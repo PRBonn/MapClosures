@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+preferred-citation:
+  title: "Effectively Detecting Loop Closures using Point Cloud Density Maps"
+  year: "2024"
+  type: conference-paper
+  booktitle: "IEEE International Conference on Robotics and Automation (ICRA)"
+  url: https://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/gupta2024icra.pdf
+  codeurl: https://github.com/PRBonn/MapClosures
+  authors:
+    - family-names: Gupta
+      given-names: Saurabh
+    - family-names: Guadagnino
+      given-names: Tiziano
+    - family-names: Mersch
+      given-names: Benedikt
+    - family-names: Vizzo
+      given-names: Ignacio
+    - family-names: Stachniss
+      given-names: Cyrill
