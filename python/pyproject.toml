@@ -1,0 +1,53 @@
+[build-system]
+requires = ["scikit_build_core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "map_closures"
+version = "0.1.0"
+description = "Effectively Detecting Loop Closures using Point Cloud Density Maps"
+readme = "README.md"
+authors = [{ name = "Saurabh Gupta", email = "saurabh.gupta1002@gmail.com" }]
+requires-python = ">=3.7"
+keywords = ["Loop Closures", "Localization", "SLAM", "LiDAR"]
+dependencies = [
+    "numpy",
+    "pydantic>=2",
+    "pydantic-settings",
+    "tqdm",
+    "typer[all]>=0.6.0",
+    "rich",
+]
+
+[project.optional-dependencies]
+all = ["open3d>0.13", "PyYAML"]
+visualizer = ["open3d>=0.13"]
+
+[project.scripts]
+map_closure_pipeline = "map_closures.tools.cmd:run"
+
+[project.urls]
+Homepage = "https://github.com/PRBonn/MapClosures"
+
+[tool.scikit-build]
+build-dir = "build/{wheel_tag}"
+cmake.verbose = false
+cmake.minimum-version = "3.16"
+editable.mode = "redirect"
+editable.rebuild = true
+editable.verbose = true
+sdist.exclude = ["pybind/"]
+wheel.install-dir = "map_closures/pybind/"
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.format]
+max-line-length = "100"
+
+[tool.cibuildwheel]
+archs = ["auto64"]
+skip = ["*-musllinux*",  "pp*", "cp36-*"]

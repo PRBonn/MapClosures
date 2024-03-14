@@ -1,0 +1,7 @@
+recursive-include map_closures *.py
+recursive-include map_closures *.cpp
+recursive-include map_closures *.hpp
+recursive-include map_closures *.h
+global-include CMakeLists.txt
+global-include LICENSE
+global-include *.cmake
