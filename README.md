@@ -1,7 +1,7 @@
 <div align="center">
     <h1>MapClosures</h1>
-    <a href="https://github.com/PRBonn/MapClosures/releases"><img src="https://img.shields.io/github/v/release/MapClosures?label=version" /></a>
-    <a href="https://github.com/PRBonn/MapClosures/blob/main/LICENSE"><img src="https://img.shields.io/github/license/PRBonn/MapClosures" /></a>
+    <a href="https://github.com/PRBonn/MapClosures/releases"><img src="https://img.shields.io/github/v/release/PRBonn/MapClosures?label=version" /></a>
+    <a href="https://github.com/PRBonn/MapClosures/blob/main/LICENSE"><img src=https://img.shields.io/badge/license-MIT-green" /></a>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/"><img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" /></a>
     <br />
     <br />
