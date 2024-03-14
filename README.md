@@ -15,11 +15,37 @@
   <br />
   
 Effectively Detecting Loop Closures using Point Cloud Density Maps.
+
+<p align="center">
+    
+![image](https://github.com/PRBonn/MapClosures/assets/28734882/18d5ee54-61a9-4d9f-87f2-8aba16de0f75)
+</p>
 </div>
+<hr />
 
 ## Install
 
+### Dependencies
+- Essentials
+    ```sh
+    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev
+    ```
+- Python
+    ```sh
+    sudo apt-get install --no-install-recommends -y python3 python3-numpy python3-pip
+    pip3 install --upgrade pip
+    pip3 install --upgrade numpy 
+    ```
+- OpenCV
+    ```sh
+    git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x \
+    cd opencv && mkdir build && cd build
+    cmake .. && make -j$(nproc --all) && make install
+    ```
+### MapClosures
 ```sh
+git clone https://github.com/PRBonn/MapClosures.git
+cd MapClosures
 make
 ```
 
@@ -35,3 +61,18 @@ map_closure_pipeline --help
 
 ![CLI_usage](https://github.com/PRBonn/MapClosures/assets/28734882/6dc885d2-e0fc-4aa4-b5b0-be8a98ed6ff9)
 </details>
+
+
+## Citation
+
+If you use this library for any academic work, please cite our original [paper](https://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/gupta2024icra.pdf).
+
+```bibtex
+@inproceedings{gupta2024icra,
+    author     = {S. Gupta and T. Guadagnino and B. Mersch and I. Vizzo and C. Stachniss},
+    title      = {{Effectively Detecting Loop Closures using Point Cloud Density Maps}},
+    booktitle  = {IEEE International Conference on Robotics and Automation (ICRA)},
+    year       = {2024},
+    codeurl    = {https://github.com/PRBonn/MapClosures},
+}
+```
