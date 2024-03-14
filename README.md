@@ -34,7 +34,8 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
     ```sh
     sudo apt-get install --no-install-recommends -y python3 python3-numpy python3-pip
     pip3 install --upgrade pip
-    pip3 install --upgrade numpy 
+    pip3 install --upgrade numpy
+    pip3 install kiss-icp
     ```
 - OpenCV
     ```sh
@@ -76,3 +77,7 @@ If you use this library for any academic work, please cite our original [paper](
     codeurl    = {https://github.com/PRBonn/MapClosures},
 }
 ```
+
+## Acknowledgement
+
+This repository is heavily inspired by, and also depends on [KISS-ICP](https://github.com/PRBonn/kiss-icp)
