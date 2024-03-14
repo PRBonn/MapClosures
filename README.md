@@ -32,5 +32,6 @@ The following command will provide details about how to use our pipeline:
 map_closure_pipeline --help
 ```
 </summary>
+
 ![CLI_usage](https://github.com/PRBonn/MapClosures/assets/28734882/6dc885d2-e0fc-4aa4-b5b0-be8a98ed6ff9)
 </details>
