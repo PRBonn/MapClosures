@@ -27,11 +27,13 @@ RUN apt-get install -y \
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade numpy
 RUN pip3 install kiss_icp
-RUN pip3 install --ignore-installed open3d
 
 RUN git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x &&\
     cd opencv && mkdir build && cd build &&\
-    cmake .. && make -j4 && make install
+    cmake .. && make -j4 && make install &&\
+    cd /usr/local/lib && ldconfig -v
+
+RUN pip3 install --ignore-installed open3d
 
 RUN git clone https://github.com/PRBonn/MapClosures.git &&\
     cd MapClosures &&\
