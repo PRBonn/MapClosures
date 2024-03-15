@@ -161,7 +161,7 @@ def map_closure_pipeline(
     version: Optional[bool] = typer.Option(
         None,
         "--version",
-        help="Show the current version of KISS-ICP",
+        help="Show the current version of MapClosures",
         callback=version_callback,
         is_eager=True,
     ),
