@@ -59,7 +59,7 @@ cd MapClosures
 # Build
 docker build . -t mapclosures:latest
 
-# Run docker image with GUI support (dataset is volume mounted)
+# Run docker container (dataset is volume mounted)
 docker run -it \
     --privileged \
     -v $(pwd)/results/:/MapClosures/results \
