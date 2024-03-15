@@ -221,7 +221,8 @@ class MapClosurePipeline:
 
         console = Console()
         table = Table(box=box.HORIZONTALS, title=f"MapClosures detected for {self._dataset_name}")
-        table.caption = f"Loop Closure Distance Threshold: {self.closure_distance_threshold} m"
+        if hasattr(self._dataset, "gt_poses") and self._eval:
+            table.caption = f"Loop Closure Distance Threshold: {self.closure_distance_threshold} m"
         table.add_column("# MapClosure", justify="left", style="cyan")
         table.add_column("Ref Map Index", justify="left", style="magenta")
         table.add_column("Query Map Index", justify="left", style="magenta")
