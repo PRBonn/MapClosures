@@ -96,6 +96,7 @@ class MapClosurePipeline:
             )
         else:
             self._eval = False
+            self.results = None
             if not hasattr(self._dataset, "gt_poses"):
                 print("Cannot compute ground truth closures, no ground truth poses available\n")
 
@@ -109,10 +110,8 @@ class MapClosurePipeline:
         self._log_to_console()
         self._write_data_to_disk()
 
-        if self._eval:
-            return self.results
-        else:
-            return 0
+        return self.results
+
 
     def _run_pipeline(self):
         map_idx = 0
@@ -137,7 +136,6 @@ class MapClosurePipeline:
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
                 scan_idx == self._n_scans - 1
             ):
-                # print(f"Creating New Local Map")
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
                 matched_map_indices, density_map = self.map_closures.match_and_add_local_map(
                     map_idx, local_map_pointcloud, map_idx // 2
@@ -221,8 +219,7 @@ class MapClosurePipeline:
 
         console = Console()
         table = Table(box=box.HORIZONTALS, title=f"MapClosures detected for {self._dataset_name}")
-        if hasattr(self._dataset, "gt_poses") and self._eval:
-            table.caption = f"Loop Closure Distance Threshold: {self.closure_distance_threshold} m"
+        table.caption = f"Detected MapClosures"
         table.add_column("# MapClosure", justify="left", style="cyan")
         table.add_column("Ref Map Index", justify="left", style="magenta")
         table.add_column("Query Map Index", justify="left", style="magenta")
