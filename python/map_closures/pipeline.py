@@ -109,7 +109,10 @@ class MapClosurePipeline:
         self._log_to_console()
         self._write_data_to_disk()
 
-        return self.results
+        if self._eval:
+            return self.results
+        else:
+            return 0
 
     def _run_pipeline(self):
         map_idx = 0
