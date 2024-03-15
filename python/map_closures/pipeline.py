@@ -137,7 +137,7 @@ class MapClosurePipeline:
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
                 scan_idx == self._n_scans - 1
             ):
-                print(f"Creating New Local Map")
+                # print(f"Creating New Local Map")
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
                 matched_map_indices, density_map = self.map_closures.match_and_add_local_map(
                     map_idx, local_map_pointcloud, map_idx // 2
