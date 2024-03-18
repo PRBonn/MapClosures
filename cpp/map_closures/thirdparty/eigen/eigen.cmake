@@ -1,10 +1,7 @@
-# We report the original licencing for this file, which was taken from the KISS-ICP project
-# https://github.com/PRBonn/kiss-icp/blob/main/cpp/kiss_icp/3rdparty/eigen/eigen.cmake
-
 # MIT License
 #
-# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
-# Stachniss.
+# Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
+# Ignacio Vizzo, Cyrill Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
