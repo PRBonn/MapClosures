@@ -47,24 +47,7 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ```sh
 git clone https://github.com/PRBonn/MapClosures.git
 cd MapClosures
-make install
-```
-
-## Install (Docker)
-
-```sh
-git clone https://github.com/PRBonn/MapClosures.git
-cd MapClosures
-
-# Build
-docker build . -t mapclosures:latest
-
-# Run docker container (dataset is volume mounted)
-docker run -it \
-    --privileged \
-    -v $(pwd)/results/:/MapClosures/results \
-    -v {DATASET_PATH}:/MapClosures/dataset \
-    mapclosures:latest
+make
 ```
 
 ## Usage
