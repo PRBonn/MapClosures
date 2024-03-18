@@ -1,7 +1,10 @@
+# We report the original licencing for this file, which was taken from the KISS-ICP project
+# https://github.com/PRBonn/kiss-icp/blob/main/cpp/kiss_icp/3rdparty/eigen/eigen.cmake
+
 # MIT License
 #
-# Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-# Ignacio Vizzo, Cyrill Stachniss.
+# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
+# Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,21 +24,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-include(ExternalProject)
+set(EIGEN_BUILD_DOC OFF CACHE BOOL "Don't build Eigen docs")
+set(EIGEN_BUILD_TESTING OFF CACHE BOOL "Don't build Eigen tests")
+set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "Don't build Eigen pkg-config")
+set(EIGEN_BUILD_BLAS OFF CACHE BOOL "Don't build blas module")
+set(EIGEN_BUILD_LAPACK OFF CACHE BOOL "Don't build lapack module")
 
-ExternalProject_Add(
-  external_eigen
-  PREFIX eigen
-  URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.bz2
-  URL_HASH SHA256=b4c198460eba6f28d34894e3a5710998818515104d6e74e5cc331ce31e46e626
-  UPDATE_COMMAND ""
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-  INSTALL_COMMAND "")
+include(FetchContent)
+FetchContent_Declare(eigen GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git GIT_TAG 3.4.0)
+FetchContent_Populate(eigen)
+add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} SYSTEM EXCLUDE_FROM_ALL)
 
-ExternalProject_Get_Property(external_eigen SOURCE_DIR)
-add_library(libEigenHelper INTERFACE)
-add_dependencies(libEigenHelper external_eigen)
-target_include_directories(libEigenHelper SYSTEM INTERFACE $<BUILD_INTERFACE:${SOURCE_DIR}>)
-set_property(TARGET libEigenHelper PROPERTY EXPORT_NAME Eigen3::Eigen)
-add_library(Eigen3::Eigen ALIAS libEigenHelper)

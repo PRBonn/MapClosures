@@ -21,8 +21,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+set(SRRG_HBST_HAS_EIGEN true)
+add_definitions(-DSRRG_HBST_HAS_EIGEN)
+set(SRRG_HBST_HAS_OPENCV true)
+add_definitions(-DSRRG_HBST_HAS_OPENCV)
+add_definitions(-DSRRG_MERGE_DESCRIPTORS)
 include(FetchContent)
-
 FetchContent_Declare(HBST URL https://gitlab.com/saurabh1002/srrg_hbst/-/archive/master/srrg_hbst-master.zip)
-
 FetchContent_Populate(HBST)
