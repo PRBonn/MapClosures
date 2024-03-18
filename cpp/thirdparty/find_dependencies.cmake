@@ -21,8 +21,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-include(FetchContent)
+if(${USE_SYSTEM_EIGEN3})
+  find_package(Eigen3 QUIET NO_MODULE)
+else()
+  include(${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake)
+endif()
 
-FetchContent_Declare(HBST URL https://gitlab.com/saurabh1002/srrg_hbst/-/archive/master/srrg_hbst-master.zip)
-
-FetchContent_Populate(HBST)
+include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)

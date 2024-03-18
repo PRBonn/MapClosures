@@ -21,28 +21,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-cmake_minimum_required(VERSION 3.16...3.26)
-project(map_closures_cpp VERSION 0.1.0 LANGUAGES CXX)
-
-option(USE_CCACHE "Build using Ccache if found on the path" ON)
-option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
-
-# ccache setup
-if(USE_CCACHE)
-  find_program(CCACHE_PATH ccache)
-  if(CCACHE_PATH)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-    message(STATUS "Using ccache: ${CCACHE_PATH}")
-  endif()
-endif()
-
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-include(thirdparty/find_dependencies.cmake)
-include(cmake/CompilerOptions.cmake)
-
-add_subdirectory(core)
-add_subdirectory(pipeline)
+add_library(pipeline STATIC)
+add_library(map_closures::pipeline ALIAS pipeline)
+target_sources(pipeline PRIVATE MapClosures.cpp)
+target_include_directories(pipeline PUBLIC ${hbst_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_link_libraries(pipeline PUBLIC map_closures::core Eigen3::Eigen ${OpenCV_LIBS})
+set_global_target_properties(pipeline)

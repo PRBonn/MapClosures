@@ -24,40 +24,15 @@
 #pragma once
 
 #include <Eigen/Core>
+#include <map>
+#include <opencv2/core.hpp>
 #include <utility>
 #include <vector>
 
 namespace map_closures {
-struct PointPair {
-    PointPair() = default;
-    PointPair(const Eigen::Vector2d &ref, const Eigen::Vector2d &query) : ref(ref), query(query) {}
-    PointPair &operator+=(const PointPair &rhs) {
-        this->ref += rhs.ref;
-        this->query += rhs.query;
-        return *this;
-    }
-    friend PointPair operator+(PointPair lhs, const PointPair &rhs) { return lhs += rhs; }
-    friend PointPair operator/(PointPair lhs, const double divisor) {
-        lhs.ref /= divisor;
-        lhs.query /= divisor;
-        return lhs;
-    }
 
-    Eigen::Vector2d ref = Eigen::Vector2d::Zero();
-    Eigen::Vector2d query = Eigen::Vector2d::Zero();
-};
-
-struct SE2 {
-    SE2() = default;
-    SE2(const Eigen::Matrix2d &R, const Eigen::Vector2d &t) : R(R), t(t) {}
-
-    friend Eigen::Vector2d operator*(const SE2 &T, const Eigen::Vector2d &p) {
-        return T.R * p + T.t;
-    }
-
-    Eigen::Matrix2d R = Eigen::Matrix2d::Identity();
-    Eigen::Vector2d t = Eigen::Vector2d::Zero();
-};
-
-std::pair<SE2, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs);
+std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
+    const std::vector<Eigen::Vector3d> &pointcloud_map,
+    const float density_map_resolution,
+    const float density_threshold);
 }  // namespace map_closures

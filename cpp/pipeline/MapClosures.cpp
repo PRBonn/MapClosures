@@ -31,8 +31,8 @@
 #include <utility>
 #include <vector>
 
-#include "map_closures/core/AlignRansac2D.hpp"
-#include "map_closures/core/DensityMap.hpp"
+#include "core/AlignRansac2D.hpp"
+#include "core/DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
 namespace {
@@ -106,9 +106,10 @@ std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int qu
         if (match.object_references.size() == 1) {
             auto ref_match = match.object_references[0].pt;
             auto qry_match = match.object_query.pt;
-            keypoint_pairs.emplace_back(PointPair(
-                {ref_match.y + ref_map_lower_bound.x(), ref_match.x + ref_map_lower_bound.y()},
-                {qry_match.y + qry_map_lower_bound.x(), qry_match.x + qry_map_lower_bound.y()}));
+            keypoint_pairs.emplace_back(Eigen::Vector2d(ref_match.y + ref_map_lower_bound.x(),
+                                                        ref_match.x + ref_map_lower_bound.y()),
+                                        Eigen::Vector2d(qry_match.y + qry_map_lower_bound.x(),
+                                                        qry_match.x + qry_map_lower_bound.y()));
         }
     });
 
@@ -116,8 +117,8 @@ std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int qu
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     if (num_matches > 2) {
         const auto [T, inliers_count] = RansacAlignment2D(keypoint_pairs);
-        pose.block<2, 2>(0, 0) = T.R;
-        pose.block<2, 1>(0, 3) = T.t * config_.density_map_resolution;
+        pose.block<2, 2>(0, 0) = T.linear();
+        pose.block<2, 1>(0, 3) = T.translation() * config_.density_map_resolution;
         num_inliers = inliers_count;
     }
     return {pose, num_inliers};

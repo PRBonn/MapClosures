@@ -24,26 +24,18 @@
 #pragma once
 
 #include <Eigen/Core>
-#include <map>
-#include <opencv2/core.hpp>
+#include <Eigen/Geometry>
 #include <utility>
 #include <vector>
 
-using Pixel = Eigen::Vector2i;
-using Point3D = Eigen::Vector3d;
-
 namespace map_closures {
 
-struct ComparePixels {
-    bool operator()(const Pixel &lhs, const Pixel &rhs) const {
-        return lhs.x() < rhs.x() || (lhs.x() == rhs.x() && lhs.y() < rhs.y());
-    }
+struct PointPair {
+    PointPair() = default;
+    PointPair(const Eigen::Vector2d &r, const Eigen::Vector2d &q);
+    Eigen::Vector2d ref = Eigen::Vector2d::Zero();
+    Eigen::Vector2d query = Eigen::Vector2d::Zero();
 };
 
-using DensityMapType = std::map<Pixel, double, ComparePixels>;
-
-std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
-    const std::vector<Eigen::Vector3d> &pointcloud_map,
-    const float density_map_resolution,
-    const float density_threshold);
+std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs);
 }  // namespace map_closures

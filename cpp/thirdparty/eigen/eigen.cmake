@@ -21,9 +21,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-add_library(pipeline STATIC)
-add_library(map_closures::pipeline ALIAS pipeline)
-target_sources(pipeline PRIVATE MapClosures.cpp)
-target_include_directories(pipeline PUBLIC "${hbst_SOURCE_DIR}")
-target_link_libraries(pipeline PUBLIC map_closures::core Eigen3::Eigen ${OpenCV_LIBS})
-set_global_target_properties(pipeline)
+set(EIGEN_BUILD_DOC OFF CACHE BOOL "Don't build Eigen docs")
+set(EIGEN_BUILD_TESTING OFF CACHE BOOL "Don't build Eigen tests")
+set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "Don't build Eigen pkg-config")
+set(EIGEN_BUILD_BLAS OFF CACHE BOOL "Don't build blas module")
+set(EIGEN_BUILD_LAPACK OFF CACHE BOOL "Don't build lapack module")
+
+include(FetchContent)
+FetchContent_Declare(eigen GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git GIT_TAG 3.4.0)
+FetchContent_Populate(eigen)
+add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} SYSTEM EXCLUDE_FROM_ALL)
+

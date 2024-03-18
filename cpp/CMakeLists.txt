@@ -21,26 +21,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# CMake arguments for configuring ExternalProjects.
-set(ExternalProject_CMAKE_ARGS
-    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
-    -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON)
-
-if(${USE_SYSTEM_EIGEN3})
-  find_package(EIGEN3 QUIET NO_MODULE)
-endif()
-if(NOT ${USE_SYSTEM_EIGEN3} OR NOT TARGET Eigen3::Eigen)
-  set(USE_SYSTEM_EIGEN3 OFF PARENT_SCOPE)
-  include(${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake)
-endif()
-
-set(SRRG_HBST_HAS_EIGEN true)
-add_definitions(-DSRRG_HBST_HAS_EIGEN)
+cmake_minimum_required(VERSION 3.25)
+project(map_closures_cpp VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(OpenCV REQUIRED)
-if(${OpenCV_FOUND})
-  set(SRRG_HBST_HAS_OPENCV true)
-  add_definitions(-DSRRG_HBST_HAS_OPENCV)
-  add_definitions(-DSRRG_MERGE_DESCRIPTORS)
-  include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)
-endif()
+
+option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
+
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+include(thirdparty/find_dependencies.cmake)
+include(cmake/CompilerOptions.cmake)
+
+add_subdirectory(core)
+add_subdirectory(pipeline)
