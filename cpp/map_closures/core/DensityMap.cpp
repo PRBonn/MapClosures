@@ -29,10 +29,20 @@
 #include <utility>
 #include <vector>
 
+namespace {
+struct ComparePixels {
+    bool operator()(const Eigen::Vector2i &lhs, const Eigen::Vector2i &rhs) const {
+        return lhs.x() < rhs.x() || (lhs.x() == rhs.x() && lhs.y() < rhs.y());
+    }
+};
+using DensityMapType = std::map<Eigen::Vector2i, double, ComparePixels>;
+}  // namespace
+
 namespace map_closures {
-std::pair<cv::Mat, Pixel> GenerateDensityMap(const std::vector<Point3D> &pointcloud_map,
-                                             const float density_map_resolution,
-                                             const float density_threshold) {
+std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
+    const std::vector<Eigen::Vector3d> &pointcloud_map,
+    const float density_map_resolution,
+    const float density_threshold) {
     DensityMapType density_map;
     int min_x = std::numeric_limits<int>::max();
     int min_y = std::numeric_limits<int>::max();
@@ -41,30 +51,31 @@ std::pair<cv::Mat, Pixel> GenerateDensityMap(const std::vector<Point3D> &pointcl
     double max_points = std::numeric_limits<double>::min();
     double min_points = std::numeric_limits<double>::max();
 
-    std::for_each(pointcloud_map.cbegin(), pointcloud_map.cend(), [&](const Point3D &point) {
-        auto x_coord = static_cast<int>(std::floor(point[0] / density_map_resolution));
-        auto y_coord = static_cast<int>(std::floor(point[1] / density_map_resolution));
-        Pixel pixel(x_coord, y_coord);
-        density_map[pixel] += 1.0;
-        auto pixel_density = density_map[pixel];
-        if (pixel_density > max_points) {
-            max_points = pixel_density;
-        } else if (pixel_density < min_points) {
-            min_points = pixel_density;
-        }
-        if (x_coord < min_x) {
-            min_x = x_coord;
-        } else if (x_coord > max_x) {
-            max_x = x_coord;
-        }
+    std::for_each(
+        pointcloud_map.cbegin(), pointcloud_map.cend(), [&](const Eigen::Vector3d &point) {
+            auto x_coord = static_cast<int>(std::floor(point[0] / density_map_resolution));
+            auto y_coord = static_cast<int>(std::floor(point[1] / density_map_resolution));
+            Eigen::Vector2i pixel(x_coord, y_coord);
+            density_map[pixel] += 1.0;
+            auto pixel_density = density_map[pixel];
+            if (pixel_density > max_points) {
+                max_points = pixel_density;
+            } else if (pixel_density < min_points) {
+                min_points = pixel_density;
+            }
+            if (x_coord < min_x) {
+                min_x = x_coord;
+            } else if (x_coord > max_x) {
+                max_x = x_coord;
+            }
 
-        if (y_coord < min_y) {
-            min_y = y_coord;
-        } else if (y_coord > max_y) {
-            max_y = y_coord;
-        }
-    });
-    auto lower_bound_coordinates = Pixel(min_x, min_y);
+            if (y_coord < min_y) {
+                min_y = y_coord;
+            } else if (y_coord > max_y) {
+                max_y = y_coord;
+            }
+        });
+    auto lower_bound_coordinates = Eigen::Vector2i(min_x, min_y);
 
     auto n_rows = max_x - min_x + 1;
     auto n_cols = max_y - min_y + 1;

@@ -29,18 +29,7 @@
 #include <utility>
 #include <vector>
 
-using Pixel = Eigen::Vector2i;
-using Point3D = Eigen::Vector3d;
-
 namespace map_closures {
-
-struct ComparePixels {
-    bool operator()(const Pixel &lhs, const Pixel &rhs) const {
-        return lhs.x() < rhs.x() || (lhs.x() == rhs.x() && lhs.y() < rhs.y());
-    }
-};
-
-using DensityMapType = std::map<Pixel, double, ComparePixels>;
 
 std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
     const std::vector<Eigen::Vector3d> &pointcloud_map,
