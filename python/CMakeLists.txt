@@ -32,6 +32,6 @@ set(PYBIND11_NEWPYTHON ON)
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cpp/map_closures ${CMAKE_CURRENT_BINARY_DIR}/map_closures)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cpp/ ${CMAKE_CURRENT_BINARY_DIR}/map_closures)
 
 add_subdirectory(map_closures/pybind)

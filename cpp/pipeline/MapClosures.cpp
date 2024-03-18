@@ -31,8 +31,8 @@
 #include <utility>
 #include <vector>
 
-#include "map_closures/core/AlignRansac2D.hpp"
-#include "map_closures/core/DensityMap.hpp"
+#include "core/AlignRansac2D.hpp"
+#include "core/DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
 namespace {

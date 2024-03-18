@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 pybind11_add_module(map_closures_pybind MODULE map_closures_pybind.cpp)
-target_link_libraries(map_closures_pybind PRIVATE map_closures::pipeline)
+target_link_libraries(map_closures_pybind PUBLIC map_closures::pipeline)
 install(TARGETS map_closures_pybind DESTINATION .)
 add_custom_target(install_python_bindings ${CMAKE_COMMAND} -DCMAKE_INSTALL_COMPONENT=python_bindings -P
                                           "${PROJECT_BINARY_DIR}/cmake_install.cmake" DEPENDS map_closures_pybind)
