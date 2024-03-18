@@ -32,11 +32,16 @@
 #include <vector>
 
 namespace {
-map_closures::SE2 KabschUmeyamaAlignment2D(
+Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const std::vector<map_closures::PointPair> &keypoint_pairs) {
-    auto mean =
-        std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(), map_closures::PointPair()) /
-        keypoint_pairs.size();
+    auto mean = std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
+                            map_closures::PointPair(), [](auto lhs, const auto &rhs) {
+                                lhs.ref += rhs.ref;
+                                lhs.query += rhs.query;
+                                return lhs;
+                            });
+    mean.query /= keypoint_pairs.size();
+    mean.ref /= keypoint_pairs.size();
     auto covariance_matrix = std::transform_reduce(
         keypoint_pairs.cbegin(), keypoint_pairs.cend(), Eigen::Matrix2d().setZero(),
         std::plus<Eigen::Matrix2d>(), [&](const auto &keypoint_pair) {
@@ -46,11 +51,12 @@ map_closures::SE2 KabschUmeyamaAlignment2D(
 
     Eigen::JacobiSVD<Eigen::Matrix2d> svd(covariance_matrix,
                                           Eigen::ComputeFullU | Eigen::ComputeFullV);
-    Eigen::Matrix2d R = svd.matrixV() * svd.matrixU().transpose();
-    R = R.determinant() > 0 ? R : -R;
-    auto t = mean.query - R * mean.ref;
+    Eigen::Isometry2d T = Eigen::Isometry2d::Identity();
+    const Eigen::Matrix2d &&R = svd.matrixV() * svd.matrixU().transpose();
+    T.linear() = R.determinant() > 0 ? R : -R;
+    T.translation() = mean.query - R * mean.ref;
 
-    return map_closures::SE2(R, t);
+    return T;
 }
 
 static constexpr double inliers_distance_threshold = 3.0;
@@ -64,7 +70,10 @@ static constexpr int __RANSAC_TRIALS__ = std::ceil(
 }  // namespace
 
 namespace map_closures {
-std::pair<SE2, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs) {
+
+PointPair::PointPair(const Eigen::Vector2d &r, const Eigen::Vector2d &q) : ref(r), query(q) {}
+
+std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs) {
     const size_t max_inliers = keypoint_pairs.size();
 
     std::vector<PointPair> sample_keypoint_pairs(2);
