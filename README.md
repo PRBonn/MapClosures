@@ -13,11 +13,11 @@
     <a href=https://github.com/PRBonn/MapClosures/issues>Contact Us</a>
   <br />
   <br />
-  
+
 Effectively Detecting Loop Closures using Point Cloud Density Maps.
 
 <p align="center">
-    
+
 ![image](https://github.com/PRBonn/MapClosures/assets/28734882/18d5ee54-61a9-4d9f-87f2-8aba16de0f75)
 </p>
 </div>
