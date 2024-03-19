@@ -28,7 +28,6 @@ set(EIGEN_BUILD_BLAS OFF CACHE BOOL "Don't build blas module")
 set(EIGEN_BUILD_LAPACK OFF CACHE BOOL "Don't build lapack module")
 
 include(FetchContent)
-FetchContent_Declare(eigen GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git GIT_TAG 3.4.0)
+FetchContent_Declare(eigen URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip)
 FetchContent_Populate(eigen)
 add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} SYSTEM EXCLUDE_FROM_ALL)
-
