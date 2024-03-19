@@ -37,3 +37,14 @@ include(cmake/CompilerOptions.cmake)
 
 add_subdirectory(core)
 add_subdirectory(pipeline)
+
+set(package_files
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/pipeline
+    ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-src.zip
+  COMMAND ${CMAKE_COMMAND} -E tar c ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-src.zip --format=zip -- ${package_files}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${package_files})
+
+add_custom_target(${PROJECT_NAME}_package DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-src.zip)
