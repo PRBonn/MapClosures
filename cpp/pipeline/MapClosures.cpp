@@ -82,7 +82,9 @@ std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
     const size_t clipped_top_k = std::min(top_k, descriptor_matches_.size());
     std::vector<int> ref_mapclosure_indices(clipped_top_k);
     if (clipped_top_k) {
-        std::multimap<int, int> num_matches_per_ref_map;
+        using NumMatches = size_t;
+        using MapIdx = int;
+        std::multimap<NumMatches, MapIdx> num_matches_per_ref_map;
         std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
                       [&](const auto &matches) {
                           num_matches_per_ref_map.emplace(matches.second.size(), matches.first);
