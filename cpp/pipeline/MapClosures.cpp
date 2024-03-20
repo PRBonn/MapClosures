@@ -63,13 +63,14 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 
 std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
     const int map_idx, const std::vector<Eigen::Vector3d> &local_map, int top_k) {
-    const auto &[density_map, map_lowerbound] =
+    const DensityMap density_map =
         GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
-    density_map_lowerbounds_.emplace_back(map_lowerbound);
+    density_map_lowerbounds_.emplace_back(density_map.lower_bound);
 
     cv::Mat orb_descriptors;
     std::vector<cv::KeyPoint> orb_keypoints;
-    orb_extractor_->detectAndCompute(density_map, cv::noArray(), orb_keypoints, orb_descriptors);
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+                                     orb_descriptors);
 
     auto hbst_matchable = Tree::getMatchables(orb_descriptors, orb_keypoints, map_idx);
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
@@ -90,7 +91,7 @@ std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
                        num_matches_per_ref_map.cend(), ref_mapclosure_indices.begin(),
                        [&](const auto &num_matches_kv) { return num_matches_kv.second; });
     }
-    return {ref_mapclosure_indices, density_map};
+    return {ref_mapclosure_indices, density_map.grid};
 }
 
 std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int query_idx) const {
@@ -116,7 +117,7 @@ std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int qu
     int num_inliers = 0;
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     if (num_matches > 2) {
-        const auto [T, inliers_count] = RansacAlignment2D(keypoint_pairs);
+        const auto &[T, inliers_count] = RansacAlignment2D(keypoint_pairs);
         pose.block<2, 2>(0, 0) = T.linear();
         pose.block<2, 1>(0, 3) = T.translation() * config_.density_map_resolution;
         num_inliers = inliers_count;
