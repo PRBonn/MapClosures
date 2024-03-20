@@ -105,8 +105,8 @@ std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int qu
     std::vector<PointPair> keypoint_pairs;
     keypoint_pairs.reserve(num_matches);
 
-    auto ref_map_lower_bound = density_maps_.at(ref_idx).lower_bound;
-    auto qry_map_lower_bound = density_maps_.at(query_idx).lower_bound;
+    const auto &ref_map_lower_bound = density_maps_.at(ref_idx).lower_bound;
+    const auto &qry_map_lower_bound = density_maps_.at(query_idx).lower_bound;
     std::for_each(matches.cbegin(), matches.cend(), [&](const Tree::Match &match) {
         if (match.object_references.size() == 1) {
             auto ref_match = match.object_references[0].pt;

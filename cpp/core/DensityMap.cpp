@@ -71,15 +71,17 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     const auto rows_and_columns = upper_bound_coordinates - lower_bound_coordinates;
     const auto n_rows = rows_and_columns.x() + 1;
     const auto n_cols = rows_and_columns.y() + 1;
+
     const double min_max_normalizer = max_points - min_points;
     DensityMap density_map(n_rows, n_cols, density_map_resolution);
     density_map.lower_bound = lower_bound_coordinates;
     std::for_each(pcd.cbegin(), pcd.cend(), [&](const auto &point) {
         const auto pixel = Discretize2D(point);
-        auto density = (point_counter.at(pixel) - min_points) * 255 / min_max_normalizer;
-        density = density > density_threshold ? density : 0.0;
+        double raw_density = (point_counter.at(pixel) - min_points) / min_max_normalizer;
+        raw_density = raw_density > density_threshold ? raw_density : 0.0;
+        uint8_t discretized_density = 255 * raw_density;
         const auto px = pixel - lower_bound_coordinates;
-        density_map(px.x(), px.y()) = static_cast<uint8_t>(density);
+        density_map(px.x(), px.y()) = discretized_density;
     });
 
     return density_map;
