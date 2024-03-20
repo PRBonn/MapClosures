@@ -62,7 +62,9 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 }
 
 std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
-    const int map_idx, const std::vector<Eigen::Vector3d> &local_map, int top_k) {
+    const int map_idx,
+    const std::vector<Eigen::Vector3d> &local_map,
+    const long unsigned int top_k) {
     density_maps_.emplace(map_idx, GenerateDensityMap(local_map, config_.density_map_resolution,
                                                       config_.density_threshold));
 
@@ -77,18 +79,18 @@ std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
 
-    top_k = std::min(top_k, static_cast<int>(descriptor_matches_.size()));
-    std::vector<int> ref_mapclosure_indices(top_k);
-    if (top_k) {
+    const size_t clipped_top_k = std::min(top_k, descriptor_matches_.size());
+    std::vector<int> ref_mapclosure_indices(clipped_top_k);
+    if (clipped_top_k) {
         std::multimap<int, int> num_matches_per_ref_map;
         std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
                       [&](const auto &matches) {
-                          num_matches_per_ref_map.insert(
-                              std::pair<int, int>(matches.second.size(), matches.first));
+                          num_matches_per_ref_map.emplace(matches.second.size(), matches.first);
                       });
 
-        std::transform(std::next(num_matches_per_ref_map.cend(), -top_k),
-                       num_matches_per_ref_map.cend(), ref_mapclosure_indices.begin(),
+        std::transform(num_matches_per_ref_map.crbegin(),
+                       std::next(num_matches_per_ref_map.crbegin(), clipped_top_k),
+                       ref_mapclosure_indices.begin(),
                        [&](const auto &num_matches_kv) { return num_matches_kv.second; });
     }
     return {ref_mapclosure_indices, last_density_grid};
