@@ -63,13 +63,13 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 
 std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
     const int map_idx, const std::vector<Eigen::Vector3d> &local_map, int top_k) {
-    const DensityMap density_map =
-        GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
-    density_map_lowerbounds_.emplace_back(density_map.lower_bound);
+    density_maps_.emplace(map_idx, GenerateDensityMap(local_map, config_.density_map_resolution,
+                                                      config_.density_threshold));
 
     cv::Mat orb_descriptors;
     std::vector<cv::KeyPoint> orb_keypoints;
-    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+    const auto &last_density_grid = density_maps_.at(map_idx).grid;
+    orb_extractor_->detectAndCompute(last_density_grid, cv::noArray(), orb_keypoints,
                                      orb_descriptors);
 
     auto hbst_matchable = Tree::getMatchables(orb_descriptors, orb_keypoints, map_idx);
@@ -91,7 +91,7 @@ std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
                        num_matches_per_ref_map.cend(), ref_mapclosure_indices.begin(),
                        [&](const auto &num_matches_kv) { return num_matches_kv.second; });
     }
-    return {ref_mapclosure_indices, density_map.grid};
+    return {ref_mapclosure_indices, last_density_grid};
 }
 
 std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int query_idx) const {
@@ -101,8 +101,8 @@ std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int qu
     std::vector<PointPair> keypoint_pairs;
     keypoint_pairs.reserve(num_matches);
 
-    auto ref_map_lower_bound = density_map_lowerbounds_[ref_idx];
-    auto qry_map_lower_bound = density_map_lowerbounds_[query_idx];
+    auto ref_map_lower_bound = density_maps_.at(ref_idx).lower_bound;
+    auto qry_map_lower_bound = density_maps_.at(query_idx).lower_bound;
     std::for_each(matches.cbegin(), matches.cend(), [&](const Tree::Match &match) {
         if (match.object_references.size() == 1) {
             auto ref_match = match.object_references[0].pt;

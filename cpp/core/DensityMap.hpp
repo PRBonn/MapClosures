@@ -33,9 +33,13 @@ namespace map_closures {
 
 struct DensityMap {
     DensityMap(const int num_rows, const int num_cols, const double resolution);
+    DensityMap(const DensityMap &other) = delete;
+    DensityMap(DensityMap &&other) = default;
+    DensityMap &operator=(DensityMap &&other) = default;
+    DensityMap &operator=(const DensityMap &other) = delete;
     inline auto &operator()(const int x, const int y) { return grid.at<uint8_t>(x, y); }
     Eigen::Vector2i lower_bound;
-    const double resolution;
+    double resolution;
     cv::Mat grid;
 };
 
