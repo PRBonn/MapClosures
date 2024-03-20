@@ -27,4 +27,21 @@ else()
   include(${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake)
 endif()
 
+# Make OpenCV FetchContentable
+if(${USE_SYSTEM_OPENCV})
+  find_package(OpenCV QUIET)
+else()
+  include(${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake)
+endif()
+# Taken from a issue in the OpenCv project (https://github.com/opencv/opencv/issues/20548#issuecomment-1325751099)
+# for some reason OpenCV does not want to convert to a FetchContent Friendly format so we need to use this trick
+add_library(OpenCV4 INTERFACE)
+target_link_libraries(OpenCV4 INTERFACE ${OpenCV_LIBS})
+target_include_directories(OpenCV4 INTERFACE
+          ${OPENCV_CONFIG_FILE_INCLUDE_DIR}
+          ${OPENCV_MODULE_opencv_core_LOCATION}/include
+          ${OPENCV_MODULE_opencv_highgui_LOCATION}/include
+          ${OpenCV_INCLUDE_DIRS}
+          )
+
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)

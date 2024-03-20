@@ -24,9 +24,10 @@
 cmake_minimum_required(VERSION 3.25)
 project(map_closures_cpp VERSION 0.1.0 LANGUAGES CXX)
 
-find_package(OpenCV REQUIRED)
+# find_package(OpenCV REQUIRED)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
+option(USE_SYSTEM_OPENCV "Use system pre-installed OpenCV" ON)
 
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

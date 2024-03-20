@@ -21,8 +21,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-add_library(core STATIC)
-add_library(map_closures::core ALIAS core)
-target_sources(core PRIVATE DensityMap.cpp AlignRansac2D.cpp)
-target_link_libraries(core PUBLIC Eigen3::Eigen OpenCV4)
-set_global_target_properties(core)
+# Taken from a issue in the OpenCv project (https://github.com/opencv/opencv/issues/20548#issuecomment-1325751099)
+# for some reason OpenCV does not want to convert to a FetchContent Friendly format so we need to use this trick
+include(FetchContent)
+FetchContent_Declare(
+        opencv
+        GIT_REPOSITORY https://github.com/opencv/opencv.git
+        GIT_TAG 4.x
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(opencv)
