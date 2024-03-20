@@ -27,7 +27,6 @@ else()
   include(${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake)
 endif()
 
-# Make OpenCV FetchContentable
 if(${USE_SYSTEM_OPENCV})
   find_package(OpenCV QUIET)
 else()
