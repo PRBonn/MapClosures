@@ -30,7 +30,7 @@ from typing import Dict, Optional
 from pydantic import BaseModel
 
 
-class BaseConfig(BaseModel):
+class MapClosuresConfig(BaseModel):
     density_map_resolution: float = 0.5
     density_threshold: float = 0.05
     hamming_distance_threshold: int = 50
@@ -38,7 +38,7 @@ class BaseConfig(BaseModel):
     local_map_factor: float = 0.6
 
 
-def load_config(config_file: Optional[Path]) -> BaseConfig:
+def load_config(config_file: Optional[Path]) -> MapClosuresConfig:
     """Load configuration from an Optional yaml file. Additionally, deskew and max_range can be
     also specified from the CLI interface"""
 
@@ -54,10 +54,10 @@ def load_config(config_file: Optional[Path]) -> BaseConfig:
             sys.exit(1)
         with open(config_file) as cfg_file:
             config = yaml.safe_load(cfg_file)
-    return BaseConfig(**config)
+    return MapClosuresConfig(**config)
 
 
-def write_config(config: BaseConfig, filename: str):
+def write_config(config: MapClosuresConfig, filename: str):
     with open(filename, "w") as outfile:
         try:
             yaml = importlib.import_module("yaml")
