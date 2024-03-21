@@ -21,4 +21,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .parser import BaseConfig, load_config, write_config
+from .config import MapClosuresConfig, load_config, write_config
