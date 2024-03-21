@@ -28,18 +28,15 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ### Dependencies
 - Essentials
     ```sh
-    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev
+    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev python3-dev python-pip
     ```
-- Python
+- Eigen
     ```sh
-    sudo apt-get install --no-install-recommends -y python3 python3-numpy python3-pip
-    pip3 install --upgrade pip
-    pip3 install --upgrade numpy
-    pip3 install kiss-icp
+    sudo apt-get install libeigen3-dev
     ```
 - OpenCV
     ```sh
-    git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x \
+    git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x
     cd opencv && mkdir build && cd build
     cmake .. && make -j$(nproc --all) && make install
     ```
