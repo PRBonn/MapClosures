@@ -27,9 +27,11 @@
 #include <memory>
 #include <opencv2/core.hpp>
 #include <opencv2/features2d.hpp>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "core/DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
 namespace {
@@ -55,13 +57,15 @@ public:
 
 public:
     std::pair<std::vector<int>, cv::Mat> MatchAndAddLocalMap(
-        const int map_idx, const std::vector<Eigen::Vector3d> &local_map, int top_k);
+        const int map_idx,
+        const std::vector<Eigen::Vector3d> &local_map,
+        const unsigned int top_k);
     std::pair<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx) const;
 
 private:
     Config config_;
     Tree::MatchVectorMap descriptor_matches_;
-    std::vector<Eigen::Vector2i> density_map_lowerbounds_;
+    std::unordered_map<int, DensityMap> density_maps_;
     std::unique_ptr<Tree> hbst_binary_tree_ = std::make_unique<Tree>();
     cv::Ptr<cv::DescriptorExtractor> orb_extractor_;
 };
