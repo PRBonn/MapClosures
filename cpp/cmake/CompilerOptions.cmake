@@ -47,6 +47,7 @@ function(set_global_target_properties target)
             $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-ignored-qualifiers>)
   set(INCLUDE_DIRS ${PROJECT_SOURCE_DIR})
   get_filename_component(INCLUDE_DIRS ${INCLUDE_DIRS} PATH)
-  target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-                             PUBLIC $<BUILD_INTERFACE:${INCLUDE_DIRS}> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+  target_include_directories(
+    ${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC $<BUILD_INTERFACE:${INCLUDE_DIRS}> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 endfunction()
