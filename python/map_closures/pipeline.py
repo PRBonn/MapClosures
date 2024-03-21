@@ -32,7 +32,7 @@ from kiss_icp.mapping import get_voxel_hash_map
 from kiss_icp.voxelization import voxel_down_sample
 from tqdm.auto import trange
 
-from map_closures.config import BaseConfig, load_config, write_config
+from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.local_maps import LocalMap
 
@@ -66,7 +66,7 @@ class MapClosurePipeline:
             self.closure_config = load_config(config_path)
         else:
             self.config_name = "base_config.yaml"
-            self.closure_config = BaseConfig()
+            self.closure_config = MapClosuresConfig()
 
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
