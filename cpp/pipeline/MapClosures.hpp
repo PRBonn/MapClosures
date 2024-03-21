@@ -34,13 +34,10 @@
 #include "core/DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
-namespace {
 static constexpr int descriptor_size_bits = 256;
-
 using Matchable = srrg_hbst::BinaryMatchable<cv::KeyPoint, descriptor_size_bits>;
 using Node = srrg_hbst::BinaryNode<Matchable>;
 using Tree = srrg_hbst::BinaryTree<Node>;
-}  // namespace
 
 namespace map_closures {
 struct Config {
