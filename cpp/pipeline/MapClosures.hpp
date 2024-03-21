@@ -29,6 +29,7 @@
 #include <opencv2/features2d.hpp>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "core/DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
@@ -58,7 +59,7 @@ public:
     std::pair<std::vector<int>, cv::Mat> MatchAndAddLocalMap(
         const int map_idx,
         const std::vector<Eigen::Vector3d> &local_map,
-        const long unsigned int top_k);
+        const unsigned int top_k);
     std::pair<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx) const;
 
 private:

@@ -64,7 +64,7 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
     const int map_idx,
     const std::vector<Eigen::Vector3d> &local_map,
-    const long unsigned int top_k) {
+    const unsigned int top_k) {
     density_maps_.emplace(map_idx, GenerateDensityMap(local_map, config_.density_map_resolution,
                                                       config_.density_threshold));
 
@@ -79,7 +79,7 @@ std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
 
-    const size_t clipped_top_k = std::min(top_k, descriptor_matches_.size());
+    const size_t clipped_top_k = std::min(top_k, static_cast<unsigned int>(descriptor_matches_.size()));
     std::vector<int> ref_mapclosure_indices(clipped_top_k);
     if (clipped_top_k) {
         using NumMatches = size_t;

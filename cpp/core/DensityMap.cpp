@@ -57,31 +57,32 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     Eigen::Array2i upper_bound_coordinates = Eigen::Array2i::Constant(min_int);
 
     auto Discretize2D = [&density_map_resolution](const Eigen::Vector3d &p) -> Eigen::Array2i {
-        return (p.head<2>().array() / density_map_resolution).cast<int>();
+        return (p.head<2>().array() / density_map_resolution).floor().cast<int>();
     };
     std::for_each(pcd.cbegin(), pcd.cend(), [&](const Eigen::Vector3d &point) {
         const auto pixel = Discretize2D(point);
-        auto &num_points = point_counter[pixel];
         point_counter[pixel] += 1.0;
+        auto &num_points = point_counter[pixel];
         max_points = std::max(max_points, num_points);
         min_points = std::min(min_points, num_points);
-        lower_bound_coordinates = lower_bound_coordinates.min(pixel);
-        upper_bound_coordinates = upper_bound_coordinates.max(pixel);
+        if (num_points <= 1) {
+            lower_bound_coordinates = lower_bound_coordinates.min(pixel);
+            upper_bound_coordinates = upper_bound_coordinates.max(pixel);
+        }
     });
     const auto rows_and_columns = upper_bound_coordinates - lower_bound_coordinates;
     const auto n_rows = rows_and_columns.x() + 1;
     const auto n_cols = rows_and_columns.y() + 1;
-
     const double min_max_normalizer = max_points - min_points;
+
     DensityMap density_map(n_rows, n_cols, density_map_resolution);
     density_map.lower_bound = lower_bound_coordinates;
-    std::for_each(pcd.cbegin(), pcd.cend(), [&](const auto &point) {
-        const auto pixel = Discretize2D(point);
-        double raw_density = (point_counter.at(pixel) - min_points) / min_max_normalizer;
-        raw_density = raw_density > density_threshold ? raw_density : 0.0;
-        uint8_t discretized_density = 255 * raw_density;
+    std::for_each(point_counter.cbegin(), point_counter.cend(), [&](const auto &point_count) {
+        auto density = (point_count.second - min_points) * 255 / min_max_normalizer;
+        density = density > density_threshold ? density : 0.0;
+        const auto pixel = point_count.first;
         const auto px = pixel - lower_bound_coordinates;
-        density_map(px.x(), px.y()) = discretized_density;
+        density_map(px.x(), px.y()) = static_cast<uint8_t>(density);
     });
 
     return density_map;
