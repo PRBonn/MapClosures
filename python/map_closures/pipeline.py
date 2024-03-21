@@ -116,7 +116,6 @@ class MapClosurePipeline:
 
         return self.results
 
-
     def _run_pipeline(self):
         map_idx = 0
         poses_in_local_map = []
