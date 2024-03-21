@@ -81,3 +81,9 @@ If you use this library for any academic work, please cite our original [paper](
 ## Acknowledgement
 
 This repository is heavily inspired by, and also depends on [KISS-ICP](https://github.com/PRBonn/kiss-icp)
+
+## Contributors
+
+<a href="https://github.com/PRBonn/MapClosures/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=PRBonn/MapClosures" />
+</a>
