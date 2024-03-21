@@ -52,7 +52,11 @@ class MapClosurePipeline:
         eval: Optional[bool] = False,
     ):
         self._dataset = dataset
-        self._dataset_name = self._dataset.sequence_id
+        self._dataset_name = (
+            self._dataset.sequence_id
+            if hasattr(self._dataset, "sequence_id")
+            else os.path.basename(self._dataset.data_dir)
+        )
         self._n_scans = len(self._dataset)
         self._results_dir = results_dir
         self._eval = eval
@@ -111,7 +115,6 @@ class MapClosurePipeline:
         self._write_data_to_disk()
 
         return self.results
-
 
     def _run_pipeline(self):
         map_idx = 0

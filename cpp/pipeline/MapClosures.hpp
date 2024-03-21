@@ -57,9 +57,7 @@ public:
 
 public:
     std::pair<std::vector<int>, cv::Mat> MatchAndAddLocalMap(
-        const int map_idx,
-        const std::vector<Eigen::Vector3d> &local_map,
-        const unsigned int top_k);
+        const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k);
     std::pair<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx) const;
 
 private:
