@@ -8,7 +8,7 @@
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/README.md#Install">Install</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-    <a href=https://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/gupta2024icra.pdf>Paper</a>
+    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>Paper</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://github.com/PRBonn/MapClosures/issues>Contact Us</a>
   <br />
@@ -63,7 +63,7 @@ map_closure_pipeline --help
 
 ## Citation
 
-If you use this library for any academic work, please cite our original [paper](https://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/gupta2024icra.pdf).
+If you use this library for any academic work, please cite our original [paper](https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf).
 
 ```bibtex
 @inproceedings{gupta2024icra,
