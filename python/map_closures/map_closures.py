@@ -40,6 +40,15 @@ class MapClosures:
         )
         return np.asarray(ref_map_indices, np.int32), np.asarray(density_map_img, np.uint8)
 
+    def detect_loop_closure_and_add_local_map(self, map_idx, local_map):
+        ref_idx, map_idx, relative_tf_2d, inliers_count = self._pipeline(map_idx, local_map)
+        closure = {"source_idx": -1, "target_idx": -1, "inliers_count": 0, "pose": np.eye(3)}
+        closure["source_idx"] = ref_idx
+        closure["target_idx"] = map_idx
+        closure["inliers_count"] = inliers_count
+        closure["pose"] = relative_tf_2d
+        return closure
+
     def add_local_map_and_compute_closure(self, map_idx: int, local_map: np.ndarray, top_k: int):
         matches, _ = self.match_and_add_local_map(map_idx, local_map, top_k)
         best_closure = {"source_idx": -1, "target_idx": -1, "inliers_count": 0, "pose": np.eye(3)}

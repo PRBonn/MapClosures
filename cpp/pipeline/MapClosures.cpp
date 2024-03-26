@@ -61,6 +61,44 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
+ClosureCandidate MapClosures::DetectLoopClosureAndAddToDatabase(
+    const int &id, const std::vector<Eigen::Vector3d> &local_map) {
+    DensityMap density_map =
+        GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
+    cv::Mat orb_descriptors;
+    std::vector<cv::KeyPoint> orb_keypoints;
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+                                     orb_descriptors);
+
+    auto hbst_matchable = Tree::getMatchables(orb_descriptors, orb_keypoints, id);
+    hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
+                                   config_.hamming_distance_threshold,
+                                   srrg_hbst::SplittingStrategy::SplitEven);
+
+    using NumMatches = size_t;
+    using MapIdx = int;
+    std::multimap<NumMatches, MapIdx> num_matches_per_ref_map;
+    std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
+                  [&](const auto &matches) {
+                      num_matches_per_ref_map.emplace(matches.second.size(), matches.first);
+                  });
+    auto best_candidate_iter = num_matches_per_ref_map.crbegin();
+    int reference_index = best_candidate_iter->second;
+    do {
+        ++best_candidate_iter;
+        reference_index = best_candidate_iter->second;
+
+    } while (std::abs(reference_index - id) < 3);
+    const auto &[transform, number_of_inliers] = CheckForClosure(reference_index, id);
+    ClosureCandidate closure;
+    closure.source_index = reference_index;
+    closure.target_index = id;
+    closure.T = transform;
+    closure.number_of_inliers = number_of_inliers;
+    density_maps_.emplace(id, std::move(density_map));
+    return closure;
+}
+
 std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
     const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k) {
     density_maps_.emplace(map_idx, GenerateDensityMap(local_map, config_.density_map_resolution,

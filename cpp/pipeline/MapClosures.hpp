@@ -46,6 +46,13 @@ struct Config {
     int hamming_distance_threshold = 50;
 };
 
+struct ClosureCandidate {
+    int source_index = -1;
+    int target_index = -1;
+    Eigen::Matrix4d T;
+    size_t number_of_inliers = 0;
+};
+
 class MapClosures {
 public:
     explicit MapClosures();
@@ -53,6 +60,9 @@ public:
     ~MapClosures() = default;
 
 public:
+    ClosureCandidate DetectLoopClosureAndAddToDatabase(
+        const int &map_id, const std::vector<Eigen::Vector3d> &local_map);
+
     std::pair<std::vector<int>, cv::Mat> MatchAndAddLocalMap(
         const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k);
     std::pair<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx) const;
