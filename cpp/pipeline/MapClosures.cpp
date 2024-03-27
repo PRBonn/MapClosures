@@ -77,6 +77,7 @@ std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
 
+
     const size_t clipped_top_k =
         std::min(top_k, static_cast<unsigned int>(descriptor_matches_.size()));
     std::vector<int> ref_mapclosure_indices(clipped_top_k);
