@@ -75,20 +75,12 @@ ClosureCandidate MapClosures::DetectLoopClosureAndAddToDatabase(
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
 
-    using NumMatches = size_t;
-    using MapIdx = int;
-    std::multimap<NumMatches, MapIdx> num_matches_per_ref_map;
-    std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
-                  [&](const auto &matches) {
-                      num_matches_per_ref_map.emplace(matches.second.size(), matches.first);
-                  });
-    auto best_candidate_iter = num_matches_per_ref_map.crbegin();
-    int reference_index = best_candidate_iter->second;
-    do {
-        ++best_candidate_iter;
-        reference_index = best_candidate_iter->second;
-
-    } while (std::abs(reference_index - id) < 3);
+    const auto best_candidate =
+        std::max_element(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
+                         [&](const auto &lhs, const auto &rhs) {
+                             return (lhs.second.size() < rhs.second.size()) || (lhs.first - id) < 3;
+                         });
+    const int &reference_index = best_candidate->first;
     const auto &[transform, number_of_inliers] = CheckForClosure(reference_index, id);
     ClosureCandidate closure;
     closure.source_index = reference_index;
