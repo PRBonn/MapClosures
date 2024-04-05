@@ -61,8 +61,8 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
-ClosureCandidate MapClosures::DetectLoopClosureAndAddToDatabase(
-    const int &id, const std::vector<Eigen::Vector3d> &local_map) {
+ClosureCandidate MapClosures::MatchAndAdd(const int &id,
+                                          const std::vector<Eigen::Vector3d> &local_map) {
     DensityMap density_map =
         GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
     cv::Mat orb_descriptors;
@@ -75,23 +75,30 @@ ClosureCandidate MapClosures::DetectLoopClosureAndAddToDatabase(
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
 
-    const auto best_candidate =
-        std::max_element(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
-                         [&](const auto &lhs, const auto &rhs) {
-                             return (lhs.second.size() < rhs.second.size()) || (lhs.first - id) < 3;
-                         });
-    const int &reference_index = best_candidate->first;
-    const auto &[transform, number_of_inliers] = CheckForClosure(reference_index, id);
-    ClosureCandidate closure;
-    closure.source_index = reference_index;
-    closure.target_index = id;
-    closure.T = transform;
-    closure.number_of_inliers = number_of_inliers;
+    auto best_candidate = descriptor_matches_.cend();
+    for (auto it = descriptor_matches_.cbegin(); it != descriptor_matches_.cend(); ++it) {
+        const bool is_distant_enough = std::abs(static_cast<int>(it->first) - id) > 3;
+        const bool has_candidate = best_candidate != descriptor_matches_.cend();
+        const bool has_more_matches =
+            has_candidate ? it->second.size() > best_candidate->second.size() : true;
+        if (has_more_matches && is_distant_enough) {
+            best_candidate = it;
+        }
+    }
     density_maps_.emplace(id, std::move(density_map));
+    ClosureCandidate closure;
+    if (best_candidate != descriptor_matches_.cend()) {
+        const int &reference_index = best_candidate->first;
+        const auto &[transform, number_of_inliers] = CheckForClosure(reference_index, id);
+        closure.source_index = reference_index;
+        closure.target_index = id;
+        closure.T = transform;
+        closure.number_of_inliers = number_of_inliers;
+    }
     return closure;
 }
 
-std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
+std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddTopK(
     const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k) {
     density_maps_.emplace(map_idx, GenerateDensityMap(local_map, config_.density_map_resolution,
                                                       config_.density_threshold));

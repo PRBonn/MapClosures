@@ -20,12 +20,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Tuple
+from typing import Tuple, TypeAlias
 
 import numpy as np
 from pydantic_settings import BaseSettings
 
 from map_closures.pybind import map_closures_pybind
+
+ClosureCandidate: TypeAlias = map_closures_pybind._ClosureCandidate
 
 
 class MapClosures:
@@ -34,20 +36,15 @@ class MapClosures:
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
     def match_and_add_local_map(self, map_idx: int, local_map: np.ndarray, top_k: int):
-        _local_map = map_closures_pybind._VectorEigen3d(local_map)
+        _local_map = map_closures_pybind._Vector3dVector(local_map)
         ref_map_indices, density_map_img = self._pipeline._MatchAndAddLocalMap(
             map_idx, _local_map, top_k
         )
         return np.asarray(ref_map_indices, np.int32), np.asarray(density_map_img, np.uint8)
 
-    def detect_loop_closure_and_add_local_map(self, map_idx, local_map):
-        ref_idx, map_idx, relative_tf_2d, inliers_count = self._pipeline(map_idx, local_map)
-        closure = {"source_idx": -1, "target_idx": -1, "inliers_count": 0, "pose": np.eye(3)}
-        closure["source_idx"] = ref_idx
-        closure["target_idx"] = map_idx
-        closure["inliers_count"] = inliers_count
-        closure["pose"] = relative_tf_2d
-        return closure
+    def match_and_add(self, map_idx, local_map):
+        pcd = map_closures_pybind._Vector3dVector(local_map)
+        return self._pipeline._MatchAndAdd(map_idx, pcd)
 
     def add_local_map_and_compute_closure(self, map_idx: int, local_map: np.ndarray, top_k: int):
         matches, _ = self.match_and_add_local_map(map_idx, local_map, top_k)
