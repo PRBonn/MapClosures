@@ -74,94 +74,55 @@ ClosureCandidate MapClosures::MatchAndAdd(const int &id,
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
+    density_maps_.emplace(id, std::move(density_map));
 
     auto best_candidate = descriptor_matches_.cend();
+    ClosureCandidate closure;
     for (auto it = descriptor_matches_.cbegin(); it != descriptor_matches_.cend(); ++it) {
         const bool is_distant_enough = std::abs(static_cast<int>(it->first) - id) > 3;
         const bool has_candidate = best_candidate != descriptor_matches_.cend();
         const bool has_more_matches =
             has_candidate ? it->second.size() > best_candidate->second.size() : true;
         if (has_more_matches && is_distant_enough) {
-            best_candidate = it;
+            ClosureCandidate new_candidate = ValidateClosure(it->first, id);
+            const bool has_more_inliers =
+                new_candidate.number_of_inliers > closure.number_of_inliers;
+            if (has_more_inliers) {
+                best_candidate = it;
+                closure = new_candidate;
+            }
         }
-    }
-    density_maps_.emplace(id, std::move(density_map));
-    ClosureCandidate closure;
-    if (best_candidate != descriptor_matches_.cend()) {
-        const int &reference_index = best_candidate->first;
-        const auto &[transform, number_of_inliers] = CheckForClosure(reference_index, id);
-        closure.source_index = reference_index;
-        closure.target_index = id;
-        closure.T = transform;
-        closure.number_of_inliers = number_of_inliers;
     }
     return closure;
 }
 
-std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddTopK(
-    const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k) {
-    density_maps_.emplace(map_idx, GenerateDensityMap(local_map, config_.density_map_resolution,
-                                                      config_.density_threshold));
-
-    cv::Mat orb_descriptors;
-    std::vector<cv::KeyPoint> orb_keypoints;
-    const auto &last_density_grid = density_maps_.at(map_idx).grid;
-    orb_extractor_->detectAndCompute(last_density_grid, cv::noArray(), orb_keypoints,
-                                     orb_descriptors);
-
-    auto hbst_matchable = Tree::getMatchables(orb_descriptors, orb_keypoints, map_idx);
-    hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
-                                   config_.hamming_distance_threshold,
-                                   srrg_hbst::SplittingStrategy::SplitEven);
-
-    const size_t clipped_top_k =
-        std::min(top_k, static_cast<unsigned int>(descriptor_matches_.size()));
-    std::vector<int> ref_mapclosure_indices(clipped_top_k);
-    if (clipped_top_k) {
-        using NumMatches = size_t;
-        using MapIdx = int;
-        std::multimap<NumMatches, MapIdx> num_matches_per_ref_map;
-        std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
-                      [&](const auto &matches) {
-                          num_matches_per_ref_map.emplace(matches.second.size(), matches.first);
-                      });
-
-        std::transform(num_matches_per_ref_map.crbegin(),
-                       std::next(num_matches_per_ref_map.crbegin(), clipped_top_k),
-                       ref_mapclosure_indices.begin(),
-                       [&](const auto &num_matches_kv) { return num_matches_kv.second; });
-    }
-    return {ref_mapclosure_indices, last_density_grid};
-}
-
-std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int query_idx) const {
+ClosureCandidate MapClosures::ValidateClosure(int ref_idx, int query_idx) const {
     const Tree::MatchVector &matches = descriptor_matches_.at(ref_idx);
-
     const size_t num_matches = matches.size();
-    std::vector<PointPair> keypoint_pairs;
-    keypoint_pairs.reserve(num_matches);
 
-    const auto &ref_map_lower_bound = density_maps_.at(ref_idx).lower_bound;
-    const auto &qry_map_lower_bound = density_maps_.at(query_idx).lower_bound;
-    std::for_each(matches.cbegin(), matches.cend(), [&](const Tree::Match &match) {
-        if (match.object_references.size() == 1) {
-            auto ref_match = match.object_references[0].pt;
-            auto qry_match = match.object_query.pt;
-            keypoint_pairs.emplace_back(Eigen::Vector2d(ref_match.y + ref_map_lower_bound.x(),
-                                                        ref_match.x + ref_map_lower_bound.y()),
-                                        Eigen::Vector2d(qry_match.y + qry_map_lower_bound.x(),
-                                                        qry_match.x + qry_map_lower_bound.y()));
-        }
-    });
-
-    int num_inliers = 0;
-    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
+    ClosureCandidate closure;
     if (num_matches > 2) {
+        const auto &ref_map_lower_bound = density_maps_.at(ref_idx).lower_bound;
+        const auto &qry_map_lower_bound = density_maps_.at(query_idx).lower_bound;
+        auto to_world_point = [](const auto &p, const auto &offset) {
+            return Eigen::Vector2d(p.y + offset.x(), p.x + offset.y());
+        };
+        std::vector<PointPair> keypoint_pairs(num_matches);
+        std::transform(
+            matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
+            [&](const Tree::Match &match) {
+                auto ref_point = to_world_point(match.object_references[0].pt, ref_map_lower_bound);
+                auto query_point = to_world_point(match.object_query.pt, qry_map_lower_bound);
+                return PointPair(ref_point, query_point);
+            });
+
         const auto &[T, inliers_count] = RansacAlignment2D(keypoint_pairs);
-        pose.block<2, 2>(0, 0) = T.linear();
-        pose.block<2, 1>(0, 3) = T.translation() * config_.density_map_resolution;
-        num_inliers = inliers_count;
+        closure.source_index = ref_idx;
+        closure.target_index = query_idx;
+        closure.T.block<2, 2>(0, 0) = T.linear();
+        closure.T.block<2, 1>(0, 3) = T.translation() * config_.density_map_resolution;
+        closure.number_of_inliers = inliers_count;
     }
-    return {pose, num_inliers};
+    return closure;
 }
 }  // namespace map_closures

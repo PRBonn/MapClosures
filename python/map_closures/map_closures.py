@@ -35,33 +35,9 @@ class MapClosures:
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
-    def match_and_add_local_map(self, map_idx: int, local_map: np.ndarray, top_k: int):
-        _local_map = map_closures_pybind._Vector3dVector(local_map)
-        ref_map_indices, density_map_img = self._pipeline._MatchAndAddLocalMap(
-            map_idx, _local_map, top_k
-        )
-        return np.asarray(ref_map_indices, np.int32), np.asarray(density_map_img, np.uint8)
-
     def match_and_add(self, map_idx, local_map):
         pcd = map_closures_pybind._Vector3dVector(local_map)
         return self._pipeline._MatchAndAdd(map_idx, pcd)
 
-    def add_local_map_and_compute_closure(self, map_idx: int, local_map: np.ndarray, top_k: int):
-        matches, _ = self.match_and_add_local_map(map_idx, local_map, top_k)
-        best_closure = {"source_idx": -1, "target_idx": -1, "inliers_count": 0, "pose": np.eye(3)}
-        max_inliers_count = 0
-        for ref_idx in matches:
-            if map_idx - ref_idx < 3:
-                continue
-            relative_tf_2d, inliers_count = self.check_for_closure(ref_idx, map_idx)
-            if inliers_count > max_inliers_count:
-                best_closure["source_idx"] = ref_idx
-                best_closure["target_idx"] = map_idx
-                best_closure["inliers_count"] = inliers_count
-                best_closure["pose"] = relative_tf_2d
-                max_inliers_count = inliers_count
-        return best_closure
-
-    def check_for_closure(self, ref_idx: int, query_idx: int) -> Tuple:
-        T_init, inliers_count = self._pipeline._CheckForClosure(ref_idx, query_idx)
-        return np.asarray(T_init), inliers_count
+    def check_for_closure(self, ref_idx: int, query_idx: int):
+        return self._pipeline._ValidateClosure(ref_idx, query_idx)

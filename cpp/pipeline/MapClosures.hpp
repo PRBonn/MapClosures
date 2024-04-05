@@ -61,10 +61,7 @@ public:
 
 public:
     ClosureCandidate MatchAndAdd(const int &map_id, const std::vector<Eigen::Vector3d> &local_map);
-
-    std::pair<std::vector<int>, cv::Mat> MatchAndAddTopK(
-        const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k);
-    std::pair<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx) const;
+    ClosureCandidate ValidateClosure(const int ref_idx, const int query_idx) const;
 
 private:
     Config config_;

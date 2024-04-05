@@ -70,18 +70,7 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                  return std::make_shared<MapClosures>(config);
              }),
              "config"_a)
-        .def(
-            "_MatchAndAddTopK",
-            [](MapClosures &self, const int map_idx, const std::vector<Eigen::Vector3d> &local_map,
-               const int top_k) {
-                const auto &[ref_map_indices, density_map_cv] =
-                    self.MatchAndAddTopK(map_idx, local_map, top_k);
-                Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> density_map_eigen;
-                cv::cv2eigen(density_map_cv, density_map_eigen);
-                return std::make_tuple(ref_map_indices, density_map_eigen);
-            },
-            "map_idx"_a, "local_map"_a, "top_k"_a)
-        .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_idx", "local_map")
-        .def("_CheckForClosure", &MapClosures::CheckForClosure, "ref_idx"_a, "query_idx"_a);
+        .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_idx"_a, "local_map"_a)
+        .def("_ValidateClosure", &MapClosures::ValidateClosure, "ref_idx"_a, "query_idx"_a);
 }
 }  // namespace map_closures
