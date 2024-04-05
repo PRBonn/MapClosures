@@ -23,6 +23,9 @@
 
 #include "MapClosures.hpp"
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_reduce.h>
+
 #include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
@@ -75,24 +78,22 @@ ClosureCandidate MapClosures::MatchAndAdd(const int &id,
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
     density_maps_.emplace(id, std::move(density_map));
-
-    auto best_candidate = descriptor_matches_.cend();
-    ClosureCandidate closure;
-    for (auto it = descriptor_matches_.cbegin(); it != descriptor_matches_.cend(); ++it) {
-        const bool is_distant_enough = std::abs(static_cast<int>(it->first) - id) > 3;
-        const bool has_candidate = best_candidate != descriptor_matches_.cend();
-        const bool has_more_matches =
-            has_candidate ? it->second.size() > best_candidate->second.size() : true;
-        if (has_more_matches && is_distant_enough) {
-            ClosureCandidate new_candidate = ValidateClosure(it->first, id);
-            const bool has_more_inliers =
-                new_candidate.number_of_inliers > closure.number_of_inliers;
-            if (has_more_inliers) {
-                best_candidate = it;
-                closure = new_candidate;
-            }
-        }
-    }
+    std::vector<int> indices(descriptor_matches_.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    auto compare_closure_candidates = [](ClosureCandidate a,
+                                         const ClosureCandidate &b) -> ClosureCandidate {
+        return a.number_of_inliers > b.number_of_inliers ? a : b;
+    };
+    using iterator_type = std::vector<int>::const_iterator;
+    const auto closure = tbb::parallel_reduce(
+        tbb::blocked_range<iterator_type>{indices.cbegin(), indices.cend()}, ClosureCandidate(),
+        [&](const tbb::blocked_range<iterator_type> &r,
+            ClosureCandidate candidate) -> ClosureCandidate {
+            return std::transform_reduce(
+                r.begin(), r.end(), candidate, compare_closure_candidates,
+                [&](const auto &ref_id) { return ValidateClosure(ref_id, id); });
+        },
+        compare_closure_candidates);
     return closure;
 }
 

@@ -25,6 +25,7 @@ cmake_minimum_required(VERSION 3.22)
 project(map_closures_cpp VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(OpenCV REQUIRED)
+find_package(TBB REQUIRED)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 
