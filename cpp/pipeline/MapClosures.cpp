@@ -64,7 +64,7 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
-ClosureCandidate MapClosures::MatchAndAdd(const int &id,
+ClosureCandidate MapClosures::MatchAndAdd(const int id,
                                           const std::vector<Eigen::Vector3d> &local_map) {
     DensityMap density_map =
         GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
