@@ -28,7 +28,7 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ### Dependencies
 - Essentials
     ```sh
-    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev python3-dev python-pip
+    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev python3-dev python3-pip
     ```
 - Eigen
     ```sh
