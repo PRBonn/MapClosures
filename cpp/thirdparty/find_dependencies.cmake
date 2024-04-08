@@ -27,4 +27,10 @@ else()
   include(${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake)
 endif()
 
+if(${USE_SYSTEM_TBB})
+  find_package(TBB QUIET NO_MODULE)
+else()
+  include(${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake)
+endif()
+
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)
