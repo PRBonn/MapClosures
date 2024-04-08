@@ -85,7 +85,7 @@ ClosureCandidate MapClosures::MatchAndAdd(const int &id,
         return a.number_of_inliers > b.number_of_inliers ? a : b;
     };
     using iterator_type = std::vector<int>::const_iterator;
-    const auto closure = tbb::parallel_reduce(
+    const auto &closure = tbb::parallel_reduce(
         tbb::blocked_range<iterator_type>{indices.cbegin(), indices.cend()}, ClosureCandidate(),
         [&](const tbb::blocked_range<iterator_type> &r,
             ClosureCandidate candidate) -> ClosureCandidate {
@@ -99,14 +99,14 @@ ClosureCandidate MapClosures::MatchAndAdd(const int &id,
     return closure;
 }
 
-ClosureCandidate MapClosures::ValidateClosure(int ref_idx, int query_idx) const {
-    const Tree::MatchVector &matches = descriptor_matches_.at(ref_idx);
+ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
+    const Tree::MatchVector &matches = descriptor_matches_.at(reference_id);
     const size_t num_matches = matches.size();
 
     ClosureCandidate closure;
     if (num_matches > 2) {
-        const auto &ref_map_lower_bound = density_maps_.at(ref_idx).lower_bound;
-        const auto &qry_map_lower_bound = density_maps_.at(query_idx).lower_bound;
+        const auto &ref_map_lower_bound = density_maps_.at(reference_id).lower_bound;
+        const auto &qry_map_lower_bound = density_maps_.at(query_id).lower_bound;
         auto to_world_point = [](const auto &p, const auto &offset) {
             return Eigen::Vector2d(p.y + offset.x(), p.x + offset.y());
         };
@@ -120,8 +120,8 @@ ClosureCandidate MapClosures::ValidateClosure(int ref_idx, int query_idx) const 
             });
 
         const auto &[T, inliers_count] = RansacAlignment2D(keypoint_pairs);
-        closure.source_index = ref_idx;
-        closure.target_index = query_idx;
+        closure.source_id = reference_id;
+        closure.target_id = query_id;
         closure.T.block<2, 2>(0, 0) = T.linear();
         closure.T.block<2, 1>(0, 3) = T.translation() * config_.density_map_resolution;
         closure.number_of_inliers = inliers_count;

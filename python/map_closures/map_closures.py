@@ -20,7 +20,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Tuple, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
 from pydantic_settings import BaseSettings
@@ -35,9 +35,12 @@ class MapClosures:
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
-    def match_and_add(self, map_idx, local_map):
+    def match_and_add(self, map_idx: int, local_map: np.ndarray) -> ClosureCandidate:
         pcd = map_closures_pybind._Vector3dVector(local_map)
         return self._pipeline._MatchAndAdd(map_idx, pcd)
 
-    def check_for_closure(self, ref_idx: int, query_idx: int):
+    def get_density_map_from_id(self, map_id: int) -> np.ndarray:
+        return self._pipeline._getDensityMapFromId(map_id)
+
+    def validate_closure(self, ref_idx: int, query_idx: int) -> ClosureCandidate:
         return self._pipeline._ValidateClosure(ref_idx, query_idx)

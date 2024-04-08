@@ -58,8 +58,8 @@ PYBIND11_MODULE(map_closures_pybind, m) {
 
     py::class_<ClosureCandidate> closure_candidate(m, "_ClosureCandidate");
     closure_candidate.def(py::init<>())
-        .def_readwrite("source_index", &ClosureCandidate::source_index)
-        .def_readwrite("target_index", &ClosureCandidate::target_index)
+        .def_readwrite("source_id", &ClosureCandidate::source_id)
+        .def_readwrite("target_id", &ClosureCandidate::target_id)
         .def_readwrite("pose", &ClosureCandidate::T)
         .def_readwrite("number_of_inliers", &ClosureCandidate::number_of_inliers);
 
@@ -70,7 +70,14 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                  return std::make_shared<MapClosures>(config);
              }),
              "config"_a)
-        .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_idx"_a, "local_map"_a)
-        .def("_ValidateClosure", &MapClosures::ValidateClosure, "ref_idx"_a, "query_idx"_a);
+        .def("_getDensityMapFromId",
+             [](MapClosures &self, const int &map_id) {
+                 const auto &density_map = self.getDensityMapFromId(map_id);
+                 Eigen::MatrixXf density_map_eigen;
+                 cv::cv2eigen(density_map.grid, density_map_eigen);
+                 return density_map_eigen;
+             })
+        .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_id"_a, "local_map"_a)
+        .def("_ValidateClosure", &MapClosures::ValidateClosure, "reference_id"_a, "query_id"_a);
 }
 }  // namespace map_closures
