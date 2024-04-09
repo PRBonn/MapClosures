@@ -49,7 +49,7 @@ struct Config {
 struct ClosureCandidate {
     int source_id = -1;
     int target_id = -1;
-    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     size_t number_of_inliers = 0;
 };
 

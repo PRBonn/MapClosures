@@ -119,12 +119,12 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
                 return PointPair(ref_point, query_point);
             });
 
-        const auto &[T, inliers_count] = RansacAlignment2D(keypoint_pairs);
+        const auto &[pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
         closure.source_id = reference_id;
         closure.target_id = query_id;
-        closure.T.block<2, 2>(0, 0) = T.linear();
-        closure.T.block<2, 1>(0, 3) = T.translation() * config_.density_map_resolution;
-        closure.number_of_inliers = inliers_count;
+        closure.pose.block<2, 2>(0, 0) = pose2d.linear();
+        closure.pose.block<2, 1>(0, 3) = pose2d.translation() * config_.density_map_resolution;
+        closure.number_of_inliers = number_of_inliers;
     }
     return closure;
 }

@@ -60,7 +60,7 @@ PYBIND11_MODULE(map_closures_pybind, m) {
     closure_candidate.def(py::init<>())
         .def_readwrite("source_id", &ClosureCandidate::source_id)
         .def_readwrite("target_id", &ClosureCandidate::target_id)
-        .def_readwrite("pose", &ClosureCandidate::T)
+        .def_readwrite("pose", &ClosureCandidate::pose)
         .def_readwrite("number_of_inliers", &ClosureCandidate::number_of_inliers);
 
     py::class_<MapClosures, std::shared_ptr<MapClosures>> map_closures(m, "_MapClosures", "");
