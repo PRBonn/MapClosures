@@ -91,7 +91,7 @@ ClosureCandidate MapClosures::MatchAndAdd(const int id,
             ClosureCandidate candidate) -> ClosureCandidate {
             return std::transform_reduce(
                 r.begin(), r.end(), candidate, compare_closure_candidates, [&](const auto &ref_id) {
-                    const int is_far_enough = std::abs(static_cast<int>(ref_id) - id) > 3;
+                    const bool is_far_enough = std::abs(static_cast<int>(ref_id) - id) > 3;
                     return is_far_enough ? ValidateClosure(ref_id, id) : ClosureCandidate();
                 });
         },
