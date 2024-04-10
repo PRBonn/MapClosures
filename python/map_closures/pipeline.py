@@ -112,7 +112,6 @@ class MapClosurePipeline:
         self._save_config()
         self._log_to_file()
         self._log_to_console()
-        self._write_data_to_disk()
 
         return self.results
 

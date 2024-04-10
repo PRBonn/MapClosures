@@ -29,11 +29,11 @@ import numpy as np
 class KITTIOdometryDataset:
     def __init__(self, data_dir, sequence: int, *_, **__):
         self.sequence_id = str(int(sequence)).zfill(2)
-        self.kitti_sequence_dir = os.path.join(data_dir, "sequences", self.sequence_id)
-        self.velodyne_dir = os.path.join(self.kitti_sequence_dir, "velodyne/")
+        self.sequence_dir = os.path.join(data_dir, "sequences", self.sequence_id)
+        self.velodyne_dir = os.path.join(self.sequence_dir, "velodyne/")
 
         self.scan_files = sorted(glob.glob(self.velodyne_dir + "*.bin"))
-        self.calibration = self.read_calib_file(os.path.join(self.kitti_sequence_dir, "calib.txt"))
+        self.calibration = self.read_calib_file(os.path.join(self.sequence_dir, "calib.txt"))
 
         # Load GT Poses (if available)
         if sequence < 11:
@@ -86,7 +86,7 @@ class KITTIOdometryDataset:
         return _lidar_pose_gt(poses)
 
     def get_frames_timestamps(self) -> np.ndarray:
-        timestamps = np.loadtxt(os.path.join(self.kitti_sequence_dir, "times.txt")).reshape(-1, 1)
+        timestamps = np.loadtxt(os.path.join(self.sequence_dir, "times.txt")).reshape(-1, 1)
         return timestamps
 
     @staticmethod
