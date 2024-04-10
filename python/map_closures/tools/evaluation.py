@@ -172,5 +172,4 @@ class EvaluationPipeline:
             console.print(config)
 
     def log_to_file_closures(self, filename):
-        with open(filename, "wt") as logfile:
-            np.save(logfile, self.predicted_closures)
+        np.save(filename, self.predicted_closures)

@@ -35,7 +35,7 @@ class MapClosuresConfig(BaseModel):
     density_threshold: float = 0.05
     hamming_distance_threshold: int = 50
     inliers_threshold: int = 10
-    local_map_factor: float = 0.6
+    local_map_factor: float = 1.0
 
 
 def load_config(config_file: Optional[Path]) -> MapClosuresConfig:
