@@ -124,7 +124,7 @@ class EvaluationPipeline:
     def compute_closures_and_metrics(
         self,
     ):
-        for inliers_threshold in range(10, 15):
+        for inliers_threshold in range(5, 15):
             closures = set()
             for closure_indices, inliers_count in zip(
                 self.closure_indices_list, self.inliers_count_list
