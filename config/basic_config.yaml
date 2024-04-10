@@ -1,5 +1,5 @@
 density_map_resolution: 0.5
 density_threshold: 0.05
 hamming_distance_threshold: 50
-inliers_threshold: 10
-local_map_factor: 0.6             # Local Map size as a multiple of the maximum range of the LiDAR
+inliers_threshold: 5
+local_map_factor: 1.0             # Local Map size as a multiple of the maximum range of the LiDAR
