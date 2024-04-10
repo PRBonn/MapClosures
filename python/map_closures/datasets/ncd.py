@@ -40,7 +40,8 @@ class NewerCollegeDataset:
         self.scan_folder = os.path.join(self.data_source, "raw_format/ouster_scan")
         self.pose_file = os.path.join(self.data_source, "ground_truth/registered_poses.csv")
         self.sequence_id = os.path.basename(data_dir)
-
+        self.sequence_dir = os.path.realpath(data_dir)
+        
         # Load scan files and poses
         self.scan_files = self.get_pcd_filenames(self.scan_folder)
         self.gt_poses = self.load_gt_poses(self.pose_file)
