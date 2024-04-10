@@ -92,7 +92,7 @@ docstring = f"""
 Effectively Detecting Loop Closures using Point Cloud Density Maps\n
 \b
 Examples:\n
-# Use a specific dataloader: apollo, kitti, mulran, ncd
+# Use a specific dataloader: apollo, kitti, mulran, ncd, helipr
 $ map_closure_pipeline --dataloader mulran --config <path-to-config-file> <path-to-mulran-sequence-root> <path-to-store-results>
 """
 
@@ -133,7 +133,7 @@ def map_closure_pipeline(
         help="[Optional] Run loop closure evaluation",
     ),
     # Aditional Options ---------------------------------------------------------------------------
-    sequence: Optional[int] = typer.Option(
+    sequence: Optional[str] = typer.Option(
         None,
         "--sequence",
         "-s",
