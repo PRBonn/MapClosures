@@ -40,7 +40,7 @@ class RosbagDataset:
         try:
             from rosbags.highlevel import AnyReader
         except ModuleNotFoundError:
-            print('rosbags library not installed, run "pip install -U rosbags"')
+            print('[ERROR] rosbags library not installed, run "pip install -U rosbags"')
             sys.exit(1)
 
         from kiss_icp.tools.point_cloud2 import read_point_cloud
@@ -54,7 +54,7 @@ class RosbagDataset:
         else:
             self.sequence_id = os.path.basename(data_dir[0]).split(".")[0]
             self.bag = AnyReader(data_dir)
-            print("Reading multiple .bag files in directory:")
+            print("[INFO] Reading multiple .bag files in directory:")
             print("\n".join(natsort.natsorted([path.name for path in self.bag.paths])))
         self.bag.open()
         self.topic = self.check_topic(topic)
@@ -114,7 +114,7 @@ class RosbagDataset:
             print_available_topics_and_exit()
         if len(point_cloud_topics) > 1:
             print(
-                "Multiple sensor_msgs/msg/PointCloud2 topics available."
+                "[ERROR] Multiple sensor_msgs/msg/PointCloud2 topics available."
                 "Please select one of the following topics with the --topic flag"
             )
             print_available_topics_and_exit()

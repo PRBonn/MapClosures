@@ -102,7 +102,9 @@ class MapClosurePipeline:
             self._eval = False
             self.results = None
             if not hasattr(self._dataset, "gt_poses"):
-                print("Cannot compute ground truth closures, no ground truth poses available\n")
+                print(
+                    "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
+                )
 
     def run(self):
         self._run_pipeline()

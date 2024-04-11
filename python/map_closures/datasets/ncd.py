@@ -23,6 +23,7 @@
 import importlib
 import os
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -34,7 +35,8 @@ class NewerCollegeDataset:
         try:
             self.PyntCloud = importlib.import_module("pyntcloud").PyntCloud
         except ModuleNotFoundError:
-            print(f'Newer College requires pnytccloud: "pip install pyntcloud"')
+            print(f'[ERROR] Newer College requires pnytccloud: "pip install pyntcloud"')
+            sys.exit(1)
 
         self.data_source = os.path.join(data_dir, "")
         self.scan_folder = os.path.join(self.data_source, "raw_format/ouster_scan")

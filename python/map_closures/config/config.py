@@ -48,7 +48,7 @@ def load_config(config_file: Optional[Path]) -> MapClosuresConfig:
             yaml = importlib.import_module("yaml")
         except ModuleNotFoundError:
             print(
-                "Custom configuration file specified but PyYAML is not installed on your system,"
+                "[ERROR] Custom configuration file specified but PyYAML is not installed on your system,"
                 " run `pip install pyyaml`"
             )
             sys.exit(1)

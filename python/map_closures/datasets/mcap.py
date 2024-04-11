@@ -32,7 +32,7 @@ class McapDataloader:
             from mcap.reader import make_reader
             from mcap_ros2.reader import read_ros2_messages
         except ImportError as e:
-            print("mcap plugins not installed: 'pip install mcap-ros2-support'")
+            print("[ERROR] mcap plugins not installed: 'pip install mcap-ros2-support'")
             exit(1)
 
         from kiss_icp.tools.point_cloud2 import read_point_cloud
@@ -100,7 +100,7 @@ class McapDataloader:
             print_available_topics_and_exit()
         if len(point_cloud_topics) > 1:
             print(
-                "Multiple sensor_msgs/msg/PointCloud2 topics available."
+                "[ERROR] Multiple sensor_msgs/msg/PointCloud2 topics available."
                 "Please select one of the following topics with the --topic flag"
             )
             print_available_topics_and_exit()

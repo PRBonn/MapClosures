@@ -71,7 +71,7 @@ def version_callback(value: bool):
 
         import map_closures
 
-        print(f"MapClosures Version: {map_closures.__version__}")
+        print(f"[INFO] MapClosures Version: {map_closures.__version__}")
         raise typer.Exit(0)
 
 
@@ -174,12 +174,14 @@ def map_closure_pipeline(
         dataloader, data = guess_dataloader(data, default_dataloader="generic")
 
     if dataloader in sequence_dataloaders() and sequence is None:
-        print('You must specify a sequence "--sequence"')
+        print('[ERROR] You must specify a sequence "--sequence"')
         raise typer.Exit(code=1)
 
     if eval is True and dataloader not in eval_dataloaders():
-        print("Cannot run evaluation pipeline for this dataloader, no groundtruth poses available")
-        print("Turning off eval mode!!")
+        print(
+            "[WARNING] Cannot run evaluation pipeline for this dataloader, no groundtruth poses available"
+        )
+        print("[WARNING] Turning off eval mode!!")
         eval = False
 
     from map_closures.datasets import dataset_factory
