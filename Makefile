@@ -11,5 +11,5 @@ editable:
 	@pip install --no-build-isolation -ve ./python/
 
 cpp:
-	@cmake -Bbuild cpp/
+	@cmake -Bbuild cpp/map_closures
 	@cmake --build build -j$(nproc --all)
