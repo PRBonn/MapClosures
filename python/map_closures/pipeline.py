@@ -34,7 +34,7 @@ from tqdm.auto import trange
 
 from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
-from map_closures.tools.local_maps import LocalMap
+from map_closures.tools.evaluation import LocalMap
 
 
 def transform_points(pcd, T):
