@@ -28,8 +28,19 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
-from map_closures.tools.local_maps import LocalMap
 
+class LocalMap:
+    def __init__(
+        self,
+        pointcloud: np.ndarray,
+        density_map: np.ndarray,
+        scan_indices: np.ndarray,
+        scan_poses: np.ndarray,
+    ):
+        self.pointcloud = pointcloud
+        self.density_map = density_map
+        self.scan_indices = scan_indices
+        self.scan_poses = scan_poses
 
 def compute_closure_indices(
     ref_indices: np.ndarray,

@@ -27,7 +27,7 @@ from typing import Optional
 
 import typer
 
-from map_closures.datasets import available_dataloaders, sequence_dataloaders
+from map_closures.datasets import available_dataloaders, sequence_dataloaders, eval_dataloaders
 
 
 def guess_dataloader(data: Path, default_dataloader: str):
@@ -110,7 +110,7 @@ def map_closure_pipeline(
         case_sensitive=False,
         autocompletion=available_dataloaders,
         callback=name_callback,
-        help="[Optional] Use a specific dataloader from those supported by KISS-ICP",
+        help="[Optional] Use a specific dataloader from those supported by MapClosures",
     ),
     results_dir: Path = typer.Argument(
         ...,
@@ -172,6 +172,11 @@ def map_closure_pipeline(
     if dataloader in sequence_dataloaders() and sequence is None:
         print('You must specify a sequence "--sequence"')
         raise typer.Exit(code=1)
+
+    if  eval is True and dataloader not in eval_dataloaders():
+        print('Cannot run evaluation pipeline for this dataloader, no groundtruth poses available')
+        print('Turning off eval mode!!')
+        eval = False
 
     from map_closures.datasets import dataset_factory
     from map_closures.pipeline import MapClosurePipeline

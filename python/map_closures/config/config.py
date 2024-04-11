@@ -25,7 +25,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 

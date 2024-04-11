@@ -26,7 +26,6 @@ import struct
 import sys
 from pathlib import Path
 
-from pyquaternion import Quaternion
 import numpy as np
 
 from lidar_visualizer.datasets import supported_file_extensions
@@ -99,6 +98,8 @@ class HeLiPRDataset:
         return points.astype(np.float64)
 
     def load_poses(self, poses_file):
+        from pyquaternion import Quaternion
+
         poses = np.loadtxt(poses_file, delimiter=" ")
         n = poses.shape[0]
 

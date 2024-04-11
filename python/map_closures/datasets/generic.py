@@ -26,7 +26,7 @@ from pathlib import Path
 
 import natsort
 import numpy as np
-from kiss_icp.datasets import supported_file_extensions
+from map_closures.datasets import supported_file_extensions
 
 
 class GenericDataset:
@@ -76,7 +76,6 @@ class GenericDataset:
             print("[WARNING] Reading .bin files, the only format supported is the KITTI format")
             return lambda file: np.fromfile(file, dtype=np.float32).reshape((-1, 4))[:, :3]
 
-        print('Trying to guess how to read your data: `pip install "kiss-icp[all]"` is required')
         first_scan_file = self.scan_files[0]
 
         # first try trimesh

@@ -28,7 +28,6 @@ from pathlib import Path
 
 import natsort
 import numpy as np
-from pyquaternion import Quaternion
 
 
 class ApolloDataset:
@@ -58,6 +57,8 @@ class ApolloDataset:
 
     @staticmethod
     def read_poses(file):
+        from pyquaternion import Quaternion
+
         data = np.loadtxt(file)
         _, _, translations, qxyzw = np.split(data, [1, 2, 5], axis=1)
         rotations = np.array(

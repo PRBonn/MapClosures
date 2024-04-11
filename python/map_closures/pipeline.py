@@ -80,7 +80,7 @@ class MapClosurePipeline:
 
         self.closures = []
 
-        if hasattr(self._dataset, "gt_poses") and self._eval:
+        if self._eval and hasattr(self._dataset, "gt_poses"):
             from map_closures.tools.evaluation import EvaluationPipeline
             from map_closures.tools.gt_closures import get_gt_closures
 

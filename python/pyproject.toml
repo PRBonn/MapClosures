@@ -7,12 +7,13 @@ name = "map_closures"
 version = "0.1.0"
 description = "Effectively Detecting Loop Closures using Point Cloud Density Maps"
 readme = "README.md"
-authors = [{ name = "Saurabh Gupta", email = "saurabh.gupta1002@gmail.com" }]
+authors = [{ name = "Saurabh Gupta" }, { name = "Tiziano Guadagnino" }]
 requires-python = ">=3.7"
 keywords = ["Loop Closures", "Localization", "SLAM", "LiDAR"]
 dependencies = [
     "kiss-icp",
     "numpy",
+    "pyquaternion",
     "pydantic>=2",
     "pydantic-settings",
     "tqdm",
@@ -51,4 +52,4 @@ max-line-length = "100"
 
 [tool.cibuildwheel]
 archs = ["auto64"]
-skip = ["*-musllinux*",  "pp*", "cp36-*"]
+skip = ["*-musllinux*", "pp*", "cp36-*"]
