@@ -25,7 +25,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -48,7 +48,7 @@ def load_config(config_file: Optional[Path]) -> MapClosuresConfig:
             yaml = importlib.import_module("yaml")
         except ModuleNotFoundError:
             print(
-                "Custom configuration file specified but PyYAML is not installed on your system,"
+                "[ERROR] Custom configuration file specified but PyYAML is not installed on your system,"
                 " run `pip install pyyaml`"
             )
             sys.exit(1)

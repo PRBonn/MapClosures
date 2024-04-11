@@ -34,8 +34,8 @@
 #include <utility>
 #include <vector>
 
-#include "core/AlignRansac2D.hpp"
-#include "core/DensityMap.hpp"
+#include "AlignRansac2D.hpp"
+#include "DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
 namespace {

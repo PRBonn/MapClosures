@@ -28,7 +28,6 @@ from pathlib import Path
 
 import natsort
 import numpy as np
-from pyquaternion import Quaternion
 
 
 class ApolloDataset:
@@ -37,7 +36,7 @@ class ApolloDataset:
             self.o3d = importlib.import_module("open3d")
         except ModuleNotFoundError:
             print(
-                'pcd files requires open3d and is not installed on your system run "pip install open3d"'
+                '[ERROR] This dataloader requires open3d but is not installed on your system run "pip install open3d"'
             )
             sys.exit(1)
 
@@ -58,6 +57,8 @@ class ApolloDataset:
 
     @staticmethod
     def read_poses(file):
+        from pyquaternion import Quaternion
+
         data = np.loadtxt(file)
         _, _, translations, qxyzw = np.split(data, [1, 2, 5], axis=1)
         rotations = np.array(

@@ -24,9 +24,25 @@ from pathlib import Path
 from typing import Dict, List
 
 
+def supported_file_extensions():
+    return [
+        "bin",
+        "pcd",
+        "ply",
+        "xyz",
+        "obj",
+        "ctm",
+        "off",
+        "stl",
+    ]
+
+
 def sequence_dataloaders():
-    # TODO: automatically infer this
-    return ["kitti"]
+    return ["kitti", "helipr"]
+
+
+def eval_dataloaders():
+    return ["kitti", "helipr", "mulran", "ncd"]
 
 
 def available_dataloaders() -> List:

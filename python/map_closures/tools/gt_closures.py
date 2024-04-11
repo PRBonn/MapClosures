@@ -89,7 +89,7 @@ def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
         closures = np.loadtxt(file_path_closures, dtype=int)
         overlaps = np.loadtxt(file_path_overlaps)
         assert len(closures) == len(overlaps)
-        print(f"Found closure ground truth at {file_path_closures}")
+        print(f"[INFO] Found closure ground truth at {file_path_closures}")
 
     else:
         min_overlap = 0.1

@@ -21,5 +21,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 pybind11_add_module(map_closures_pybind MODULE map_closures_pybind.cpp)
-target_link_libraries(map_closures_pybind PUBLIC map_closures::pipeline)
+target_link_libraries(map_closures_pybind PUBLIC map_closures)
 install(TARGETS map_closures_pybind DESTINATION .)

@@ -34,7 +34,7 @@ from tqdm.auto import trange
 
 from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
-from map_closures.tools.local_maps import LocalMap
+from map_closures.tools.evaluation import LocalMap
 
 
 def transform_points(pcd, T):
@@ -80,7 +80,7 @@ class MapClosurePipeline:
 
         self.closures = []
 
-        if hasattr(self._dataset, "gt_poses") and self._eval:
+        if self._eval and hasattr(self._dataset, "gt_poses"):
             from map_closures.tools.evaluation import EvaluationPipeline
             from map_closures.tools.gt_closures import get_gt_closures
 
@@ -102,7 +102,9 @@ class MapClosurePipeline:
             self._eval = False
             self.results = None
             if not hasattr(self._dataset, "gt_poses"):
-                print("Cannot compute ground truth closures, no ground truth poses available\n")
+                print(
+                    "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
+                )
 
     def run(self):
         self._run_pipeline()

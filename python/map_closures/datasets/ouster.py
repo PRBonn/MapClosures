@@ -86,7 +86,9 @@ class OusterDataloader:
             import ouster.pcap as pcap
             from ouster import client
         except ImportError:
-            print(f'ouster-sdk is not installed on your system, run "pip install ouster-sdk"')
+            print(
+                f'[ERROR] ouster-sdk is not installed on your system, run "pip install ouster-sdk"'
+            )
             exit(1)
 
         # since we import ouster-sdk's client module locally, we keep it locally as well
@@ -99,9 +101,9 @@ class OusterDataloader:
 
         metadata_json = meta or find_metadata_json(pcap_file)
         if not metadata_json:
-            print("Ouster pcap dataloader can't find metadata json file.")
+            print("[ERROR] Ouster pcap dataloader can't find metadata json file.")
             exit(1)
-        print("Ouster pcap dataloader: using metadata json: ", metadata_json)
+        print("[INFO] Ouster pcap dataloader: using metadata json: ", metadata_json)
 
         self.data_dir = os.path.dirname(data_dir)
 
@@ -115,10 +117,10 @@ class OusterDataloader:
         self._pcap_file = str(data_dir)
 
         # read pcap file for the first pass to count scans
-        print("Pre-reading Ouster pcap to count the scans number ...")
+        print("[INFO] Pre-reading Ouster pcap to count the scans number ...")
         self._source = pcap.Pcap(self._pcap_file, self._info)
         self._scans_num = sum((1 for _ in client.Scans(self._source)))
-        print(f"Ouster pcap total scans number:  {self._scans_num}")
+        print(f"[INFO] Ouster pcap total scans number:  {self._scans_num}")
 
         # frame timestamps array
         self._timestamps = np.linspace(0, self._scans_num, self._scans_num, endpoint=False)
