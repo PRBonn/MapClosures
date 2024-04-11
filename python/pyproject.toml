@@ -22,7 +22,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-all = ["open3d>0.13", "PyYAML"]
+all = [
+    "open3d>0.13",
+    "PyYAML",
+    "mcap-ros2-support",
+    "rosbags",
+    "trimesh",
+    "ouster-sdk",
+    "pyntcloud",
+]
 visualizer = ["open3d>=0.13"]
 
 [project.scripts]

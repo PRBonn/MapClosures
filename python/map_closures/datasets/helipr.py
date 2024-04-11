@@ -27,7 +27,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from lidar_visualizer.datasets import supported_file_extensions
 
 
 class HeLiPRDataset:
@@ -42,9 +41,6 @@ class HeLiPRDataset:
 
         if len(self.scan_files) == 0:
             raise ValueError(f"Tried to read point cloud files in {data_dir} but none found")
-        self.file_extension = self.scan_files[0].split(".")[-1]
-        if self.file_extension not in supported_file_extensions():
-            raise ValueError(f"Supported formats are: {supported_file_extensions()}")
 
         # Obtain the pointcloud reader for the given data folder
         if self.sequence_id == "Avia":
@@ -62,7 +58,7 @@ class HeLiPRDataset:
             self.intensity_channel = 3
         else:
             print("[ERROR] Unsupported LiDAR Type")
-            sys.exit()
+            sys.exit(1)
 
     def __len__(self):
         return len(self.scan_files)
