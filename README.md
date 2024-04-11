@@ -79,7 +79,7 @@ As we decide to continue the development of **MapClosures** behond the scope the
 ```sh
 git checkout ICRA2024
 ```
-The goal of our development is to push the performances of **MapClosures** above the origianl results from the paper.
+The goal of our development is to push the performances of **MapClosures** above the origial results of the paper.
 
 ## Acknowledgement
 
