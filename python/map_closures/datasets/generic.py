@@ -26,6 +26,7 @@ from pathlib import Path
 
 import natsort
 import numpy as np
+
 from map_closures.datasets import supported_file_extensions
 
 

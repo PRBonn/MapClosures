@@ -20,14 +20,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import os
 import glob
+import os
 import struct
 import sys
 from pathlib import Path
 
 import numpy as np
-
 from lidar_visualizer.datasets import supported_file_extensions
 
 

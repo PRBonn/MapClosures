@@ -42,6 +42,7 @@ class LocalMap:
         self.scan_indices = scan_indices
         self.scan_poses = scan_poses
 
+
 def compute_closure_indices(
     ref_indices: np.ndarray,
     query_indices: np.ndarray,
