@@ -74,6 +74,12 @@ If you use this library for any academic work, please cite our original [paper](
     codeurl    = {https://github.com/PRBonn/MapClosures},
 }
 ```
+### Paper Results
+As we decide to continue the development of **MapClosures** behond the scope the ICRA paper, we created a ``git tag`` so that researchers can always reproduce the results of the publication. To checkout at this tag you can run:
+```sh
+git checkout ICRA2024
+```
+The goal of our development is to push the performances of **MapClosures** above the origianl results from the paper.
 
 ## Acknowledgement
 
