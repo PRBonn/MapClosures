@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-#include "core/DensityMap.hpp"
+#include "DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
 static constexpr int descriptor_size_bits = 256;
