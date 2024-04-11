@@ -139,9 +139,7 @@ class MapClosurePipeline:
                 scan_idx == self._n_scans - 1
             ):
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
-                matched_map_indices, density_map = self.map_closures.match_and_add_local_map(
-                    map_idx, local_map_pointcloud, map_idx // 2
-                )
+                closure = self.map_closures.match_and_add(map_idx, local_map_pointcloud)
 
                 scan_indices_in_local_map.append(scan_idx)
                 poses_in_local_map.append(current_frame_pose)
@@ -149,35 +147,30 @@ class MapClosurePipeline:
                 self.local_maps.append(
                     LocalMap(
                         local_map_pointcloud,
-                        density_map,
+                        self.map_closures.get_density_map_from_id(map_idx),
                         np.copy(scan_indices_in_local_map),
                         np.copy(poses_in_local_map),
                     )
                 )
 
-                for ref_idx in matched_map_indices:
-                    if map_idx - ref_idx >= 3:
-                        relative_pose, inliers_count = self.map_closures.check_for_closure(
-                            ref_idx, map_idx
+                if closure.number_of_inliers > self.closure_config.inliers_threshold:
+                    self.closures.append(
+                        np.r_[
+                            closure.source_id,
+                            map_idx,
+                            self.local_maps[closure.source_id].scan_indices[0],
+                            self.local_maps[map_idx].scan_indices[0],
+                            closure.pose.flatten(),
+                        ]
+                    )
+                    if self._eval:
+                        self.results.append(
+                            self.local_maps[closure.source_id],
+                            self.local_maps[map_idx],
+                            closure.pose,
+                            self.closure_distance_threshold,
+                            closure.number_of_inliers,
                         )
-                        if inliers_count > self.closure_config.inliers_threshold:
-                            self.closures.append(
-                                np.r_[
-                                    ref_idx,
-                                    map_idx,
-                                    self.local_maps[ref_idx].scan_indices[0],
-                                    self.local_maps[map_idx].scan_indices[0],
-                                    relative_pose.flatten(),
-                                ]
-                            )
-                            if self._eval:
-                                self.results.append(
-                                    self.local_maps[ref_idx],
-                                    self.local_maps[map_idx],
-                                    relative_pose,
-                                    self.closure_distance_threshold,
-                                    inliers_count,
-                                )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 pts_to_keep = self.voxel_local_map.point_cloud()

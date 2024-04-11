@@ -20,11 +20,21 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+if(CMAKE_VERSION VERSION_GREATER 3.24)
+  cmake_policy(SET CMP0135 OLD)
+endif()
 
 if(${USE_SYSTEM_EIGEN3})
   find_package(Eigen3 QUIET NO_MODULE)
 else()
   include(${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake)
+endif()
+
+if(${USE_SYSTEM_TBB})
+  find_package(TBB QUIET NO_MODULE)
+endif()
+if(NOT TARGET TBB::tbb)
+  include(${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)

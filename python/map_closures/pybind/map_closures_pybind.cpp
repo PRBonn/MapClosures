@@ -53,8 +53,15 @@ Config GetConfigFromYAML(const py::dict &yaml_cfg) {
 
 PYBIND11_MODULE(map_closures_pybind, m) {
     auto vector3dvector = pybind_eigen_vector_of_vector<Eigen::Vector3d>(
-        m, "_VectorEigen3d", "std::vector<Eigen::Vector3d>",
+        m, "_Vector3dVector", "std::vector<Eigen::Vector3d>",
         py::py_array_to_vectors_double<Eigen::Vector3d>);
+
+    py::class_<ClosureCandidate> closure_candidate(m, "_ClosureCandidate");
+    closure_candidate.def(py::init<>())
+        .def_readwrite("source_id", &ClosureCandidate::source_id)
+        .def_readwrite("target_id", &ClosureCandidate::target_id)
+        .def_readwrite("pose", &ClosureCandidate::pose)
+        .def_readwrite("number_of_inliers", &ClosureCandidate::number_of_inliers);
 
     py::class_<MapClosures, std::shared_ptr<MapClosures>> map_closures(m, "_MapClosures", "");
     map_closures
@@ -63,17 +70,14 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                  return std::make_shared<MapClosures>(config);
              }),
              "config"_a)
-        .def(
-            "_MatchAndAddLocalMap",
-            [](MapClosures &self, const int map_idx, const std::vector<Eigen::Vector3d> &local_map,
-               const int top_k) {
-                const auto &[ref_map_indices, density_map_cv] =
-                    self.MatchAndAddLocalMap(map_idx, local_map, top_k);
-                Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> density_map_eigen;
-                cv::cv2eigen(density_map_cv, density_map_eigen);
-                return std::make_tuple(ref_map_indices, density_map_eigen);
-            },
-            "map_idx"_a, "local_map"_a, "top_k"_a)
-        .def("_CheckForClosure", &MapClosures::CheckForClosure, "ref_idx"_a, "query_idx"_a);
+        .def("_getDensityMapFromId",
+             [](MapClosures &self, const int &map_id) {
+                 const auto &density_map = self.getDensityMapFromId(map_id);
+                 Eigen::MatrixXf density_map_eigen;
+                 cv::cv2eigen(density_map.grid, density_map_eigen);
+                 return density_map_eigen;
+             })
+        .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_id"_a, "local_map"_a)
+        .def("_ValidateClosure", &MapClosures::ValidateClosure, "reference_id"_a, "query_id"_a);
 }
 }  // namespace map_closures

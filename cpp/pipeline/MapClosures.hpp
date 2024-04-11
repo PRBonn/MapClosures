@@ -46,16 +46,25 @@ struct Config {
     int hamming_distance_threshold = 50;
 };
 
+struct ClosureCandidate {
+    int source_id = -1;
+    int target_id = -1;
+    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
+    size_t number_of_inliers = 0;
+};
+
 class MapClosures {
 public:
     explicit MapClosures();
     explicit MapClosures(const Config &config);
     ~MapClosures() = default;
 
-public:
-    std::pair<std::vector<int>, cv::Mat> MatchAndAddLocalMap(
-        const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k);
-    std::pair<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx) const;
+    ClosureCandidate MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
+    ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
+
+    const DensityMap &getDensityMapFromId(const int &map_id) const {
+        return density_maps_.at(map_id);
+    }
 
 private:
     Config config_;
