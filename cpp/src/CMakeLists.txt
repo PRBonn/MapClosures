@@ -21,8 +21,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-add_library(core STATIC)
-add_library(map_closures::core ALIAS core)
-target_sources(core PRIVATE DensityMap.cpp AlignRansac2D.cpp)
-target_link_libraries(core PUBLIC Eigen3::Eigen ${OpenCV_LIBS})
-set_global_target_properties(core)
+add_library(map_closures STATIC)
+target_sources(map_closures PRIVATE DensityMap.cpp AlignRansac2D.cpp MapClosures.cpp)
+target_include_directories(map_closures PUBLIC ${hbst_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(map_closures PUBLIC Eigen3::Eigen TBB::tbb ${OpenCV_LIBS})
+target_compile_features(map_closures PUBLIC cxx_std_17)
