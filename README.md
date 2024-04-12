@@ -75,11 +75,11 @@ If you use this library for any academic work, please cite our original [paper](
 }
 ```
 ### Paper Results
-As we decide to continue the development of **MapClosures** behond the scope the ICRA paper, we created a ``git tag`` so that researchers can always reproduce the results of the publication. To checkout at this tag you can run:
+As we decided to continue the development of **MapClosures** beyond the scope of the ICRA paper, we created a ``git tag`` so that researchers can consistently reproduce the results of the publication. To checkout at this tag, you can run the following:
 ```sh
 git checkout ICRA2024
 ```
-The goal of our development is to push the performances of **MapClosures** above the origial results of the paper.
+Our development aims to push the performances of **MapClosures** above the original results of the paper.
 
 ## Acknowledgement
 
