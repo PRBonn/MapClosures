@@ -29,10 +29,8 @@ set(BUILD_opencv_video OFF CACHE BOOL "Build OpenCV video module")
 set(BUILD_opencv_videoio OFF CACHE BOOL "Build OpenCV video IO module")
 
 include(FetchContent)
-FetchContent_Declare(opencv URL https://github.com/opencv/opencv/archive/refs/tags/4.9.0.tar.gz
-)# downloading the zip is faster than cloning a repo
-# GIT_REPOSITORY https://github.com/opencv/opencv.git GIT_TAG 4.x GIT_SHALLOW
-# TRUE GIT_PROGRESS TRUE)
+FetchContent_Declare(opencv GIT_REPOSITORY https://github.com/opencv/opencv.git GIT_TAG 4.x
+                     GIT_SHALLOW TRUE GIT_PROGRESS TRUE)
 FetchContent_MakeAvailable(opencv)
 # OpenCV_INCLUDE_DIRS is set by OpenCVConfig.cmake and is unavailable after simply building
 set(OpenCV_INCLUDE_DIRS "${opencv_SOURCE_DIR}/include")
