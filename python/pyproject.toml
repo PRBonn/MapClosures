@@ -19,6 +19,7 @@ dependencies = [
     "tqdm",
     "typer[all]>=0.6.0",
     "rich",
+    "typing_extensions",
 ]
 
 [project.optional-dependencies]
