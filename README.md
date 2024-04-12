@@ -34,12 +34,7 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
     ```sh
     sudo apt-get install libeigen3-dev
     ```
-- OpenCV
-    ```sh
-    git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x
-    cd opencv && mkdir build && cd build
-    cmake .. && make -j$(nproc --all) && make install
-    ```
+- If OpenCV is installed on your system, it is used during the build. Otherwise, the necessary OpenCV modules are built alongside MapClosures.
 ### MapClosures
 ```sh
 git clone https://github.com/PRBonn/MapClosures.git
