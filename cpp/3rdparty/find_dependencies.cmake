@@ -37,4 +37,19 @@ if(NOT TARGET TBB::tbb)
   include(${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake)
 endif()
 
+if(${USE_SYSTEM_OPENCV})
+  find_package(OpenCV QUIET NO_MODULE)
+endif()
+if(NOT TARGET opencv_features2d)
+  include(${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake)
+endif()
+# Taken from an issue in the OpenCV project (https://github.com/opencv/opencv/issues/20548#issuecomment-1325751099)
+add_library(OpenCV4 INTERFACE)
+target_link_libraries(OpenCV4 INTERFACE opencv_core opencv_features2d opencv_imgproc)
+target_include_directories(
+  OpenCV4
+  INTERFACE ${OPENCV_CONFIG_FILE_INCLUDE_DIR} ${OPENCV_MODULE_opencv_core_LOCATION}/include
+            ${OPENCV_MODULE_opencv_features2d_LOCATION}/include
+            ${OPENCV_MODULE_opencv_imgproc_LOCATION}/include ${OpenCV_INCLUDE_DIRS})
+
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)
