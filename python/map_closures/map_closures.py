@@ -23,15 +23,14 @@
 from typing_extensions import TypeAlias
 
 import numpy as np
-from pydantic_settings import BaseSettings
-
+from map_closures.config import MapClosuresConfig
 from map_closures.pybind import map_closures_pybind
 
 ClosureCandidate: TypeAlias = map_closures_pybind._ClosureCandidate
 
 
 class MapClosures:
-    def __init__(self, config: BaseSettings):
+    def __init__(self, config: MapClosuresConfig = MapClosuresConfig()):
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
