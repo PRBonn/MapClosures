@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2024 Meher Malladi, Tiziano Guadagnino
+# Copyright (c) 2024 Tiziano Guadagnino, Meher Malladi, Saurabh Gupta
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
