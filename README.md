@@ -26,28 +26,36 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ## Install
 
 ### Dependencies
-- Essentials
+- *Essentials*
     ```sh
-    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev python3-dev python3-pip
+    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev python3-dev python3-pip
     ```
-- Eigen
-    ```sh
-    sudo apt-get install libeigen3-dev
-    ```
-- OpenCV
-    ```sh
-    git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x
-    cd opencv && mkdir build && cd build
-    cmake .. && make -j$(nproc --all) && make install
-    ```
-### MapClosures
+
+- *Optionally Built* \
+  In this case you have two options:
+  - **Option 1**: You can install them by the package manager in your operative system, e.g. in Ubuntu 22.04:
+      ```sh
+      sudo apt-get install libeigen3-dev libopencv-dev libtbb-dev
+      ```
+      this will of course make the build of **MapClosures** much faster.
+  - **Option 2**: Let the build system handle them:
+      ```sh
+      cmake -B build -S cpp -DUSE_SYSTEM_TBB=OFF -DUSE_SYSTEM_OPENCV=OFF -DUSE_SYSTEM_EIGEN3=OFF
+      ```
+      this will be slower in terms of build time, but will enable you to have a different version of this libraries installed in your system without interfering with the build of **MapClosures**.
+
+Once the dependencies are installed, the C++ library can be build by using standard cmake commands:
 ```sh
-git clone https://github.com/PRBonn/MapClosures.git
-cd MapClosures
-make
+cmake -B build -S cpp
+cmake --build build -j8
 ```
 
-## Usage
+## Python Package
+We provide a _python_ wrapper for **MapClosures** which can be easily installed by simply running:
+```sh
+make
+```
+### Usage
 <details>
 <summary>
 The following command will provide details about how to use our pipeline:

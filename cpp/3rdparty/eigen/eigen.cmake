@@ -1,7 +1,6 @@
 # MIT License
-#
-# Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-# Ignacio Vizzo, Cyrill Stachniss.
+# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
+# Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,5 +28,15 @@ set(EIGEN_BUILD_LAPACK OFF CACHE BOOL "Don't build lapack module")
 
 include(FetchContent)
 FetchContent_Declare(eigen GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git GIT_TAG 3.4.0)
-FetchContent_Populate(eigen)
-add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} SYSTEM EXCLUDE_FROM_ALL)
+if(NOT eigen_POPULATED)
+  FetchContent_Populate(eigen)
+  if(${CMAKE_VERSION} GREATER_EQUAL 3.25)
+    add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} SYSTEM EXCLUDE_FROM_ALL)
+  else()
+    # Emulate the SYSTEM flag introduced in CMake 3.25. Withouth this flag the compiler will
+    # consider this 3rdparty headers as source code and fail due the -Werror flag.
+    add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} EXCLUDE_FROM_ALL)
+    get_target_property(eigen_include_dirs eigen INTERFACE_INCLUDE_DIRECTORIES)
+    set_target_properties(eigen PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${eigen_include_dirs}")
+  endif()
+endif()
