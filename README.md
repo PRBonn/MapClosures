@@ -31,7 +31,7 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
     sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev python3-dev python3-pip
     ```
 
-- *Optionally Built* 
+- *Optionally Built* \
   In this case you have two options:
   - **Option 1**: You can install them by the package manager in your operative system, e.g. in Ubuntu 22.04:
       ```sh
