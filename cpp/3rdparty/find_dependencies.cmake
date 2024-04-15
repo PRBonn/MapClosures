@@ -44,5 +44,4 @@ find_dependecy("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.c
 find_dependecy("TBB" "TBB::tbb" "${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake")
 find_dependecy("OpenCV" "opencv_features2d" "${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake")
 
-
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)
