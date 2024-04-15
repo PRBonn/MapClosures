@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2024 Meher Malladi, Tiziano Guadagnino
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 set(BUILD_opencv_core ON CACHE BOOL "Build OpenCV core module")
 set(BUILD_opencv_features2d ON CACHE BOOL "Build OpenCV features2d module")
 set(BUILD_opencv_imgproc ON CACHE BOOL "Build OpenCV imgproc module")
@@ -34,3 +56,16 @@ FetchContent_Declare(opencv GIT_REPOSITORY https://github.com/opencv/opencv.git 
 FetchContent_MakeAvailable(opencv)
 # OpenCV_INCLUDE_DIRS is set by OpenCVConfig.cmake and is unavailable after simply building
 set(OpenCV_INCLUDE_DIRS "${opencv_SOURCE_DIR}/include")
+
+add_library(OpenCV INTERFACE)
+target_link_libraries(OpenCV INTERFACE opencv_core opencv_features2d opencv_imgproc)
+# Taken from an issue in the OpenCV project (https://github.com/opencv/opencv/issues/20548#issuecomment-1325751099)
+target_include_directories(
+  OpenCV
+  INTERFACE ${OPENCV_CONFIG_FILE_INCLUDE_DIR} ${OPENCV_MODULE_opencv_core_LOCATION}/include
+            ${OPENCV_MODULE_opencv_features2d_LOCATION}/include
+            ${OPENCV_MODULE_opencv_imgproc_LOCATION}/include ${OpenCV_INCLUDE_DIRS})
+
+# try to hide this madness to the end-user
+set(OpenCV_LIBS OpenCV)
+
