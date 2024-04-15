@@ -24,32 +24,25 @@ if(CMAKE_VERSION VERSION_GREATER 3.24)
   cmake_policy(SET CMP0135 OLD)
 endif()
 
-if(${USE_SYSTEM_EIGEN3})
-  find_package(Eigen3 QUIET NO_MODULE)
-else()
-  include(${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake)
-endif()
+# Inspired by KISS-ICP https://github.com/PRBonn/kiss-icp/blob/d51329990462ad85e6802810e69feda4d30017c3/cpp/kiss_icp/3rdparty/find_dependencies.cmake#L28C1-L38C14
+# AN IMPORTANT DIFFERENCE: In this case we need to use a macro instead of a function. you can find the differences here: https://cmake.org/cmake/help/latest/command/macro.html. In essence, a function
+# will transfer the control from the calling scope to the function and the back to the calling scope once the function
+# as done whatever it has to do. This transfer will cause how black magic forwarded include dirs for the OpenCV targets to dont work anymore, as this will be confined to the local scope of the cmake function.
+# The easier solution for us was to just change function to macro, as the later will just copy paste the content adjusting the parameters (exactly like a C macro). This is horrible of course, but it is caused by the build system of OpenCV.
+macro(find_dependecy PACKAGE_NAME TARGET_NAME INCLUDED_CMAKE_PATH)
+  string(TOUPPER ${PACKAGE_NAME} PACKAGE_NAME_UP)
+  set(USE_FROM_SYSTEM_OPTION "USE_SYSTEM_${PACKAGE_NAME_UP}")
+  if(${${USE_FROM_SYSTEM_OPTION}})
+    find_package(${PACKAGE_NAME} QUIET NO_MODULE)
+  endif()
+  if(NOT TARGET ${TARGET_NAME})
+    include(${INCLUDED_CMAKE_PATH})
+  endif()
+endmacro()
 
-if(${USE_SYSTEM_TBB})
-  find_package(TBB QUIET NO_MODULE)
-endif()
-if(NOT TARGET TBB::tbb)
-  include(${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake)
-endif()
+find_dependecy("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake")
+find_dependecy("TBB" "TBB::tbb" "${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake")
+find_dependecy("OpenCV" "opencv_features2d" "${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake")
 
-if(${USE_SYSTEM_OPENCV})
-  find_package(OpenCV QUIET NO_MODULE)
-endif()
-if(NOT TARGET opencv_features2d)
-  include(${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake)
-endif()
-# Taken from an issue in the OpenCV project (https://github.com/opencv/opencv/issues/20548#issuecomment-1325751099)
-add_library(OpenCV4 INTERFACE)
-target_link_libraries(OpenCV4 INTERFACE opencv_core opencv_features2d opencv_imgproc)
-target_include_directories(
-  OpenCV4
-  INTERFACE ${OPENCV_CONFIG_FILE_INCLUDE_DIR} ${OPENCV_MODULE_opencv_core_LOCATION}/include
-            ${OPENCV_MODULE_opencv_features2d_LOCATION}/include
-            ${OPENCV_MODULE_opencv_imgproc_LOCATION}/include ${OpenCV_INCLUDE_DIRS})
 
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)

@@ -60,6 +60,7 @@ set(OpenCV_INCLUDE_DIRS "${opencv_SOURCE_DIR}/include")
 add_library(OpenCV INTERFACE)
 target_link_libraries(OpenCV INTERFACE opencv_core opencv_features2d opencv_imgproc)
 # Taken from an issue in the OpenCV project (https://github.com/opencv/opencv/issues/20548#issuecomment-1325751099)
+# Include files from OpenCV modules are not forwarded to the corresponding targets, so we need to add them manually
 target_include_directories(
   OpenCV
   INTERFACE ${OPENCV_CONFIG_FILE_INCLUDE_DIR} ${OPENCV_MODULE_opencv_core_LOCATION}/include
