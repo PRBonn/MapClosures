@@ -28,20 +28,20 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ### Dependencies
 - Essentials
     ```sh
-    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev python3-dev python3-pip
+    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev python3-dev python3-pip
     ```
 
-- Optional. If the following are installed on your system, they will be used (faster build). Otherwise, they will be built alongside MapClosures.
-  - Eigen
+- Optionally Built: In this case you have two options:
+  - **Option 1**: You can install them by the package manager in your operative system, e.g. in Ubuntu 22.04:
       ```sh
-      sudo apt-get install libeigen3-dev
+      sudo apt-get install libeigen3-dev libopencv-dev libtbb-dev
       ```
-  - OpenCV
+      this will of course make the build of **MapClosures** much faster.
+  - **Option 2**: Let the build system handle them:
       ```sh
-      git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x
-      cd opencv && mkdir build && cd build
-      cmake .. && make -j$(nproc --all) && make install
+      cmake -B build -S cpp -DUSE_SYSTEM_TBB=OFF -DUSE_SYSTEM_OPENCV=OFF -DUSE_SYSTEM_EIGEN3=OFF
       ```
+      this will be slower in terms of build time, but will enable you to have a different version of this library installed in your system without interfering with the build of **MapClosures**.
 ### MapClosures
 ```sh
 git clone https://github.com/PRBonn/MapClosures.git
