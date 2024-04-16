@@ -34,7 +34,7 @@
 #include <tuple>
 #include <vector>
 
-#include "MapClosures.hpp"
+#include "map_closures/MapClosures.hpp"
 #include "stl_vector_eigen.h"
 
 PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
