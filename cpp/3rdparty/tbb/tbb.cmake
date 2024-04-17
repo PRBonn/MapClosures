@@ -1,7 +1,6 @@
-# THIS FILE IS ENTIRELY TAKEN FROM KISS-ICP, we reference the original LICENCE in the following
 # MIT License
 #
-# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
+# Copyright (c) 2024 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
 # Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
