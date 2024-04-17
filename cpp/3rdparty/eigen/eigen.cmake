@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
+# Copyright (c) 2024 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
 # Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,7 +27,8 @@ set(EIGEN_BUILD_BLAS OFF CACHE BOOL "Don't build blas module")
 set(EIGEN_BUILD_LAPACK OFF CACHE BOOL "Don't build lapack module")
 
 include(FetchContent)
-FetchContent_Declare(eigen GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git GIT_TAG 3.4.0)
+FetchContent_Declare(eigen URL https://github.com/nachovizzo/eigen/archive/refs/tags/3.4.90.tar.gz)
+FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
   FetchContent_Populate(eigen)
   if(${CMAKE_VERSION} GREATER_EQUAL 3.25)
