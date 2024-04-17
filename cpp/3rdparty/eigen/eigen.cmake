@@ -28,6 +28,7 @@ set(EIGEN_BUILD_LAPACK OFF CACHE BOOL "Don't build lapack module")
 
 include(FetchContent)
 FetchContent_Declare(eigen GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git GIT_TAG 3.4.0)
+FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
   FetchContent_Populate(eigen)
   if(${CMAKE_VERSION} GREATER_EQUAL 3.25)

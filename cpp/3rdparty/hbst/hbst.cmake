@@ -29,4 +29,7 @@ add_definitions(-DSRRG_MERGE_DESCRIPTORS)
 include(FetchContent)
 FetchContent_Declare(
   HBST URL https://gitlab.com/saurabh1002/srrg_hbst/-/archive/master/srrg_hbst-master.zip)
-FetchContent_Populate(HBST)
+FetchContent_GetProperties(HBST)
+if(NOT hbst_POPULATED)
+  FetchContent_Populate(HBST)
+endif()
