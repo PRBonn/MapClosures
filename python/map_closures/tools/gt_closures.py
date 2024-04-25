@@ -83,6 +83,7 @@ def compute_overlap(query_points: np.ndarray, ref_points: np.ndarray, voxel_size
 
 def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
     base_dir = dataset.sequence_dir if hasattr(dataset, "sequence_dir") else ""
+    os.makedirs(os.path.join(base_dir, "loop_closure"), exist_ok=True)
     file_path_closures = os.path.join(base_dir, "loop_closure/gt_closures.txt")
     file_path_overlaps = os.path.join(base_dir, "loop_closure/gt_overlaps.txt")
     if os.path.exists(file_path_closures) and os.path.exists(file_path_overlaps):
@@ -92,29 +93,41 @@ def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
         print(f"[INFO] Found closure ground truth at {file_path_closures}")
 
     else:
+        print("Computing Ground Truth Closures, might take some time!")
         min_overlap = 0.1
         sampling_distance = 2.0
+        n_skip_segments = int(2 * config.data.max_range / sampling_distance)
         segment_indices = get_segment_indices(gt_poses, sampling_distance)
-        closures = []
-        overlaps = []
-        tbar = tqdm(segment_indices, desc="Computing Ground Truth Closures, might take some time!")
-        for i, query_segment in enumerate(tbar):
+        global_points_segments = [
+            get_global_points(dataset, segment, gt_poses[segment]) for segment in segment_indices
+        ]
+        closures = np.empty((0, 2), dtype=int)
+        overlaps = np.empty((0,), dtype=float)
+        tbar = tqdm(
+            zip(segment_indices, global_points_segments),
+            total=len(segment_indices),
+        )
+        for i, (query_segment, query_points) in enumerate(tbar):
             query_pose = gt_poses[query_segment[0]]
-            query_points = get_global_points(dataset, query_segment, gt_poses[query_segment])
-            n_skip_segments = int(2 * config.data.max_range / sampling_distance)
-            for _, ref_segment in enumerate(
-                segment_indices[i + n_skip_segments :], start=n_skip_segments + 1
+            for _, (ref_segment, ref_points) in enumerate(
+                zip(
+                    segment_indices[i + n_skip_segments :],
+                    global_points_segments[i + n_skip_segments :],
+                ),
+                start=n_skip_segments + 1,
             ):
                 ref_pose = gt_poses[ref_segment[0]]
                 dist = np.linalg.norm(query_pose[:3, -1] - ref_pose[:3, -1])
                 if dist < config.data.max_range:
-                    ref_points = get_global_points(dataset, ref_segment, gt_poses[ref_segment])
                     overlap = compute_overlap(query_points, ref_points, voxel_size=0.5)
                     if overlap > min_overlap:
-                        for qi in query_segment:
-                            for ri in ref_segment:
-                                closures.append({qi, ri})
-                                overlaps.append(overlap)
-        np.savetxt(file_path_closures, np.array(closures, dtype=int))
-        np.savetxt(file_path_overlaps, np.array(overlaps))
+                        segment_closures = np.dstack(
+                            np.meshgrid(query_segment, ref_segment)
+                        ).reshape(-1, 2)
+                        closures = np.vstack((closures, segment_closures), dtype=int)
+                        overlaps = np.hstack(
+                            (overlaps, np.full(segment_closures.shape[0], overlap))
+                        )
+        np.savetxt(file_path_closures, closures)
+        np.savetxt(file_path_overlaps, overlaps)
     return closures, overlaps
