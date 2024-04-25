@@ -50,6 +50,7 @@ set(BUILD_opencv_stitching OFF CACHE BOOL "Build OpenCV stitching module")
 set(BUILD_opencv_video OFF CACHE BOOL "Build OpenCV video module")
 set(BUILD_opencv_videoio OFF CACHE BOOL "Build OpenCV video IO module")
 
+message(STATUS "Fetching OpenCV from Github")
 include(FetchContent)
 FetchContent_Declare(opencv GIT_REPOSITORY https://github.com/opencv/opencv.git GIT_TAG 4.x
                      GIT_SHALLOW TRUE GIT_PROGRESS TRUE)
