@@ -89,6 +89,8 @@ git checkout ICRA2024
 ```
 Our development aims to push the performances of **MapClosures** above the original results of the paper.
 
+**Note**: You can download the ground-truth loop closure candidates for the datasets used in the paper from [here](https://www.ipb.uni-bonn.de/html/projects/gupta2024icra/MapClosuresGroundtruth.zip). When run with `-e` flag, our pipeline will search for groundtruth data under the folder at path `<data>/loop_closure/`. If not found, it will first generate the groundtruth closures which might consume some time.
+
 ## Acknowledgement
 
 This repository is heavily inspired by, and also depends on [KISS-ICP](https://github.com/PRBonn/kiss-icp)
