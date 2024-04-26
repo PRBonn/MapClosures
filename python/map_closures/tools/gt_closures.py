@@ -84,8 +84,8 @@ def compute_overlap(query_points: np.ndarray, ref_points: np.ndarray, voxel_size
 def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
     base_dir = dataset.sequence_dir if hasattr(dataset, "sequence_dir") else ""
     os.makedirs(os.path.join(base_dir, "loop_closure"), exist_ok=True)
-    file_path_closures = os.path.join(base_dir, "loop_closure/gt_closures.txt")
-    file_path_overlaps = os.path.join(base_dir, "loop_closure/gt_overlaps.txt")
+    file_path_closures = os.path.join(base_dir, "loop_closure", "gt_closures.txt")
+    file_path_overlaps = os.path.join(base_dir, "loop_closure", "gt_overlaps.txt")
     if os.path.exists(file_path_closures) and os.path.exists(file_path_overlaps):
         closures = np.loadtxt(file_path_closures, dtype=int)
         overlaps = np.loadtxt(file_path_overlaps)
