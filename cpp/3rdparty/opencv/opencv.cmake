@@ -70,4 +70,3 @@ target_include_directories(
 
 # try to hide this madness to the end-user
 set(OpenCV_LIBS OpenCV)
-
