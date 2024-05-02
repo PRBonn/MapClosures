@@ -57,17 +57,17 @@ make
 ```
 ### Usage
 The following commands can be used to run the main experiments provided in the paper:
-1. MulRAN Dataset (KAIST03, Riverside02, Sejong01)
+1. [MulRAN Dataset](https://sites.google.com/view/mulran-pr/download) (KAIST03, Riverside02, Sejong01)
   ```sh
   map_closure_pipeline --dataloader mulran --eval --config <path/to/basic_config.yaml> <path/to/dataset-dir>  <path/to/output-dir>
   ```
 
-2. Newer College Dataset (01_short_experiment)
+2. [Newer College Dataset](https://ori-drs.github.io/newer-college-dataset/download/) (01_short_experiment)
   ```sh
   map_closure_pipeline --dataloader ncd --eval --config <path/to/basic_config.yaml> <path/to/dataset-dir>  <path/to/output-dir>
   ```
 
-3. HeLiPR Livox Dataset (Town01)
+3. [HeLiPR Dataset](https://sites.google.com/view/heliprdataset/download) (Town01 Livox Avia)
   ```sh
   map_closure_pipeline --dataloader helipr --sequence Avia --eval --config <path/to/Livox.yaml> <path/to/dataset-dir>  <path/to/output-dir>
   ```
