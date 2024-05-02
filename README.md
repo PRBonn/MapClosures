@@ -28,7 +28,9 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ### Dependencies
 - *Essentials*
     ```sh
-    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev python3-dev python3-pip libopencv-dev
+    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev python3-dev python3-pip
+    sudo apt-get install -y libopencv-dev
+    pip install kiss-icp==0.4.0
     ```
 
 - *Optionally Built* \
