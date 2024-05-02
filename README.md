@@ -26,40 +26,53 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ## Install
 
 ### Dependencies
-- Essentials
+- *Essentials*
     ```sh
-    sudo apt-get install --no-install-recommends -y build-essential ccache clang-format git cmake pybind11-dev python3-dev python3-pip
+    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev python3-dev python3-pip libopencv-dev
     ```
-- Eigen
-    ```sh
-    sudo apt-get install libeigen3-dev
-    ```
-- OpenCV
-    ```sh
-    git clone --depth 1 https://github.com/opencv/opencv.git -b 4.x
-    cd opencv && mkdir build && cd build
-    cmake .. && make -j$(nproc --all) && make install
-    ```
-### MapClosures
+
+- *Optionally Built* \
+  In this case you have two options:
+  - **Option 1**: You can install them by the package manager in your operative system, e.g. in Ubuntu 22.04:
+      ```sh
+      sudo apt-get install libeigen3-dev
+      ```
+      this will of course make the build of **MapClosures** much faster.
+  - **Option 2**: Let the build system handle them:
+      ```sh
+      cmake -B build -S cpp -DUSE_SYSTEM_EIGEN3=OFF
+      ```
+      this will be slower in terms of build time, but will enable you to have a different version of this libraries installed in your system without interfering with the build of **MapClosures**.
+
+Once the dependencies are installed, the C++ library can be build by using standard cmake commands:
 ```sh
-git clone https://github.com/PRBonn/MapClosures.git
-cd MapClosures
+cmake -B build -S cpp
+cmake --build build -j8
+```
+
+## Python Package
+We provide a _python_ wrapper for **MapClosures** which can be easily installed by simply running:
+```sh
 make
 ```
+### Usage
+The following commands can be used to run the main experiments provided in the paper:
+1. MulRAN Dataset (KAIST03, Riverside02, Sejong01)
+  ```sh
+  map_closure_pipeline --dataloader mulran --eval --config <path/to/basic_config.yaml> <path/to/dataset-dir>  <path/to/output-dir>
+  ```
 
-## Usage
-<details>
-<summary>
-The following command will provide details about how to use our pipeline:
+2. Newer College Dataset (01_short_experiment)
+  ```sh
+  map_closure_pipeline --dataloader ncd --eval --config <path/to/basic_config.yaml> <path/to/dataset-dir>  <path/to/output-dir>
+  ```
 
-```sh
-map_closure_pipeline --help
-```
-</summary>
+3. HeLiPR Livox Dataset (Town01)
+  ```sh
+  map_closure_pipeline --dataloader helipr --sequence Avia --eval --config <path/to/Livox.yaml> <path/to/dataset-dir>  <path/to/output-dir>
+  ```
 
-![CLI_usage](https://github.com/PRBonn/MapClosures/assets/28734882/6dc885d2-e0fc-4aa4-b5b0-be8a98ed6ff9)
-</details>
-
+**Note**: You can download the ground-truth loop closure candidates for the datasets used in the paper from [here](https://www.ipb.uni-bonn.de/html/projects/gupta2024icra/MapClosuresGroundtruth.zip). When run with `-e` flag, our pipeline will search for groundtruth data under the folder at path `<path/to/dataset-dir>/loop_closure/`. If not found, it will first generate the groundtruth closures which might consume some time.
 
 ## Citation
 
