@@ -25,64 +25,73 @@
 
 #include <Eigen/Core>
 #include <algorithm>
-#include <limits>
 #include <opencv2/core.hpp>
-#include <utility>
+#include <tuple>
+#include <unordered_map>
 #include <vector>
 
-namespace {
-struct ComparePixels {
-    bool operator()(const Eigen::Array2i &lhs, const Eigen::Array2i &rhs) const {
-        return lhs.x() < rhs.x() || (lhs.x() == rhs.x() && lhs.y() < rhs.y());
-    }
-};
-using PointCounterType = std::map<Eigen::Array2i, double, ComparePixels>;
-constexpr int max_int = std::numeric_limits<int>::max();
-constexpr int min_int = std::numeric_limits<int>::min();
-}  // namespace
+using Pixel = Eigen::Vector2i;
+using Point3D = Eigen::Vector3d;
 
 namespace map_closures {
+std::unordered_map<Pixel, double, PixelHash> GenerateDensityMap(
+    const std::vector<Point3D> &pointcloud_map,
+    const float voxel_size,
+    const float density_map_threshold) {
+    std::unordered_map<Pixel, double, PixelHash> density_map;
+    for (const Point3D &point : pointcloud_map) {
+        auto x_coord = static_cast<int>(std::floor(point[0] / voxel_size));
+        auto y_coord = static_cast<int>(std::floor(point[1] / voxel_size));
+        Pixel pixel(x_coord, y_coord);
+        density_map[pixel] += 1.0;
+    }
 
-DensityMap::DensityMap(const int num_rows, const int num_cols, const double resolution_)
-    : lower_bound(0, 0), resolution(resolution_), grid(num_rows, num_cols, CV_8UC1, 0.0) {}
+    // Minmax Normalization
+    const auto [minval_elem, maxval_elem] = std::minmax_element(
+        density_map.cbegin(), density_map.cend(),
+        [](const std::pair<Pixel, double> &a, const std::pair<Pixel, double> &b) -> bool {
+            return a.second < b.second;
+        });
+    auto min_count = minval_elem->second;
+    auto max_count = maxval_elem->second;
+    auto range = max_count - min_count;
 
-DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
-                              const float density_map_resolution,
-                              const float density_threshold) {
-    PointCounterType point_counter;
-
-    double max_points = std::numeric_limits<double>::min();
-    double min_points = std::numeric_limits<double>::max();
-    Eigen::Array2i lower_bound_coordinates = Eigen::Array2i::Constant(max_int);
-    Eigen::Array2i upper_bound_coordinates = Eigen::Array2i::Constant(min_int);
-
-    auto Discretize2D = [&density_map_resolution](const Eigen::Vector3d &p) -> Eigen::Array2i {
-        return (p.head<2>() / density_map_resolution).array().floor().cast<int>();
-    };
-    std::for_each(pcd.cbegin(), pcd.cend(), [&](const Eigen::Vector3d &point) {
-        const auto pixel = Discretize2D(point);
-        point_counter[pixel] += 1.0;
-        auto &num_points = point_counter[pixel];
-        max_points = std::max(max_points, num_points);
-        min_points = std::min(min_points, num_points);
-        lower_bound_coordinates = lower_bound_coordinates.min(pixel);
-        upper_bound_coordinates = upper_bound_coordinates.max(pixel);
-    });
-    const auto rows_and_columns = upper_bound_coordinates - lower_bound_coordinates;
-    const auto n_rows = rows_and_columns.x() + 1;
-    const auto n_cols = rows_and_columns.y() + 1;
-    const double min_max_normalizer = max_points - min_points;
-
-    DensityMap density_map(n_rows, n_cols, density_map_resolution);
-    density_map.lower_bound = lower_bound_coordinates;
-    std::for_each(point_counter.cbegin(), point_counter.cend(), [&](const auto &entry) {
-        const auto &[pixel, point_count] = entry;
-        auto density = (point_count - min_points) / min_max_normalizer;
-        density = density > density_threshold ? density : 0.0;
-        const auto px = pixel - lower_bound_coordinates;
-        density_map(px.x(), px.y()) = static_cast<uint8_t>(255 * density);
-    });
-
+    for (auto &element : density_map) {
+        auto density_val = (element.second - min_count) * 255 / range;
+        density_map[element.first] = density_val > density_map_threshold ? density_val : 0.0;
+    }
     return density_map;
+}
+
+std::tuple<cv::Mat, Pixel> DensityMapAsImage(
+    const std::unordered_map<Eigen::Vector2i, double, PixelHash> &density_map) {
+    const auto [min_x_elem, max_x_elem] = std::minmax_element(
+        density_map.cbegin(), density_map.cend(),
+        [](const std::pair<Pixel, double> &a, const std::pair<Pixel, double> &b) -> bool {
+            return a.first.x() < b.first.x();
+        });
+
+    const auto [min_y_elem, max_y_elem] = std::minmax_element(
+        density_map.cbegin(), density_map.cend(),
+        [](const std::pair<Pixel, double> &a, const std::pair<Pixel, double> &b) -> bool {
+            return a.first.y() < b.first.y();
+        });
+
+    auto min_x = min_x_elem->first.x();
+    auto max_x = max_x_elem->first.x();
+    auto min_y = min_y_elem->first.y();
+    auto max_y = max_y_elem->first.y();
+
+    auto n_rows = max_x - min_x + 1;
+    auto n_cols = max_y - min_y + 1;
+    cv::Mat density_map_as_img(n_rows, n_cols, CV_8UC1, 0.0);
+
+    for (const auto &element : density_map) {
+        auto row = element.first.x() - min_x;
+        auto col = element.first.y() - min_y;
+        density_map_as_img.at<uint8_t>(row, col) = static_cast<uint8_t>(element.second);
+    }
+
+    return {density_map_as_img, Pixel(min_x, min_y)};
 }
 }  // namespace map_closures

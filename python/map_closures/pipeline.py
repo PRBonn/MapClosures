@@ -70,6 +70,11 @@ class MapClosurePipeline:
 
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
+
+        if self.config_name == "Livox":
+            self.kiss_config.data.max_range = 50.0
+            self.kiss_config.mapping.voxel_size = 0.5
+
         self.odometry = KissICP(self.kiss_config)
         self.voxel_local_map = get_voxel_hash_map(self.kiss_config)
 
@@ -131,7 +136,7 @@ class MapClosurePipeline:
             self.odometry.register_frame(frame, timestamps)
             current_frame_pose = self.odometry.poses[-1]
 
-            frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
+            frame_downsample = voxel_down_sample(frame, 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
 
@@ -139,10 +144,8 @@ class MapClosurePipeline:
                 scan_idx == self._n_scans - 1
             ):
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
-                matched_map_indices, density_map = self.map_closures.match_and_add_local_map(
-                    map_idx, local_map_pointcloud, map_idx // 2
-                )
-
+                density_map = self.map_closures.add_new_localmap(map_idx, local_map_pointcloud)
+                matched_map_indices = self.map_closures.get_ref_map_indices(map_idx // 2)
                 scan_indices_in_local_map.append(scan_idx)
                 poses_in_local_map.append(current_frame_pose)
 
@@ -179,6 +182,8 @@ class MapClosurePipeline:
                                     inliers_count,
                                 )
 
+                self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
+                self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 pts_to_keep = self.voxel_local_map.point_cloud()
                 self.voxel_local_map = get_voxel_hash_map(self.kiss_config)

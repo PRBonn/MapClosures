@@ -28,89 +28,80 @@
 #include <Eigen/SVD>
 #include <algorithm>
 #include <random>
-#include <utility>
+#include <tuple>
 #include <vector>
 
+using Eigen::Matrix4d, Eigen::Matrix2d;
+using Eigen::Vector2d;
+using KeyPoints2D = std::vector<Vector2d>;
+
 namespace {
-Eigen::Isometry2d KabschUmeyamaAlignment2D(
-    const std::vector<map_closures::PointPair> &keypoint_pairs) {
-    auto mean = std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
-                            map_closures::PointPair(), [](auto lhs, const auto &rhs) {
-                                lhs.ref += rhs.ref;
-                                lhs.query += rhs.query;
-                                return lhs;
-                            });
-    mean.query /= keypoint_pairs.size();
-    mean.ref /= keypoint_pairs.size();
-    auto covariance_matrix = std::transform_reduce(
-        keypoint_pairs.cbegin(), keypoint_pairs.cend(), Eigen::Matrix2d().setZero(),
-        std::plus<Eigen::Matrix2d>(), [&](const auto &keypoint_pair) {
-            return (keypoint_pair.ref - mean.ref) *
-                   ((keypoint_pair.query - mean.query).transpose());
-        });
+std::tuple<Vector2d, Vector2d, Matrix2d> computeMeanAndCovariance(const KeyPoints2D &A,
+                                                                  const KeyPoints2D &B) {
+    Vector2d A_bar = std::accumulate(A.cbegin(), A.cend(), Vector2d().setZero()) / A.size();
+    Vector2d B_bar = std::accumulate(B.cbegin(), B.cend(), Vector2d().setZero()) / B.size();
 
-    Eigen::JacobiSVD<Eigen::Matrix2d> svd(covariance_matrix,
-                                          Eigen::ComputeFullU | Eigen::ComputeFullV);
-    Eigen::Isometry2d T = Eigen::Isometry2d::Identity();
-    const Eigen::Matrix2d &&R = svd.matrixV() * svd.matrixU().transpose();
-    T.linear() = R.determinant() > 0 ? R : -R;
-    T.translation() = mean.query - R * mean.ref;
-
-    return T;
+    Matrix2d Cov = std::transform_reduce(
+        A.cbegin(), A.cend(), B.cbegin(), Matrix2d().setZero(), std::plus<Matrix2d>(),
+        [&](const auto &a, const auto &b) { return (a - A_bar) * ((b - B_bar).transpose()); });
+    return {A_bar, B_bar, Cov};
 }
 
-static constexpr double inliers_distance_threshold = 3.0;
-
-// RANSAC Parameters
-static constexpr double inliers_ratio = 0.3;
-static constexpr double probability_success = 0.999;
-static constexpr int min_points = 2;
-static constexpr int __RANSAC_TRIALS__ = std::ceil(
-    std::log(1.0 - probability_success) / std::log(1.0 - std::pow(inliers_ratio, min_points)));
+KeyPoints2D applyRigidBodyTransform(const KeyPoints2D &pts, const Matrix2d &R, const Vector2d &tr) {
+    KeyPoints2D pts_;
+    pts_.reserve(pts.size());
+    std::for_each(pts.cbegin(), pts.cend(),
+                  [&](const auto &pt) { pts_.emplace_back(R * pt + tr); });
+    return pts_;
+}
 }  // namespace
 
+static constexpr int inliers_threshold = 3.0;
 namespace map_closures {
+std::tuple<Matrix2d, Vector2d, int> ICPRansac2D(const KeyPoints2D &ref_keypts,
+                                                const KeyPoints2D &query_keypts,
+                                                const std::vector<double> &weights) {
+    std::discrete_distribution<int> rig(weights.cbegin(), weights.cend());
+    std::mt19937_64 gen(std::random_device{}());
+    int best_inliers_count = 0;
+    Matrix2d best_Rot;
+    Vector2d best_tr;
 
-PointPair::PointPair(const Eigen::Vector2d &r, const Eigen::Vector2d &q) : ref(r), query(q) {}
+    int n_iters = 0;
+    int max_iters = 0.5 * weights.size() * (weights.size() - 1);
+    while (n_iters++ < max_iters) {
+        int idx_1 = -1, idx_2 = -1;
+        while (idx_1 == idx_2) {
+            idx_1 = rig(gen);
+            idx_2 = rig(gen);
+        }
 
-std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs) {
-    const size_t max_inliers = keypoint_pairs.size();
+        auto [P_bar, Q_bar, Cov] = computeMeanAndCovariance(
+            {ref_keypts[idx_1], ref_keypts[idx_2]}, {query_keypts[idx_1], query_keypts[idx_2]});
 
-    std::vector<PointPair> sample_keypoint_pairs(2);
-    std::vector<int> inlier_indices;
-    inlier_indices.reserve(max_inliers);
+        Eigen::JacobiSVD<Matrix2d> svd(Cov, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
-    std::vector<int> optimal_inlier_indices;
-    optimal_inlier_indices.reserve(max_inliers);
+        Matrix2d Rot = svd.matrixV() * svd.matrixU().transpose();
+        if (Rot.determinant() < 0) {
+            Rot = -Rot;
+        }
 
-    int iter = 0;
-    while (iter++ < __RANSAC_TRIALS__) {
-        inlier_indices.clear();
+        auto tr = Q_bar - Rot * P_bar;
 
-        std::sample(keypoint_pairs.begin(), keypoint_pairs.end(), sample_keypoint_pairs.begin(), 2,
-                    std::mt19937{std::random_device{}()});
-        auto T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
+        auto Q_tf = applyRigidBodyTransform(ref_keypts, Rot, tr);
 
-        int index = 0;
-        std::for_each(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
-                      [&](const auto &keypoint_pair) {
-                          if ((T * keypoint_pair.ref - keypoint_pair.query).norm() <
-                              inliers_distance_threshold)
-                              inlier_indices.emplace_back(index);
-                          index++;
-                      });
+        auto inliers_count =
+            std::inner_product(query_keypts.cbegin(), query_keypts.cend(), Q_tf.cbegin(), 0.0,
+                               std::plus<>(), [&](const Vector2d &a, const Vector2d &b) {
+                                   return (a - b).norm() < inliers_threshold;
+                               });
 
-        if (inlier_indices.size() > optimal_inlier_indices.size()) {
-            optimal_inlier_indices = inlier_indices;
+        if (inliers_count >= best_inliers_count) {
+            best_inliers_count = inliers_count;
+            best_Rot = Rot;
+            best_tr = tr;
         }
     }
-
-    const int num_inliers = optimal_inlier_indices.size();
-    std::vector<PointPair> inlier_keypoint_pairs(num_inliers);
-    std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),
-                   inlier_keypoint_pairs.begin(),
-                   [&](const auto index) { return keypoint_pairs[index]; });
-    auto T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
-    return {T, num_inliers};
+    return {best_Rot, best_tr, best_inliers_count};
 }
 }  // namespace map_closures

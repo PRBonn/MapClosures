@@ -24,26 +24,24 @@
 #pragma once
 
 #include <Eigen/Core>
-#include <map>
 #include <opencv2/core.hpp>
-#include <utility>
+#include <tuple>
+#include <unordered_map>
 #include <vector>
 
 namespace map_closures {
-
-struct DensityMap {
-    DensityMap(const int num_rows, const int num_cols, const double resolution);
-    DensityMap(const DensityMap &other) = delete;
-    DensityMap(DensityMap &&other) = default;
-    DensityMap &operator=(DensityMap &&other) = default;
-    DensityMap &operator=(const DensityMap &other) = delete;
-    inline auto &operator()(const int x, const int y) { return grid.at<uint8_t>(x, y); }
-    Eigen::Vector2i lower_bound;
-    double resolution;
-    cv::Mat grid;
+struct PixelHash {
+    size_t operator()(const Eigen::Vector2i &pixel) const {
+        const uint32_t *vec = reinterpret_cast<const uint32_t *>(pixel.data());
+        return ((1 << 20) - 1) & (vec[0] * 73856093 ^ vec[1] * 19349669);
+    }
 };
 
-DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pointcloud_map,
-                              const float density_map_resolution,
-                              const float density_threshold);
+std::unordered_map<Eigen::Vector2i, double, PixelHash> GenerateDensityMap(
+    const std::vector<Eigen::Vector3d> &pointcloud_map,
+    const float voxel_size,
+    const float density_map_threshold);
+
+std::tuple<cv::Mat, Eigen::Vector2i> DensityMapAsImage(
+    const std::unordered_map<Eigen::Vector2i, double, PixelHash> &density_map);
 }  // namespace map_closures

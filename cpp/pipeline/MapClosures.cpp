@@ -35,6 +35,11 @@
 #include "core/DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
+using Eigen::Matrix4d;
+using Eigen::Vector3d, Eigen::Vector2d;
+
+using KeyPoints2D = std::vector<Vector2d>;
+
 namespace {
 // fixed parameters for OpenCV ORB Features
 static constexpr float scale_factor = 1.00;
@@ -43,88 +48,113 @@ static constexpr int first_level = 0;
 static constexpr int WTA_K = 2;
 static constexpr int nfeatures = 500;
 static constexpr int edge_threshold = 31;
-static constexpr int score_type = 0;
+static constexpr int score_type = 1;
 static constexpr int patch_size = 31;
 static constexpr int fast_threshold = 35;
 }  // namespace
 
 namespace map_closures {
 MapClosures::MapClosures() : config_(Config()) {
-    orb_extractor_ =
+    image_descriptor_extractor_ =
         cv::ORB::create(nfeatures, scale_factor, n_levels, edge_threshold, first_level, WTA_K,
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
 MapClosures::MapClosures(const Config &config) : config_(config) {
-    orb_extractor_ =
+    image_descriptor_extractor_ =
         cv::ORB::create(nfeatures, scale_factor, n_levels, edge_threshold, first_level, WTA_K,
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
-
-std::pair<std::vector<int>, cv::Mat> MapClosures::MatchAndAddLocalMap(
-    const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k) {
-    density_maps_.emplace(map_idx, GenerateDensityMap(local_map, config_.density_map_resolution,
-                                                      config_.density_threshold));
-
-    cv::Mat orb_descriptors;
-    std::vector<cv::KeyPoint> orb_keypoints;
-    const auto &last_density_grid = density_maps_.at(map_idx).grid;
-    orb_extractor_->detectAndCompute(last_density_grid, cv::noArray(), orb_keypoints,
-                                     orb_descriptors);
-
-    auto hbst_matchable = Tree::getMatchables(orb_descriptors, orb_keypoints, map_idx);
-    hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
-                                   config_.hamming_distance_threshold,
-                                   srrg_hbst::SplittingStrategy::SplitEven);
-
-    const size_t clipped_top_k =
-        std::min(top_k, static_cast<unsigned int>(descriptor_matches_.size()));
-    std::vector<int> ref_mapclosure_indices(clipped_top_k);
-    if (clipped_top_k) {
-        using NumMatches = size_t;
-        using MapIdx = int;
-        std::multimap<NumMatches, MapIdx> num_matches_per_ref_map;
-        std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
-                      [&](const auto &matches) {
-                          num_matches_per_ref_map.emplace(matches.second.size(), matches.first);
-                      });
-
-        std::transform(num_matches_per_ref_map.crbegin(),
-                       std::next(num_matches_per_ref_map.crbegin(), clipped_top_k),
-                       ref_mapclosure_indices.begin(),
-                       [&](const auto &num_matches_kv) { return num_matches_kv.second; });
-    }
-    return {ref_mapclosure_indices, last_density_grid};
+void MapClosures::AddToTree(int map_idx, const cv::Mat &density_map_cv) {
+    cv::Mat descriptors;
+    std::vector<cv::KeyPoint> keypoints;
+    image_descriptor_extractor_->detectAndCompute(density_map_cv, cv::noArray(), keypoints,
+                                                  descriptors);
+    auto hbst_matchable = Tree::getMatchables(descriptors, keypoints, map_idx);
+    hbst_tree_->matchAndAdd(hbst_matchable, latest_matches_map_, config_.hamming_distance_threshold,
+                            srrg_hbst::SplittingStrategy::SplitEven);
 }
 
-std::pair<Eigen::Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int query_idx) const {
-    const Tree::MatchVector &matches = descriptor_matches_.at(ref_idx);
+cv::Mat MapClosures::AddNewLocalMap(int map_idx, const std::vector<Vector3d> &local_map) {
+    const auto density_map =
+        GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
+    const auto [density_map_cv, lower_bound] = DensityMapAsImage(density_map);
 
-    const size_t num_matches = matches.size();
-    std::vector<PointPair> keypoint_pairs;
-    keypoint_pairs.reserve(num_matches);
+    density_maps_.emplace_back(density_map);
+    density_maps_cv_.emplace_back(density_map_cv);
+    img_to_density_map_shift_.emplace_back(lower_bound);
+    this->AddToTree(map_idx, density_map_cv);
+    return density_map_cv;
+}
 
-    const auto &ref_map_lower_bound = density_maps_.at(ref_idx).lower_bound;
-    const auto &qry_map_lower_bound = density_maps_.at(query_idx).lower_bound;
-    std::for_each(matches.cbegin(), matches.cend(), [&](const Tree::Match &match) {
-        if (match.object_references.size() == 1) {
-            auto ref_match = match.object_references[0].pt;
-            auto qry_match = match.object_query.pt;
-            keypoint_pairs.emplace_back(Eigen::Vector2d(ref_match.y + ref_map_lower_bound.x(),
-                                                        ref_match.x + ref_map_lower_bound.y()),
-                                        Eigen::Vector2d(qry_match.y + qry_map_lower_bound.x(),
-                                                        qry_match.x + qry_map_lower_bound.y()));
+std::vector<int> MapClosures::GetRefMapIndices(const int top_n) {
+    std::vector<int> ref_map_indices;
+    ref_map_indices.reserve(top_n);
+    if (latest_matches_map_.size() != 0) {
+        std::vector<std::tuple<int, int>> num_matches_per_img;
+        num_matches_per_img.reserve(latest_matches_map_.size());
+        for (const auto &[ref_idx, matches] : latest_matches_map_) {
+            num_matches_per_img.emplace_back(std::make_tuple(ref_idx, matches.size()));
         }
-    });
-
-    int num_inliers = 0;
-    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-    if (num_matches > 2) {
-        const auto &[T, inliers_count] = RansacAlignment2D(keypoint_pairs);
-        pose.block<2, 2>(0, 0) = T.linear();
-        pose.block<2, 1>(0, 3) = T.translation() * config_.density_map_resolution;
-        num_inliers = inliers_count;
+        std::sort(num_matches_per_img.begin(), num_matches_per_img.end(),
+                  [](const std::tuple<int, int> &a, const std::tuple<int, int> &b) {
+                      return std::get<1>(a) > std::get<1>(b);
+                  });
+        for (int i = 0; i < std::min(top_n, static_cast<int>(latest_matches_map_.size())); i++) {
+            ref_map_indices.emplace_back(std::get<0>(num_matches_per_img[i]));
+        }
     }
-    return {pose, num_inliers};
+    return ref_map_indices;
+}
+
+std::tuple<bool, KeyPoints2D, KeyPoints2D, std::vector<double>> MapClosures::ComputeMatches(
+    int ref_idx, int query_idx) {
+    Tree::MatchVector matches = latest_matches_map_.at(ref_idx);
+    std::sort(matches.begin(), matches.end(),
+              [](const Tree::Match &a, const Tree::Match &b) { return a.distance < b.distance; });
+
+    KeyPoints2D ref_keypoints;
+    ref_keypoints.reserve(matches.size());
+    KeyPoints2D query_keypoints;
+    query_keypoints.reserve(matches.size());
+    std::vector<double> match_weights;
+    match_weights.reserve(matches.size());
+
+    if (matches.size() >= 10) {
+        auto ref_shift = img_to_density_map_shift_[ref_idx];
+        auto query_shift = img_to_density_map_shift_[query_idx];
+
+        std::for_each(matches.cbegin(), matches.cend(), [&](const Tree::Match &match) {
+            if (match.object_references.size() == 1) {
+                match_weights.emplace_back(match.distance);
+                ref_keypoints.emplace_back(
+                    Vector2d(match.object_references[0].pt.y + ref_shift.x(),
+                             match.object_references[0].pt.x + ref_shift.y()));
+                query_keypoints.emplace_back(Vector2d(match.object_query.pt.y + query_shift.x(),
+                                                      match.object_query.pt.x + query_shift.y()));
+            }
+        });
+
+        auto sum_weights = std::accumulate(match_weights.cbegin(), match_weights.cend(), 0.1);
+        std::transform(match_weights.begin(), match_weights.end(), match_weights.begin(),
+                       [sum_weights](auto weight) { return 1 - (weight / sum_weights); });
+        return {true, ref_keypoints, query_keypoints, match_weights};
+    }
+    return {false, ref_keypoints, query_keypoints, match_weights};
+}
+
+std::tuple<Matrix4d, int> MapClosures::CheckForClosure(int ref_idx, int query_idx) {
+    const auto [has_enough_matches, ref_kps, query_kps, match_weights] =
+        this->ComputeMatches(ref_idx, query_idx);
+    if (has_enough_matches) {
+        const auto [R, tr, inliers_count] =
+            ICPRansac2D(ref_kps, query_kps, match_weights);
+        Matrix4d initial_tf;
+        initial_tf.setIdentity();
+        initial_tf.block(0, 0, 2, 2) = R;
+        initial_tf.block(0, 3, 2, 1) = tr * config_.density_map_resolution;
+        return {initial_tf, inliers_count};
+    }
+    return {Matrix4d{}, 0};
 }
 }  // namespace map_closures

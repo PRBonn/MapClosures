@@ -21,21 +21,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
-
 #include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <utility>
+#include <tuple>
 #include <vector>
 
 namespace map_closures {
 
-struct PointPair {
-    PointPair() = default;
-    PointPair(const Eigen::Vector2d &r, const Eigen::Vector2d &q);
-    Eigen::Vector2d ref = Eigen::Vector2d::Zero();
-    Eigen::Vector2d query = Eigen::Vector2d::Zero();
-};
-
-std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs);
-}  // namespace map_closures
+std::tuple<Eigen::Matrix2d, Eigen::Vector2d, int> ICPRansac2D(
+    const std::vector<Eigen::Vector2d> &ref_keypts,
+    const std::vector<Eigen::Vector2d> &query_keypts,
+    const std::vector<double> &weights);
+}

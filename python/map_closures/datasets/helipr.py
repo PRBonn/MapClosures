@@ -22,15 +22,10 @@
 # SOFTWARE.
 import os
 import glob
-import struct
-import sys
 from pathlib import Path
 
 from pyquaternion import Quaternion
 import numpy as np
-
-from lidar_visualizer.datasets import supported_file_extensions
-
 
 class HeLiPRDataset:
     def __init__(self, data_dir: Path, sequence: str, *_, **__):
@@ -42,60 +37,31 @@ class HeLiPRDataset:
         self.gt_file = os.path.join(self.sequence_dir, "LiDAR_GT", f"{self.sequence_id}_gt.txt")
         self.gt_poses = self.load_poses(self.gt_file)
 
-        if len(self.scan_files) == 0:
-            raise ValueError(f"Tried to read point cloud files in {data_dir} but none found")
-        self.file_extension = self.scan_files[0].split(".")[-1]
-        if self.file_extension not in supported_file_extensions():
-            raise ValueError(f"Supported formats are: {supported_file_extensions()}")
-
-        # Obtain the pointcloud reader for the given data folder
-        if self.sequence_id == "Avia":
-            self.format_string = "fffBBBL"
-            self.intensity_channel = None
-        elif self.sequence_id == "Aeva":
-            self.format_string = "ffffflBf"
-            self.format_string_no_intensity = "ffffflB"
-            self.intensity_channel = 7
-        elif self.sequence_id == "Ouster":
-            self.format_string = "ffffIHHH"
-            self.intensity_channel = 3
-        elif self.sequence_id == "Velodyne":
-            self.format_string = "ffffHf"
-            self.intensity_channel = 3
-        else:
-            print("[ERROR] Unsupported LiDAR Type")
-            sys.exit()
+        self.dtype = np.dtype(
+            [
+                ("x", np.float32),
+                ("y", np.float32),
+                ("z", np.float32),
+                ("reflectivity", np.uint8),
+                ("tag", np.uint8),
+                ("line", np.uint8),
+                ("offset_time", np.uint32),
+            ]
+        )
 
     def __len__(self):
         return len(self.scan_files)
 
     def __getitem__(self, idx):
-        return self.read_point_cloud(idx)
+        return self.read_point_cloud(self.scan_files[idx])
 
-    def get_data(self, idx: int):
-        file_path = self.scan_files[idx]
-        list_lines = []
-
-        # Special case, see https://github.com/minwoo0611/HeLiPR-File-Player/blob/e8d95e390454ece1415ae9deb51515f63730c10a/src/ROSThread.cpp#L632
-        if self.sequence_id == "Aeva" and int(Path(file_path).stem) <= 1691936557946849179:
-            self.intensity_channel = None
-            format_string = self.format_string_no_intensity
-        else:
-            format_string = self.format_string
-
-        chunk_size = struct.calcsize(f"={format_string}")
-        with open(file_path, "rb") as f:
-            binary = f.read()
-            offset = 0
-            while offset < len(binary):
-                list_lines.append(struct.unpack_from(f"={format_string}", binary, offset))
-                offset += chunk_size
-        data = np.stack(list_lines)
-        return data
-
-    def read_point_cloud(self, idx: int):
-        data = self.get_data(idx)
-        points = data[:, :3]
+    def read_point_cloud(self, file_path: str):
+        points = np.stack(
+            [
+                [line[0], line[1], line[2]]
+                for line in np.fromfile(file_path, dtype=self.dtype).tolist()
+            ]
+        )
         return points.astype(np.float64)
 
     def load_poses(self, poses_file):

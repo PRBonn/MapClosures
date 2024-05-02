@@ -52,28 +52,33 @@ Config GetConfigFromYAML(const py::dict &yaml_cfg) {
 }
 
 PYBIND11_MODULE(map_closures_pybind, m) {
-    auto vector3dvector = pybind_eigen_vector_of_vector<Eigen::Vector3d>(
+auto vector3dvector = pybind_eigen_vector_of_vector<Eigen::Vector3d>(
         m, "_VectorEigen3d", "std::vector<Eigen::Vector3d>",
         py::py_array_to_vectors_double<Eigen::Vector3d>);
 
-    py::class_<MapClosures, std::shared_ptr<MapClosures>> map_closures(m, "_MapClosures", "");
-    map_closures
+    py::class_<MapClosures, std::shared_ptr<MapClosures>> map_closure(m, "_MapClosures", "");
+    map_closure
         .def(py::init([](const py::dict &cfg) {
                  auto config = GetConfigFromYAML(cfg);
                  return std::make_shared<MapClosures>(config);
              }),
              "config"_a)
         .def(
-            "_MatchAndAddLocalMap",
-            [](MapClosures &self, const int map_idx, const std::vector<Eigen::Vector3d> &local_map,
-               const int top_k) {
-                const auto &[ref_map_indices, density_map_cv] =
-                    self.MatchAndAddLocalMap(map_idx, local_map, top_k);
+            "_AddNewLocalMap",
+            [](MapClosures &self, int map_idx, const std::vector<Eigen::Vector3d> &local_map) {
+                cv::Mat density_map_cv = self.AddNewLocalMap(map_idx, local_map);
                 Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> density_map_eigen;
                 cv::cv2eigen(density_map_cv, density_map_eigen);
-                return std::make_tuple(ref_map_indices, density_map_eigen);
+                return density_map_eigen;
             },
-            "map_idx"_a, "local_map"_a, "top_k"_a)
+            "map_idx"_a, "local_map"_a)
+        .def(
+            "_GetRefMapIndices",
+            [](MapClosures &self, const int top_n) {
+                std::vector<int> ref_map_ids = self.GetRefMapIndices(top_n);
+                return py::cast(ref_map_ids);
+            },
+            "top_n"_a)
         .def("_CheckForClosure", &MapClosures::CheckForClosure, "ref_idx"_a, "query_idx"_a);
 }
 }  // namespace map_closures

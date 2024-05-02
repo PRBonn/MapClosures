@@ -23,12 +23,6 @@
 from pathlib import Path
 from typing import Dict, List
 
-
-def sequence_dataloaders():
-    # TODO: automatically infer this
-    return ["kitti"]
-
-
 def available_dataloaders() -> List:
     import os.path
     import pkgutil

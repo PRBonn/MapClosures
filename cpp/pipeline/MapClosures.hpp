@@ -47,21 +47,38 @@ struct Config {
 };
 
 class MapClosures {
+    using Matchable = srrg_hbst::BinaryMatchable<cv::KeyPoint, descriptor_size_bits>;
+    using Node = srrg_hbst::BinaryNode<Matchable>;
+    using Tree = srrg_hbst::BinaryTree<Node>;
+    using MatchableVector = Tree::MatchableVector;
+
+    using Points2D = std::vector<Eigen::Vector2d>;
+
 public:
-    explicit MapClosures();
-    explicit MapClosures(const Config &config);
+    MapClosures();
+    MapClosures(const map_closures::Config &config);
+
     ~MapClosures() = default;
 
 public:
-    std::pair<std::vector<int>, cv::Mat> MatchAndAddLocalMap(
-        const int map_idx, const std::vector<Eigen::Vector3d> &local_map, const unsigned int top_k);
-    std::pair<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx) const;
+    cv::Mat AddNewLocalMap(int map_idx, const std::vector<Eigen::Vector3d> &local_map);
+    std::tuple<Eigen::Matrix4d, int> CheckForClosure(const int ref_idx, const int query_idx);
+    std::vector<int> GetRefMapIndices(const int top_n);
+
+private:
+    void AddToTree(int map_idx, const cv::Mat &density_map_cv);
+    std::tuple<bool, Points2D, Points2D, std::vector<double>> ComputeMatches(const int ref_idx,
+                                                                             const int query_idx);
 
 private:
     Config config_;
-    Tree::MatchVectorMap descriptor_matches_;
-    std::unordered_map<int, DensityMap> density_maps_;
-    std::unique_ptr<Tree> hbst_binary_tree_ = std::make_unique<Tree>();
-    cv::Ptr<cv::DescriptorExtractor> orb_extractor_;
+    cv::Ptr<cv::DescriptorExtractor> image_descriptor_extractor_;
+
+    std::vector<std::unordered_map<Eigen::Vector2i, double, PixelHash>> density_maps_;
+    std::vector<cv::Mat> density_maps_cv_;
+    std::vector<Eigen::Vector2i> img_to_density_map_shift_;
+
+    std::unique_ptr<Tree> hbst_tree_ = std::make_unique<Tree>();
+    Tree::MatchVectorMap latest_matches_map_;
 };
 }  // namespace map_closures
