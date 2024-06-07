@@ -68,7 +68,7 @@ std::tuple<Matrix2d, Vector2d, int> ICPRansac2D(const KeyPoints2D &ref_keypts,
     Vector2d best_tr;
 
     int n_iters = 0;
-    int max_iters = 0.5 * weights.size() * (weights.size() - 1);
+    int max_iters = weights.size() * (weights.size() - 1);
     while (n_iters++ < max_iters) {
         int idx_1 = -1, idx_2 = -1;
         while (idx_1 == idx_2) {
