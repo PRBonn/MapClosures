@@ -24,6 +24,7 @@
 #include "AlignRansac2D.hpp"
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <algorithm>

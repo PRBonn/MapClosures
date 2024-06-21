@@ -26,7 +26,6 @@
 #include <Eigen/Core>
 #include <map>
 #include <opencv2/core.hpp>
-#include <utility>
 #include <vector>
 
 namespace map_closures {

@@ -27,7 +27,6 @@
 #include <algorithm>
 #include <limits>
 #include <opencv2/core.hpp>
-#include <utility>
 #include <vector>
 
 namespace {
