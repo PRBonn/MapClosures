@@ -21,6 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import copy
+import importlib
 import os
 from abc import ABC
 from functools import partial
@@ -28,51 +29,75 @@ from typing import Callable, List
 
 import numpy as np
 
-CYAN = np.array([0.24, 0.898, 1])
-GREEN = np.array([0, 1, 0])
-RED = np.array([128, 0, 0]) / 255.0
-BLACK = np.array([0, 0, 0]) / 255.0
+CYAN = np.array([0.24, 0.898, 1.0])
+GREEN = np.array([0.0, 1.0, 0.0])
+RED = np.array([0.5, 0.0, 0.0])
+BLACK = np.array([0.0, 0.0, 0.0])
 BLUE = np.array([0.4, 0.5, 0.9])
 GRAY = np.array([0.4, 0.4, 0.4])
 WHITE = np.array([1.0, 1.0, 1.0])
 SPHERE_SIZE = 0.20
 
 
-class StubRegistrationVisualizer(ABC):
+class RegistrationData:
+    def __init__(self, o3d):
+        self.source = o3d.geometry.PointCloud()
+        self.keypoints = o3d.geometry.PointCloud()
+        self.target = o3d.geometry.PointCloud()
+        self.frames = []
+
+
+class LoopClosureData:
+    def __init__(self, o3d):
+        self.loop_closures = o3d.geometry.LineSet()
+        self.closure_points = []
+        self.closure_lines = []
+
+        self.closures_exist = False
+
+        self.sources = []
+        self.targets = []
+        self.closure_poses = []
+
+        self.current_closure_id = 0
+        self.current_source = o3d.geometry.PointCloud()
+        self.current_target = o3d.geometry.PointCloud()
+
+
+class StubVisualizer(ABC):
     def __init__(self):
         pass
 
-    def update(self, source, keypoints, target_map, frame_pose, map_pose):
+    def update_registration(self, source, keypoints, target_map, frame_pose, map_pose):
         pass
 
-    def update_closures(self, closure_indices):
+    def update_closures(self, source, target, closure_pose, closure_indices):
         pass
 
 
-class RegistrationVisualizer(StubRegistrationVisualizer):
+class Visualizer(StubVisualizer):
     # Public Interaface ----------------------------------------------------------------------------
-    def __init__(self, o3d):
-        self.o3d = o3d
+    def __init__(self):
+        try:
+            self.o3d = importlib.import_module("open3d")
+        except ModuleNotFoundError:
+            print(f'open3d is not installed on your system, run "pip install open3d"')
+            exit(1)
 
         # Initialize GUI controls
         self.block_vis = True
         self.play_crun = False
         self.reset_bounding_box = True
 
-        # Create data
-        self.source = self.o3d.geometry.PointCloud()
-        self.keypoints = self.o3d.geometry.PointCloud()
-        self.target = self.o3d.geometry.PointCloud()
-        self.frames = []
-
-        self.loop_closures = self.o3d.geometry.LineSet()
-        self.closure_points = []
-        self.closure_lines = []
+        # Create registration data
+        self.registration_data = RegistrationData(self.o3d)
+        self.loop_closures_data = LoopClosureData(self.o3d)
 
         # Initialize visualizer
-        self.vis = self.o3d.visualization.VisualizerWithKeyCallback()
-        self._register_key_callbacks()
-        self._initialize_visualizer()
+        self.registration_vis = self.o3d.visualization.VisualizerWithKeyCallback()
+        self.closure_vis = self.o3d.visualization.VisualizerWithKeyCallback()
+        self._registration_key_callbacks()
+        self._initialize_registration_visualizers()
 
         # Visualization options
         self.render_map = False
@@ -88,35 +113,42 @@ class RegistrationVisualizer(StubRegistrationVisualizer):
             self.render_source,
         )
 
-    def update(self, source, keypoints, target_map, frame_pose, map_pose):
+    def update_registration(self, source, keypoints, target_map, frame_pose, map_pose):
         target = target_map.point_cloud()
-        self._update_geometries(source, keypoints, target, frame_pose, map_pose)
+        self._update_registraion(source, keypoints, target, frame_pose, map_pose)
         while self.block_vis:
-            self.vis.poll_events()
-            self.vis.update_renderer()
+            self.registration_vis.poll_events()
+            self.registration_vis.update_renderer()
+            self.closure_vis.poll_events()
+            self.closure_vis.update_renderer()
             if self.play_crun:
                 break
         self.block_vis = not self.block_vis
 
-    def update_closures(self, closure_indices):
-        self._update_closures(closure_indices)
+    def update_closures(self, source, target, closure_pose, closure_indices):
+        if self.loop_closures_data.closures_exist == False:
+            self._initialize_closure_visualizers()
+            self._loopclosure_key_callbacks()
+            self.loop_closures_data.closures_exist = True
+        self._update_closures(source, target, closure_pose, closure_indices)
         while self.block_vis:
-            self.vis.poll_events()
-            self.vis.update_renderer()
+            self.closure_vis.poll_events()
+            self.closure_vis.update_renderer()
             if self.play_crun:
                 break
         self.block_vis = not self.block_vis
 
     # Private Interaface ---------------------------------------------------------------------------
-    def _initialize_visualizer(self):
-        w_name = self.__class__.__name__
-        self.vis.create_window(window_name=w_name, width=1920, height=1080)
-        self.vis.add_geometry(self.source)
-        self.vis.add_geometry(self.keypoints)
-        self.vis.add_geometry(self.target)
-        self.vis.add_geometry(self.loop_closures)
-        self._set_black_background(self.vis)
-        self.vis.get_render_option().point_size = 1
+    def _initialize_registration_visualizers(self):
+        w_name = "Registration Visualizer"
+        self.registration_vis.create_window(window_name=w_name, width=1920, height=1080)
+        self.registration_vis.add_geometry(self.registration_data.source, reset_bounding_box=False)
+        self.registration_vis.add_geometry(
+            self.registration_data.keypoints, reset_bounding_box=False
+        )
+        self.registration_vis.add_geometry(self.registration_data.target, reset_bounding_box=False)
+        self._set_black_background(self.registration_vis)
+        self.registration_vis.get_render_option().point_size = 1
         print(
             f"{w_name} initialized. Press:\n"
             "\t[SPACE] to pause/start\n"
@@ -132,22 +164,58 @@ class RegistrationVisualizer(StubRegistrationVisualizer):
             "\t    [B] to toggle a black background\n"
         )
 
-    def _register_key_callback(self, keys: List, callback: Callable):
-        for key in keys:
-            self.vis.register_key_callback(ord(str(key)), partial(callback))
+    def _initialize_closure_visualizers(self):
+        w_name = "Loop Closure Visualizer"
+        self.closure_vis.create_window(window_name=w_name, width=1920, height=1080)
+        self.closure_vis.add_geometry(
+            self.loop_closures_data.current_source, reset_bounding_box=False
+        )
+        self.closure_vis.add_geometry(
+            self.loop_closures_data.current_target, reset_bounding_box=False
+        )
+        self.registration_vis.add_geometry(
+            self.loop_closures_data.loop_closures, reset_bounding_box=False
+        )
+        self._set_black_background(self.closure_vis)
+        self.closure_vis.get_render_option().point_size = 1
+        print(
+            f"{w_name} initialized. Press:\n"
+            "\t[SPACE] to pause/start\n"
+            "\t    [P] to step to previous closure\n"
+            "\t    [N] to step to next closure\n"
+            "\t    [C] to center the viewpoint\n"
+            "\t    [W] to toggle a white background\n"
+            "\t    [B] to toggle a black background\n"
+        )
 
-    def _register_key_callbacks(self):
-        self._register_key_callback(["Ā", "Q", "\x1b"], self._quit)
-        self._register_key_callback([" "], self._start_stop)
-        self._register_key_callback(["N"], self._next_frame)
-        self._register_key_callback(["V"], self._toggle_view)
-        self._register_key_callback(["C"], self._center_viewpoint)
-        self._register_key_callback(["F"], self._toggle_source)
-        self._register_key_callback(["K"], self._toggle_keypoints)
-        self._register_key_callback(["M"], self._toggle_map)
-        self._register_key_callback(["T"], self._toggle_trajectory)
-        self._register_key_callback(["B"], self._set_black_background)
-        self._register_key_callback(["W"], self._set_white_background)
+    def _registration_key_callback(self, keys: List, callback: Callable):
+        for key in keys:
+            self.registration_vis.register_key_callback(ord(str(key)), partial(callback))
+
+    def _loopclosure_key_callback(self, keys: List, callback: Callable):
+        for key in keys:
+            self.closure_vis.register_key_callback(ord(str(key)), partial(callback))
+
+    def _registration_key_callbacks(self):
+        self._registration_key_callback(["Ā", "Q", "\x1b"], self._quit)
+        self._registration_key_callback([" "], self._start_stop)
+        self._registration_key_callback(["N"], self._next_frame)
+        self._registration_key_callback(["V"], self._toggle_view)
+        self._registration_key_callback(["C"], self._center_viewpoint)
+        self._registration_key_callback(["F"], self._toggle_source)
+        self._registration_key_callback(["K"], self._toggle_keypoints)
+        self._registration_key_callback(["M"], self._toggle_map)
+        self._registration_key_callback(["T"], self._toggle_trajectory)
+        self._registration_key_callback(["B"], self._set_black_background)
+        self._registration_key_callback(["W"], self._set_white_background)
+
+    def _loopclosure_key_callbacks(self):
+        self._loopclosure_key_callback([" "], self._start_stop)
+        self._loopclosure_key_callback(["P"], self._prev_closure)
+        self._loopclosure_key_callback(["N"], self._next_closure)
+        self._loopclosure_key_callback(["C"], self._center_viewpoint)
+        self._loopclosure_key_callback(["B"], self._set_black_background)
+        self._loopclosure_key_callback(["W"], self._set_white_background)
 
     def _set_black_background(self, vis):
         vis.get_render_option().background_color = [0.0, 0.0, 0.0]
@@ -162,6 +230,18 @@ class RegistrationVisualizer(StubRegistrationVisualizer):
 
     def _next_frame(self, vis):
         self.block_vis = not self.block_vis
+
+    def _prev_closure(self, vis):
+        self.loop_closures_data.current_closure_id = (
+            self.loop_closures_data.current_closure_id - 1
+        ) % len(self.loop_closures_data.closure_poses)
+        self._update_closure(self.loop_closures_data.current_closure_id)
+
+    def _next_closure(self, vis):
+        self.loop_closures_data.current_closure_id = (
+            self.loop_closures_data.current_closure_id + 1
+        ) % len(self.loop_closures_data.closure_poses)
+        self._update_closure(self.loop_closures_data.current_closure_id)
 
     def _start_stop(self, vis):
         self.play_crun = not self.play_crun
@@ -203,181 +283,99 @@ class RegistrationVisualizer(StubRegistrationVisualizer):
 
     def _trajectory_handle(self):
         if self.render_trajectory and self.global_view:
-            for frame in self.frames:
-                self.vis.add_geometry(frame, reset_bounding_box=False)
-            self.vis.add_geometry(self.loop_closures, reset_bounding_box=False)
+            for frame in self.registration_data.frames:
+                self.registration_vis.add_geometry(frame, reset_bounding_box=False)
+            if self.loop_closures_data.closures_exist:
+                self.registration_vis.add_geometry(
+                    self.loop_closures_data.loop_closures, reset_bounding_box=False
+                )
         else:
-            for frame in self.frames:
-                self.vis.remove_geometry(frame, reset_bounding_box=False)
-            self.vis.remove_geometry(self.loop_closures, reset_bounding_box=False)
+            for frame in self.registration_data.frames:
+                self.registration_vis.remove_geometry(frame, reset_bounding_box=False)
+            if self.loop_closures_data.closures_exist:
+                self.registration_vis.remove_geometry(
+                    self.loop_closures_data.loop_closures, reset_bounding_box=False
+                )
 
-    def _update_geometries(self, source, keypoints, target, pose, frame_to_map_pose):
+    def _update_registraion(self, source, keypoints, target, pose, frame_to_map_pose):
         # Source hot frame
         if self.render_source:
-            self.source.points = self.o3d.utility.Vector3dVector(source)
-            self.source.paint_uniform_color(CYAN)
+            self.registration_data.source.points = self.o3d.utility.Vector3dVector(source)
+            self.registration_data.source.paint_uniform_color(CYAN)
             if self.global_view:
-                self.source.transform(pose)
+                self.registration_data.source.transform(pose)
         else:
-            self.source.points = self.o3d.utility.Vector3dVector()
+            self.registration_data.source.points = self.o3d.utility.Vector3dVector()
 
         # Keypoints
         if self.render_keypoints:
-            self.keypoints.points = self.o3d.utility.Vector3dVector(keypoints)
-            self.keypoints.paint_uniform_color(CYAN)
+            self.registration_data.keypoints.points = self.o3d.utility.Vector3dVector(keypoints)
+            self.registration_data.keypoints.paint_uniform_color(CYAN)
             if self.global_view:
-                self.keypoints.transform(pose)
+                self.registration_data.keypoints.transform(pose)
         else:
-            self.keypoints.points = self.o3d.utility.Vector3dVector()
+            self.registration_data.keypoints.points = self.o3d.utility.Vector3dVector()
 
         # Target Map
         if self.render_map:
             target = copy.deepcopy(target)
-            self.target.points = self.o3d.utility.Vector3dVector(target)
+            self.registration_data.target.points = self.o3d.utility.Vector3dVector(target)
             if self.global_view:
-                self.target.paint_uniform_color(GRAY)
-                self.target.transform(pose @ np.linalg.inv(frame_to_map_pose))
+                self.registration_data.target.paint_uniform_color(GRAY)
+                self.registration_data.target.transform(pose @ np.linalg.inv(frame_to_map_pose))
             else:
-                self.target.transform(np.linalg.inv(frame_to_map_pose))
+                self.registration_data.target.transform(np.linalg.inv(frame_to_map_pose))
                 pass
         else:
-            self.target.points = self.o3d.utility.Vector3dVector()
+            self.registration_data.target.points = self.o3d.utility.Vector3dVector()
 
         # Update always a list with all the trajectories
         new_frame = self.o3d.geometry.TriangleMesh.create_sphere(SPHERE_SIZE)
         new_frame.paint_uniform_color(BLUE)
         new_frame.compute_vertex_normals()
         new_frame.transform(pose)
-        self.frames.append(new_frame)
-        self.closure_points.append(pose[:3, -1])
+        self.registration_data.frames.append(new_frame)
+        self.loop_closures_data.closure_points.append(pose[:3, -1])
 
         # Render trajectory, only if it make sense (global view)
         if self.render_trajectory and self.global_view:
-            self.vis.add_geometry(self.frames[-1], reset_bounding_box=False)
-            self.vis.add_geometry(self.loop_closures, reset_bounding_box=False)
+            self.registration_vis.add_geometry(
+                self.registration_data.frames[-1], reset_bounding_box=False
+            )
 
-        self.vis.update_geometry(self.keypoints)
-        self.vis.update_geometry(self.source)
-        self.vis.update_geometry(self.target)
+        self.registration_vis.update_geometry(self.registration_data.keypoints)
+        self.registration_vis.update_geometry(self.registration_data.source)
+        self.registration_vis.update_geometry(self.registration_data.target)
         if self.reset_bounding_box:
-            self.vis.reset_view_point(True)
+            self.registration_vis.reset_view_point(True)
             self.reset_bounding_box = False
 
-    def _update_closures(self, closure_indices):
-        self.closure_lines.append(closure_indices)
-        self.loop_closures = self.o3d.geometry.LineSet(
-            points=self.o3d.utility.Vector3dVector(self.closure_points),
-            lines=self.o3d.utility.Vector2iVector(self.closure_lines),
+    def _update_closures(self, source, target, closure_pose, closure_indices):
+        self.loop_closures_data.sources.append(self.o3d.utility.Vector3dVector(source))
+        self.loop_closures_data.targets.append(self.o3d.utility.Vector3dVector(target))
+        self.loop_closures_data.closure_poses.append(closure_pose)
+        self._update_closure(len(self.loop_closures_data.closure_poses) - 1)
+
+        self.loop_closures_data.closure_lines.append(closure_indices)
+        self.loop_closures_data.loop_closures = self.o3d.geometry.LineSet(
+            points=self.o3d.utility.Vector3dVector(self.loop_closures_data.closure_points),
+            lines=self.o3d.utility.Vector2iVector(self.loop_closures_data.closure_lines),
         )
-        self.loop_closures.paint_uniform_color(RED)
+        self.loop_closures_data.loop_closures.paint_uniform_color(RED)
 
         # Render trajectory, only if it make sense (global view)
         if self.render_trajectory and self.global_view:
-            self.vis.add_geometry(self.loop_closures, reset_bounding_box=False)
+            self.registration_vis.add_geometry(
+                self.loop_closures_data.loop_closures, reset_bounding_box=False
+            )
 
+    def _update_closure(self, idx):
+        self.loop_closures_data.current_source.points = self.loop_closures_data.sources[idx]
+        self.loop_closures_data.current_source.transform(self.loop_closures_data.closure_poses[idx])
+        self.loop_closures_data.current_source.paint_uniform_color(RED)
+        self.loop_closures_data.current_target.points = self.loop_closures_data.targets[idx]
+        self.loop_closures_data.current_target.paint_uniform_color(GREEN)
 
-class StubLoopClosuresVisualizer(ABC):
-    def __init__(self):
-        pass
-
-    def update(self, source, target, closure_pose):
-        pass
-
-
-class LoopClosuresVisualizer(StubLoopClosuresVisualizer):
-    def __init__(self, o3d):
-        self.o3d = o3d
-
-        # Initialize GUI controls
-        self.reset_bounding_box = True
-        self.closures_exist = False
-
-        # Create data
-        self.sources = []
-        self.targets = []
-        self.closure_poses = []
-
-        self.current_closure_id = 0
-        self.current_source = self.o3d.geometry.PointCloud()
-        self.current_target = self.o3d.geometry.PointCloud()
-
-        # Initialize visualizer
-        self.vis = self.o3d.visualization.VisualizerWithKeyCallback()
-
-    def update(self, source, target, closure_pose):
-        if self.closures_exist == False:
-            self._register_key_callbacks()
-            self._initialize_visualizer()
-            self.closures_exist = True
-
-        self.sources.append(self.o3d.utility.Vector3dVector(source))
-        self.targets.append(self.o3d.utility.Vector3dVector(target))
-        self.closure_poses.append(closure_pose)
-        self._update_closures(len(self.closure_poses) - 1)
-        
-    # Private Interaface ---------------------------------------------------------------------------
-    def _initialize_visualizer(self):
-        w_name = self.__class__.__name__
-        self.vis.create_window(window_name=w_name, width=1920, height=1080)
-        self.vis.add_geometry(self.current_source)
-        self.vis.add_geometry(self.current_target)
-        self._set_black_background(self.vis)
-        self.vis.get_render_option().point_size = 1
-        print(
-            f"{w_name} initialized. Press:\n"
-            "\t  [ESC] to exit\n"
-            "\t    [P] to step to previous closure\n"
-            "\t    [N] to step to next closure\n"
-            "\t    [C] to center the viewpoint\n"
-            "\t    [W] to toggle a white background\n"
-            "\t    [B] to toggle a black background\n"
-        )
-
-    def _register_key_callback(self, keys: List, callback: Callable):
-        for key in keys:
-            self.vis.register_key_callback(ord(str(key)), partial(callback))
-
-    def _register_key_callbacks(self):
-        self._register_key_callback(["Ā", "Q", "\x1b"], self._quit)
-        self._register_key_callback(["P"], self._prev_closure)
-        self._register_key_callback(["N"], self._next_closure)
-        self._register_key_callback(["C"], self._center_viewpoint)
-        self._register_key_callback(["B"], self._set_black_background)
-        self._register_key_callback(["W"], self._set_white_background)
-
-    def _set_black_background(self, vis):
-        vis.get_render_option().background_color = [0.0, 0.0, 0.0]
-
-    def _set_white_background(self, vis):
-        vis.get_render_option().background_color = [1.0, 1.0, 1.0]
-
-    def _quit(self, vis):
-        print("Destroying Loop Closure Visualizer")
-        vis.destroy_window()
-        os._exit(0)
-
-    def _prev_closure(self, vis):
-        self.current_closure_id = (self.current_closure_id - 1) % len(self.closure_poses)
-        self._update_closures(self.current_closure_id)
-
-    def _next_closure(self, vis):
-        self.current_closure_id = (self.current_closure_id + 1) % len(self.closure_poses)
-        self._update_closures(self.current_closure_id)
-
-    def _center_viewpoint(self, vis):
-        vis.reset_view_point(True)
-
-    def _update_closures(self, idx):
-        self.current_source.points = self.sources[idx]
-        self.current_source.transform(self.closure_poses[idx])
-        self.current_source.paint_uniform_color(RED)
-        self.current_target.points = self.targets[idx]
-        self.current_target.paint_uniform_color(GREEN)
-
-        self.vis.update_geometry(self.current_source)
-        self.vis.update_geometry(self.current_target)
-        if self.reset_bounding_box:
-            self.vis.reset_view_point(True)
-        self.vis.poll_events()
-        self.vis.update_renderer()
-
+        self.closure_vis.update_geometry(self.loop_closures_data.current_source)
+        self.closure_vis.update_geometry(self.loop_closures_data.current_target)
+        self.closure_vis.reset_view_point(True)
