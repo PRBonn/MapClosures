@@ -24,6 +24,7 @@ import datetime
 import os
 from pathlib import Path
 from typing import List, Optional
+import importlib
 
 import numpy as np
 from kiss_icp.config import KISSConfig
@@ -35,6 +36,12 @@ from tqdm.auto import trange
 from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import LocalMap
+from map_closures.tools.visualizer import (
+    RegistrationVisualizer,
+    StubRegistrationVisualizer,
+    LoopClosuresVisualizer,
+    StubLoopClosuresVisualizer,
+)
 
 
 def transform_points(pcd, T):
@@ -50,6 +57,7 @@ class MapClosurePipeline:
         config_path: Path,
         results_dir: Path,
         eval: Optional[bool] = False,
+        vis: Optional[bool] = False,
     ):
         self._dataset = dataset
         self._dataset_name = (
@@ -60,6 +68,7 @@ class MapClosurePipeline:
         self._n_scans = len(self._dataset)
         self._results_dir = results_dir
         self._eval = eval
+        self._vis = vis
 
         if config_path is not None:
             self.config_name = os.path.basename(config_path)
@@ -77,7 +86,7 @@ class MapClosurePipeline:
         self.map_closures = MapClosures(self.closure_config)
 
         self.local_maps: List[LocalMap] = []
-
+        self.kiss_poses: List[np.ndarray] = []
         self.closures = []
 
         if self._eval and hasattr(self._dataset, "gt_poses"):
@@ -106,6 +115,16 @@ class MapClosurePipeline:
                     "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
                 )
 
+        self.registration_visualizer = StubRegistrationVisualizer()
+        self.closures_visualizer = StubLoopClosuresVisualizer()
+        if self._vis:
+            try:
+                self.o3d = importlib.import_module("open3d")
+                self.registration_visualizer = RegistrationVisualizer(self.o3d)
+                self.closures_visualizer = LoopClosuresVisualizer(self.o3d)
+            except ModuleNotFoundError:
+                print(f'open3d is not installed on your system, run "pip install open3d"')
+
     def run(self):
         self._run_pipeline()
         if self._eval:
@@ -130,12 +149,16 @@ class MapClosurePipeline:
                 frame = self._dataset[scan_idx]
                 timestamps = np.zeros(len(frame))
 
-            self.odometry.register_frame(frame, timestamps)
-            current_frame_pose = self.odometry.poses[-1]
+            source, keypoints = self.odometry.register_frame(frame, timestamps)
+            current_frame_pose = self.odometry.last_pose
+            self.kiss_poses.append(current_frame_pose)
 
             frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
+            self.registration_visualizer.update(
+                source, keypoints, self.voxel_local_map, current_frame_pose, frame_to_map_pose
+            )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
                 scan_idx == self._n_scans - 1
@@ -156,23 +179,36 @@ class MapClosurePipeline:
                 )
 
                 if closure.number_of_inliers > self.closure_config.inliers_threshold:
+                    ref_local_map = self.local_maps[closure.source_id]
+                    query_local_map = self.local_maps[closure.target_id]
                     self.closures.append(
                         np.r_[
                             closure.source_id,
-                            map_idx,
-                            self.local_maps[closure.source_id].scan_indices[0],
-                            self.local_maps[map_idx].scan_indices[0],
+                            closure.target_id,
+                            ref_local_map.scan_indices[0],
+                            query_local_map.scan_indices[0],
                             closure.pose.flatten(),
                         ]
                     )
                     if self._eval:
                         self.results.append(
-                            self.local_maps[closure.source_id],
-                            self.local_maps[map_idx],
+                            ref_local_map,
+                            query_local_map,
                             closure.pose,
                             self.closure_distance_threshold,
                             closure.number_of_inliers,
                         )
+                    self.registration_visualizer.update_closures(
+                        [
+                            ref_local_map.scan_indices[0],
+                            query_local_map.scan_indices[0],
+                        ],
+                    )
+                    self.closures_visualizer.update(
+                        ref_local_map.pointcloud,
+                        query_local_map.pointcloud,
+                        np.asarray(closure.pose),
+                    )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 pts_to_keep = self.voxel_local_map.point_cloud()
@@ -206,7 +242,7 @@ class MapClosurePipeline:
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
         np.save(
             os.path.join(self._results_dir, "kiss_poses.npy"),
-            np.asarray(self.odometry.poses),
+            np.asarray(self.kiss_poses),
         )
 
     def _log_to_console(self):
