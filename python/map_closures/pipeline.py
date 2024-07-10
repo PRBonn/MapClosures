@@ -80,7 +80,7 @@ class MapClosurePipeline:
         self.map_closures = MapClosures(self.closure_config)
 
         self.local_maps: List[LocalMap] = []
-        self.kiss_poses: List[np.ndarray] = []
+
         self.closures = []
 
         if self._eval and hasattr(self._dataset, "gt_poses"):
@@ -133,17 +133,13 @@ class MapClosurePipeline:
         current_map_pose = np.eye(4)
         for scan_idx in trange(0, self._n_scans, ncols=8, unit=" frames", dynamic_ncols=True):
             try:
-                frame, intensity, timestamps = self._dataset[scan_idx]
+                frame, timestamps = self._dataset[scan_idx]
             except ValueError:
-                frame, intensity = self._dataset[scan_idx]
+                frame = self._dataset[scan_idx]
                 timestamps = np.zeros(len(frame))
-            ind = np.where(intensity > 0.25)[0]
-            frame = frame[ind]
-            timestamps = timestamps[ind]
 
             source, keypoints = self.odometry.register_frame(frame, timestamps)
-            current_frame_pose = self.odometry.last_pose
-            self.kiss_poses.append(current_frame_pose)
+            current_frame_pose = self.odometry.poses[-1]
 
             frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
@@ -152,7 +148,9 @@ class MapClosurePipeline:
                 source, keypoints, self.voxel_local_map, current_frame_pose, frame_to_map_pose
             )
 
-            if np.linalg.norm(frame_to_map_pose[:3, -1]) > 100.0 or (scan_idx == self._n_scans - 1):
+            if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
+                scan_idx == self._n_scans - 1
+            ):
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
                 closure = self.map_closures.match_and_add(map_idx, local_map_pointcloud)
 
@@ -233,7 +231,7 @@ class MapClosurePipeline:
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
         np.save(
             os.path.join(self._results_dir, "kiss_poses.npy"),
-            np.asarray(self.kiss_poses),
+            np.asarray(self.odometry.poses),
         )
 
     def _log_to_console(self):

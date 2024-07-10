@@ -101,7 +101,7 @@ class GenericDataset:
         try:
             import open3d as o3d
 
-            o3d.t.io.read_point_cloud(first_scan_file)
+            o3d.io.read_point_cloud(first_scan_file)
             return lambda file: np.asarray(o3d.io.read_point_cloud(file).points, dtype=np.float64)
         except:
             print("[ERROR], File format not supported")
