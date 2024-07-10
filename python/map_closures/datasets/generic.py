@@ -101,6 +101,7 @@ class GenericDataset:
         # lastly with open3d
         try:
             import open3d as o3d
+
             o3d.t.io.read_point_cloud(first_scan_file)
             return lambda file: [
                 o3d.t.io.read_point_cloud(file).point.positions.numpy(),

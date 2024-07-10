@@ -68,6 +68,9 @@ class StubVisualizer(ABC):
     def __init__(self):
         pass
 
+    def pause_vis():
+        pass
+
     def update_registration(self, source, keypoints, target_map, frame_pose, map_pose):
         pass
 
@@ -113,6 +116,16 @@ class Visualizer(StubVisualizer):
             self.render_source,
         )
 
+    def pause_vis(self):
+        self.play_crun = False
+        while True:
+            self.registration_vis.poll_events()
+            self.registration_vis.update_renderer()
+            self.closure_vis.poll_events()
+            self.closure_vis.update_renderer()
+            if self.play_crun:
+                break
+
     def update_registration(self, source, keypoints, target_map, frame_pose, map_pose):
         target = target_map.point_cloud()
         self._update_registraion(source, keypoints, target, frame_pose, map_pose)
@@ -126,27 +139,21 @@ class Visualizer(StubVisualizer):
         self.block_vis = not self.block_vis
 
     def update_closures(self, source, target, closure_pose, closure_indices):
+        self._update_closures(source, target, closure_pose, closure_indices)
         if self.loop_closures_data.closures_exist == False:
             self._initialize_closure_visualizers()
             self._loopclosure_key_callbacks()
             self.loop_closures_data.closures_exist = True
-        self._update_closures(source, target, closure_pose, closure_indices)
-        while self.block_vis:
-            self.closure_vis.poll_events()
-            self.closure_vis.update_renderer()
-            if self.play_crun:
-                break
-        self.block_vis = not self.block_vis
+
+        # Render trajectory, only if it make sense (global view)
+        if self.render_trajectory and self.global_view:
+            self.registration_vis.update_geometry(self.loop_closures_data.loop_closures)
 
     # Private Interaface ---------------------------------------------------------------------------
     def _initialize_registration_visualizers(self):
         w_name = "Registration Visualizer"
         self.registration_vis.create_window(window_name=w_name, width=1920, height=1080)
         self.registration_vis.add_geometry(self.registration_data.source, reset_bounding_box=False)
-        self.registration_vis.add_geometry(
-            self.registration_data.keypoints, reset_bounding_box=False
-        )
-        self.registration_vis.add_geometry(self.registration_data.target, reset_bounding_box=False)
         self._set_black_background(self.registration_vis)
         self.registration_vis.get_render_option().point_size = 1
         print(
@@ -250,21 +257,52 @@ class Visualizer(StubVisualizer):
         if self.render_keypoints:
             self.render_keypoints = False
             self.render_source = True
+            self.registration_vis.remove_geometry(
+                self.registration_data.keypoints, reset_bounding_box=False
+            )
         else:
             self.render_source = not self.render_source
+
+        if self.render_source:
+            self.registration_vis.add_geometry(
+                self.registration_data.source, reset_bounding_box=False
+            )
+        else:
+            self.registration_vis.remove_geometry(
+                self.registration_data.source, reset_bounding_box=False
+            )
         return False
 
     def _toggle_keypoints(self, vis):
         if self.render_source:
             self.render_source = False
             self.render_keypoints = True
+            self.registration_vis.remove_geometry(
+                self.registration_data.source, reset_bounding_box=False
+            )
         else:
             self.render_keypoints = not self.render_keypoints
 
+        if self.render_keypoints:
+            self.registration_vis.add_geometry(
+                self.registration_data.keypoints, reset_bounding_box=False
+            )
+        else:
+            self.registration_vis.remove_geometry(
+                self.registration_data.keypoints, reset_bounding_box=False
+            )
         return False
 
     def _toggle_map(self, vis):
         self.render_map = not self.render_map
+        if self.render_map:
+            self.registration_vis.add_geometry(
+                self.registration_data.target, reset_bounding_box=False
+            )
+        else:
+            self.registration_vis.remove_geometry(
+                self.registration_data.target, reset_bounding_box=False
+            )
         return False
 
     def _toggle_view(self, vis):
@@ -304,8 +342,7 @@ class Visualizer(StubVisualizer):
             self.registration_data.source.paint_uniform_color(CYAN)
             if self.global_view:
                 self.registration_data.source.transform(pose)
-        else:
-            self.registration_data.source.points = self.o3d.utility.Vector3dVector()
+            self.registration_vis.update_geometry(self.registration_data.source)
 
         # Keypoints
         if self.render_keypoints:
@@ -313,8 +350,7 @@ class Visualizer(StubVisualizer):
             self.registration_data.keypoints.paint_uniform_color(CYAN)
             if self.global_view:
                 self.registration_data.keypoints.transform(pose)
-        else:
-            self.registration_data.keypoints.points = self.o3d.utility.Vector3dVector()
+            self.registration_vis.update_geometry(self.registration_data.keypoints)
 
         # Target Map
         if self.render_map:
@@ -325,9 +361,7 @@ class Visualizer(StubVisualizer):
                 self.registration_data.target.transform(pose @ np.linalg.inv(frame_to_map_pose))
             else:
                 self.registration_data.target.transform(np.linalg.inv(frame_to_map_pose))
-                pass
-        else:
-            self.registration_data.target.points = self.o3d.utility.Vector3dVector()
+            self.registration_vis.update_geometry(self.registration_data.target)
 
         # Update always a list with all the trajectories
         new_frame = self.o3d.geometry.TriangleMesh.create_sphere(SPHERE_SIZE)
@@ -343,9 +377,6 @@ class Visualizer(StubVisualizer):
                 self.registration_data.frames[-1], reset_bounding_box=False
             )
 
-        self.registration_vis.update_geometry(self.registration_data.keypoints)
-        self.registration_vis.update_geometry(self.registration_data.source)
-        self.registration_vis.update_geometry(self.registration_data.target)
         if self.reset_bounding_box:
             self.registration_vis.reset_view_point(True)
             self.reset_bounding_box = False
@@ -357,17 +388,13 @@ class Visualizer(StubVisualizer):
         self._update_closure(len(self.loop_closures_data.closure_poses) - 1)
 
         self.loop_closures_data.closure_lines.append(closure_indices)
-        self.loop_closures_data.loop_closures = self.o3d.geometry.LineSet(
-            points=self.o3d.utility.Vector3dVector(self.loop_closures_data.closure_points),
-            lines=self.o3d.utility.Vector2iVector(self.loop_closures_data.closure_lines),
+        self.loop_closures_data.loop_closures.points = self.o3d.utility.Vector3dVector(
+            self.loop_closures_data.closure_points
+        )
+        self.loop_closures_data.loop_closures.lines = self.o3d.utility.Vector2iVector(
+            self.loop_closures_data.closure_lines
         )
         self.loop_closures_data.loop_closures.paint_uniform_color(RED)
-
-        # Render trajectory, only if it make sense (global view)
-        if self.render_trajectory and self.global_view:
-            self.registration_vis.add_geometry(
-                self.loop_closures_data.loop_closures, reset_bounding_box=False
-            )
 
     def _update_closure(self, idx):
         self.loop_closures_data.current_source.points = self.loop_closures_data.sources[idx]
@@ -378,4 +405,3 @@ class Visualizer(StubVisualizer):
 
         self.closure_vis.update_geometry(self.loop_closures_data.current_source)
         self.closure_vis.update_geometry(self.loop_closures_data.current_target)
-        self.closure_vis.reset_view_point(True)

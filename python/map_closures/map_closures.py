@@ -20,9 +20,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import numpy as np
 from typing_extensions import TypeAlias
 
-import numpy as np
 from map_closures.config import MapClosuresConfig
 from map_closures.pybind import map_closures_pybind
 

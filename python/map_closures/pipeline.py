@@ -24,20 +24,18 @@ import datetime
 import os
 from pathlib import Path
 from typing import List, Optional
-import importlib
 
 import numpy as np
-from tqdm.auto import trange
-
 from kiss_icp.config import KISSConfig
 from kiss_icp.kiss_icp import KissICP
 from kiss_icp.mapping import get_voxel_hash_map
 from kiss_icp.voxelization import voxel_down_sample
+from tqdm.auto import trange
 
 from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import LocalMap
-from map_closures.tools.visualizer import Visualizer, StubVisualizer
+from map_closures.tools.visualizer import StubVisualizer, Visualizer
 
 
 def transform_points(pcd, T):
@@ -74,11 +72,7 @@ class MapClosurePipeline:
             self.closure_config = MapClosuresConfig()
 
         self.kiss_config = KISSConfig()
-        self.kiss_config.mapping.voxel_size = 0.3
-        self.kiss_config.data.max_range = 30.0
-        self.kiss_config.data.min_range = 0.0
-        self.kiss_config.mapping.max_points_per_voxel = 50
-
+        self.kiss_config.mapping.voxel_size = 1.0
         self.odometry = KissICP(self.kiss_config)
         self.voxel_local_map = get_voxel_hash_map(self.kiss_config)
 
@@ -223,6 +217,7 @@ class MapClosurePipeline:
             else:
                 scan_indices_in_local_map.append(scan_idx)
                 poses_in_local_map.append(current_frame_pose)
+        self.visualizer.pause_vis()
 
     def _run_evaluation(self):
         self.results.compute_closures_and_metrics()
