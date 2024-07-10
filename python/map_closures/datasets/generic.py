@@ -61,9 +61,8 @@ class GenericDataset:
         return self.read_point_cloud(self.scan_files[idx])
 
     def read_point_cloud(self, file_path: str):
-        points, intensity = self._read_point_cloud(file_path)
-        intensity = intensity / intensity.max()
-        return points.astype(np.float64), intensity
+        points = self._read_point_cloud(file_path)
+        return points.astype(np.float64)
 
     def _get_point_cloud_reader(self):
         """Attempt to guess with try/catch blocks which is the best point cloud reader to use for
@@ -80,33 +79,30 @@ class GenericDataset:
 
         first_scan_file = self.scan_files[0]
 
-        # # first try trimesh
-        # try:
-        #     import trimesh
+        # first try trimesh
+        try:
+            import trimesh
 
-        #     trimesh.load(first_scan_file)
-        #     return lambda file: np.asarray(trimesh.load(file).vertices)
-        # except:
-        #     pass
+            trimesh.load(first_scan_file)
+            return lambda file: np.asarray(trimesh.load(file).vertices)
+        except:
+            pass
 
-        # # then try pyntcloud
-        # try:
-        #     from pyntcloud import PyntCloud
+        # then try pyntcloud
+        try:
+            from pyntcloud import PyntCloud
 
-        #     PyntCloud.from_file(first_scan_file)
-        #     return lambda file: PyntCloud.from_file(file).points[["x", "y", "z"]].to_numpy()
-        # except:
-        #     pass
+            PyntCloud.from_file(first_scan_file)
+            return lambda file: PyntCloud.from_file(file).points[["x", "y", "z"]].to_numpy()
+        except:
+            pass
 
         # lastly with open3d
         try:
             import open3d as o3d
 
             o3d.t.io.read_point_cloud(first_scan_file)
-            return lambda file: [
-                o3d.t.io.read_point_cloud(file).point.positions.numpy(),
-                o3d.t.io.read_point_cloud(file).point.intensity.numpy(),
-            ]
+            return lambda file: np.asarray(o3d.io.read_point_cloud(file).points, dtype=np.float64)
         except:
             print("[ERROR], File format not supported")
             sys.exit(1)
