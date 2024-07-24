@@ -36,6 +36,7 @@ from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import LocalMap
 from map_closures.tools.visualizer import StubVisualizer, Visualizer
+from map_closures.tools.pgo_optimize import Optimizer, StubOptimizer
 
 
 def transform_points(pcd, T):
@@ -52,6 +53,7 @@ class MapClosurePipeline:
         results_dir: Path,
         eval: Optional[bool] = False,
         vis: Optional[bool] = False,
+        opt: Optional[bool] = False,
     ):
         self._dataset = dataset
         self._dataset_name = (
@@ -59,10 +61,13 @@ class MapClosurePipeline:
             if hasattr(self._dataset, "sequence_id")
             else os.path.basename(self._dataset.data_dir)
         )
+        self.gt_poses = self._dataset.gt_poses if hasattr(self._dataset, "gt_poses") else None
+
         self._n_scans = len(self._dataset)
         self._results_dir = results_dir
         self._eval = eval
         self._vis = vis
+        self._opt = opt
 
         if config_path is not None:
             self.config_name = os.path.basename(config_path)
@@ -83,7 +88,7 @@ class MapClosurePipeline:
 
         self.closures = []
 
-        if self._eval and hasattr(self._dataset, "gt_poses"):
+        if self._eval and self.gt_poses:
             from map_closures.tools.evaluation import EvaluationPipeline
             from map_closures.tools.gt_closures import get_gt_closures
 
@@ -104,11 +109,12 @@ class MapClosurePipeline:
         else:
             self._eval = False
             self.results = None
-            if not hasattr(self._dataset, "gt_poses"):
+            if self.gt_poses is None:
                 print(
                     "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
                 )
         self.visualizer = Visualizer() if self._vis else StubVisualizer()
+        self.pgo_optimizer = Optimizer(self.gt_poses) if self._opt else StubOptimizer(self.gt_poses)
 
     def run(self):
         self._run_pipeline()
@@ -118,6 +124,10 @@ class MapClosurePipeline:
         self._save_config()
         self._log_to_file()
         self._log_to_console()
+
+        self.pgo_optimizer.optimize(self.closures, self.local_maps, np.array(self.odometry.poses))
+        self.pgo_optimizer._log_to_file(self._results_dir)
+        self.pgo_optimizer._plot_trajectories()
 
         return self.results
 
