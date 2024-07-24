@@ -35,7 +35,7 @@ from tqdm.auto import trange
 from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import LocalMap
-from map_closures.tools.pgo_optimize import PGO_Optimizer
+from map_closures.tools.pgo_optimize import Optimizer, StubOptimizer
 
 
 def transform_points(pcd, T):
@@ -64,7 +64,7 @@ class MapClosurePipeline:
         self._n_scans = len(self._dataset)
         self._results_dir = results_dir
         self._eval = eval
-        self.opt = opt
+        self._opt = opt
 
         if config_path is not None:
             self.config_name = os.path.basename(config_path)
@@ -110,17 +110,20 @@ class MapClosurePipeline:
                 print(
                     "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
                 )
+        self.pgo_optimizer = Optimizer(self.gt_poses) if self._opt else StubOptimizer(self.gt_poses)
 
     def run(self):
         self._run_pipeline()
         if self._eval:
             self._run_evaluation()
             self.results.print()
-        if self.opt and len(self.closures) != 0:
-            self._run_optimization()
         self._save_config()
         self._log_to_file()
         self._log_to_console()
+
+        self.pgo_optimizer.optimize(self.closures, self.local_maps, np.array(self.odometry.poses))
+        self.pgo_optimizer._log_to_file(self._results_dir)
+        self.pgo_optimizer._plot_trajectories()
 
         return self.results
 
@@ -201,14 +204,6 @@ class MapClosurePipeline:
 
     def _run_evaluation(self):
         self.results.compute_closures_and_metrics()
-
-    def _run_optimization(self):
-        self.pgo_optimizer = PGO_Optimizer(
-            self.closures, self.local_maps, np.asarray(self.odometry.poses), self.gt_poses
-        )
-        self.pgo_optimizer.optimize()
-        self.pgo_optimizer._log_to_file(self._results_dir)
-        self.pgo_optimizer._plot_trajectories()
 
     def _log_to_file(self):
         if self._eval:

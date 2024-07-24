@@ -20,17 +20,35 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import importlib
 import os
 import sys
+import importlib
+from abc import ABC
+from typing import List
 
 import numpy as np
-from pgo.pose_graph_optimizer import PoseGraphOptimizer
 from tqdm.auto import trange
 
+from pgo.pose_graph_optimizer import PoseGraphOptimizer
+from map_closures.tools.evaluation import LocalMap
 
-class PGO_Optimizer:
-    def __init__(self, closures, local_maps, odom_poses, gt_poses):
+
+class StubOptimizer(ABC):
+    def __init__(self, gt_poses):
+        pass
+
+    def optimize(self, closures, local_maps, odom_poses):
+        pass
+
+    def _log_to_file(self, output_dir):
+        pass
+
+    def _plot_trajectories(self):
+        pass
+
+
+class Optimizer(StubOptimizer):
+    def __init__(self, gt_poses: np.ndarray):
         try:
             self.o3d = importlib.import_module("open3d")
         except ModuleNotFoundError:
@@ -38,9 +56,6 @@ class PGO_Optimizer:
                 '[ERROR] This dataloader requires open3d but is not installed on your system run "pip install open3d"'
             )
             sys.exit(1)
-        self.closures = closures
-        self.local_maps = local_maps
-        self.odom_poses = odom_poses
         self.gt_poses = (
             np.einsum("...ij,...jk->...ik", np.linalg.inv(gt_poses[0]), gt_poses)
             if gt_poses is not None
@@ -50,7 +65,7 @@ class PGO_Optimizer:
         self.voxel_size = 1.0
         self.optimizer = PoseGraphOptimizer()
 
-    def gicp(self, source, target, initial_guess):
+    def _gicp(self, source: np.ndarray, target: np.ndarray, initial_guess: np.ndarray):
         distance_threshold = self.voxel_size * 0.4
         result = self.o3d.pipelines.registration.registration_generalized_icp(
             self.o3d.geometry.PointCloud(self.o3d.utility.Vector3dVector(source)),
@@ -62,17 +77,23 @@ class PGO_Optimizer:
         return result
 
     def optimize(
-        self,
+        self, closures: List[np.ndarray], local_maps: List[LocalMap], odom_poses: np.ndarray
     ):
+        self.closures = closures
+        self.local_maps = local_maps
+        self.odom_poses = odom_poses
         for idx, pose in enumerate(self.odom_poses):
             self.optimizer.add_variable(idx, pose)
+        self.optimizer.fix_variable(0)
         omega_poses = np.eye(6)
         for idx in range(len(self.odom_poses) - 1):
             Ti = self.odom_poses[idx]
             Tj = self.odom_poses[idx + 1]
-            self.optimizer.add_factor(idx, idx + 1, np.linalg.inv(Ti) @ Tj, omega_poses)
+            self.optimizer.add_factor(idx, idx + 1, np.linalg.inv(Tj) @ Ti, omega_poses)
 
         omega_closure = 1e3 * np.eye(6)
+
+        print("\nRunning g2o optimization on detected closures\n")
         for closure_idx in trange(
             0, len(self.closures), ncols=8, unit=" closures", dynamic_ncols=True
         ):
@@ -87,20 +108,25 @@ class PGO_Optimizer:
 
             source = self.local_maps[local_map_source].pointcloud
             target = self.local_maps[local_map_target].pointcloud
-            estimate = self.gicp(source, target, initial_guess)
+            estimate = self._gicp(source, target, initial_guess)
             if estimate.fitness > 0.5:
                 self.optimizer.add_factor(
-                    first_scan_in_target,
                     first_scan_in_source,
+                    first_scan_in_target,
                     estimate.transformation,
                     omega_closure,
                 )
 
         self.optimizer.optimize()
-        g2o_poses = np.array([pose for pose in dict(self.optimizer.estimates()).values()])
-        self.g2o_poses = np.einsum("ij,njk->nik", np.linalg.inv(g2o_poses[0]), g2o_poses)
+        optimized_poses = dict(self.optimizer.estimates())
+        self.g2o_poses = np.ones((len(optimized_poses), 4, 4))
+        for idx, pose in optimized_poses.items():
+            self.g2o_poses[idx] = pose
+        self.g2o_poses = np.einsum(
+            "...ij,...jk->...ik", np.linalg.inv(self.g2o_poses[0]), self.g2o_poses
+        )
 
-    def _log_to_file(self, output_dir):
+    def _log_to_file(self, output_dir: str):
         self.optimizer.write_graph(os.path.join(output_dir, "out.g2o"))
         np.savetxt(
             os.path.join(output_dir, "g2o_poses_kitti.txt"), self.g2o_poses[:, :3].reshape(-1, 12)
@@ -117,12 +143,14 @@ class PGO_Optimizer:
             self.odom_poses[:, 1, -1],
             self.odom_poses[:, 2, -1],
             linewidth=2,
+            color="tab:red",
         )
         plt.plot(
             self.g2o_poses[:, 0, -1],
             self.g2o_poses[:, 1, -1],
             self.g2o_poses[:, 2, -1],
             linewidth=2,
+            color="tab:blue",
         )
         if self.gt_poses is not None:
             plt.plot(
@@ -130,6 +158,7 @@ class PGO_Optimizer:
                 self.gt_poses[:, 1, -1],
                 self.gt_poses[:, 2, -1],
                 linewidth=2,
+                color="tab:green",
             )
             ax.legend(["odometry", "g2o-optimized", "groundtruth"], fontsize=20)
         else:
