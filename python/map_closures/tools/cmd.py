@@ -136,6 +136,13 @@ def map_closure_pipeline(
         rich_help_panel="Additional Options",
         help="[Optional] Run loop closure evaluation",
     ),
+    vis: Optional[bool] = typer.Option(
+        False,
+        "--vis",
+        "-v",
+        rich_help_panel="Additional Options",
+        help="[Optional] Visualization of closures",
+    ),
     opt: Optional[bool] = typer.Option(
         False,
         "--opt",
@@ -206,6 +213,7 @@ def map_closure_pipeline(
         config_path=config,
         results_dir=results_dir,
         eval=eval,
+        vis=vis,
         opt=opt,
     ).run()
 

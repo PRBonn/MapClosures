@@ -35,6 +35,7 @@ from tqdm.auto import trange
 from map_closures.config import MapClosuresConfig, load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import LocalMap
+from map_closures.tools.visualizer import StubVisualizer, Visualizer
 from map_closures.tools.pgo_optimize import Optimizer, StubOptimizer
 
 
@@ -51,6 +52,7 @@ class MapClosurePipeline:
         config_path: Path,
         results_dir: Path,
         eval: Optional[bool] = False,
+        vis: Optional[bool] = False,
         opt: Optional[bool] = False,
     ):
         self._dataset = dataset
@@ -64,6 +66,7 @@ class MapClosurePipeline:
         self._n_scans = len(self._dataset)
         self._results_dir = results_dir
         self._eval = eval
+        self._vis = vis
         self._opt = opt
 
         if config_path is not None:
@@ -110,6 +113,7 @@ class MapClosurePipeline:
                 print(
                     "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
                 )
+        self.visualizer = Visualizer() if self._vis else StubVisualizer()
         self.pgo_optimizer = Optimizer(self.gt_poses) if self._opt else StubOptimizer(self.gt_poses)
 
     def run(self):
@@ -140,12 +144,15 @@ class MapClosurePipeline:
                 frame = self._dataset[scan_idx]
                 timestamps = np.zeros(len(frame))
 
-            self.odometry.register_frame(frame, timestamps)
+            source, keypoints = self.odometry.register_frame(frame, timestamps)
             current_frame_pose = self.odometry.poses[-1]
 
             frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
+            self.visualizer.update_registration(
+                source, keypoints, self.voxel_local_map, current_frame_pose, frame_to_map_pose
+            )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
                 scan_idx == self._n_scans - 1
@@ -166,23 +173,36 @@ class MapClosurePipeline:
                 )
 
                 if closure.number_of_inliers > self.closure_config.inliers_threshold:
+                    reference_local_map = self.local_maps[closure.source_id]
+                    query_local_map = self.local_maps[closure.target_id]
                     self.closures.append(
                         np.r_[
                             closure.source_id,
-                            map_idx,
-                            self.local_maps[closure.source_id].scan_indices[0],
-                            self.local_maps[map_idx].scan_indices[0],
+                            closure.target_id,
+                            reference_local_map.scan_indices[0],
+                            query_local_map.scan_indices[0],
                             closure.pose.flatten(),
                         ]
                     )
+
                     if self._eval:
                         self.results.append(
-                            self.local_maps[closure.source_id],
-                            self.local_maps[map_idx],
+                            reference_local_map,
+                            query_local_map,
                             closure.pose,
                             self.closure_distance_threshold,
                             closure.number_of_inliers,
                         )
+
+                    self.visualizer.update_closures(
+                        reference_local_map.pointcloud,
+                        query_local_map.pointcloud,
+                        np.asarray(closure.pose),
+                        [
+                            reference_local_map.scan_indices[0],
+                            query_local_map.scan_indices[0],
+                        ],
+                    )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 pts_to_keep = self.voxel_local_map.point_cloud()
@@ -201,6 +221,7 @@ class MapClosurePipeline:
             else:
                 scan_indices_in_local_map.append(scan_idx)
                 poses_in_local_map.append(current_frame_pose)
+        self.visualizer.pause_vis()
 
     def _run_evaluation(self):
         self.results.compute_closures_and_metrics()
