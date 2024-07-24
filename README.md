@@ -66,7 +66,7 @@ map_closure_pipeline --help
 ```
 </summary>
 
-![CLI_usage](https://github.com/PRBonn/MapClosures/assets/28734882/6dfbd767-ca63-4671-9582-3129752d0244)
+![CLI_usage](https://github.com/user-attachments/assets/a56bc3e6-2ee6-4f59-92e8-66d03f70e561)
 </details>
 
 
