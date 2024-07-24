@@ -108,11 +108,7 @@ class MapClosurePipeline:
                 print(
                     "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
                 )
-
-        if self._vis:
-            self.visualizer = Visualizer()
-        else:
-            self.visualizer = StubVisualizer()
+        self.visualizer = Visualizer() if self._vis else StubVisualizer()
 
     def run(self):
         self._run_pipeline()
@@ -167,13 +163,13 @@ class MapClosurePipeline:
                 )
 
                 if closure.number_of_inliers > self.closure_config.inliers_threshold:
-                    ref_local_map = self.local_maps[closure.source_id]
+                    reference_local_map = self.local_maps[closure.source_id]
                     query_local_map = self.local_maps[closure.target_id]
                     self.closures.append(
                         np.r_[
                             closure.source_id,
                             closure.target_id,
-                            ref_local_map.scan_indices[0],
+                            reference_local_map.scan_indices[0],
                             query_local_map.scan_indices[0],
                             closure.pose.flatten(),
                         ]
@@ -181,7 +177,7 @@ class MapClosurePipeline:
 
                     if self._eval:
                         self.results.append(
-                            ref_local_map,
+                            reference_local_map,
                             query_local_map,
                             closure.pose,
                             self.closure_distance_threshold,
@@ -189,11 +185,11 @@ class MapClosurePipeline:
                         )
 
                     self.visualizer.update_closures(
-                        ref_local_map.pointcloud,
+                        reference_local_map.pointcloud,
                         query_local_map.pointcloud,
                         np.asarray(closure.pose),
                         [
-                            ref_local_map.scan_indices[0],
+                            reference_local_map.scan_indices[0],
                             query_local_map.scan_indices[0],
                         ],
                     )
