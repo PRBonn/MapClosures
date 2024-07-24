@@ -136,6 +136,13 @@ def map_closure_pipeline(
         rich_help_panel="Additional Options",
         help="[Optional] Run loop closure evaluation",
     ),
+    opt: Optional[bool] = typer.Option(
+        False,
+        "--opt",
+        "-o",
+        rich_help_panel="Additional Options",
+        help="[Optional] Run g2o optimization with detected closures",
+    ),
     # Aditional Options ---------------------------------------------------------------------------
     sequence: Optional[str] = typer.Option(
         None,
@@ -199,6 +206,7 @@ def map_closure_pipeline(
         config_path=config,
         results_dir=results_dir,
         eval=eval,
+        opt=opt,
     ).run()
 
 
