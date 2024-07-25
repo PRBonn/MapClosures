@@ -64,18 +64,12 @@ class MapClosurePipeline:
         self._eval = eval
         self._vis = vis
 
-        if config_path is not None:
-            self.config_name = os.path.basename(config_path)
-            self.closure_config = load_config(config_path)
-        else:
-            self.config_name = "base_config.yaml"
-            self.closure_config = MapClosuresConfig()
-
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
         self.odometry = KissICP(self.kiss_config)
         self.voxel_local_map = get_voxel_hash_map(self.kiss_config)
 
+        self.closure_config = load_config(config_path)
         self._map_range = self.closure_config.local_map_factor * self.kiss_config.data.max_range
         self.map_closures = MapClosures(self.closure_config)
 
@@ -255,7 +249,7 @@ class MapClosurePipeline:
 
     def _save_config(self):
         self._results_dir = self._create_results_dir()
-        write_config(self.closure_config, os.path.join(self._results_dir, self.config_name))
+        write_config(self.closure_config, os.path.join(self._results_dir, "config"))
 
     def _write_data_to_disk(self):
         import open3d as o3d
