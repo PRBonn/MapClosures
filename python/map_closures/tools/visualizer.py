@@ -68,13 +68,13 @@ class StubVisualizer(ABC):
     def __init__(self):
         pass
 
-    def pause_vis():
+    def pause_vis(self):
         pass
 
-    def update_registration(self, source, keypoints, target_map, frame_pose, map_pose):
+    def update_registration(self, *kwargs):
         pass
 
-    def update_closures(self, source, target, closure_pose, closure_indices):
+    def update_closures(self, *kwargs):
         pass
 
 
