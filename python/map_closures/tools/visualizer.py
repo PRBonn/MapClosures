@@ -21,13 +21,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import copy
-import importlib
 import os
 from abc import ABC
+from dataclasses import dataclass, field
 from functools import partial
 from typing import Callable, List
 
 import numpy as np
+import open3d as o3d
 
 CYAN = np.array([0.24, 0.898, 1.0])
 GREEN = np.array([0.0, 1.0, 0.0])
@@ -81,12 +82,6 @@ class StubVisualizer(ABC):
 class Visualizer(StubVisualizer):
     # Public Interaface ----------------------------------------------------------------------------
     def __init__(self):
-        try:
-            self.o3d = importlib.import_module("open3d")
-        except ModuleNotFoundError:
-            print(f'open3d is not installed on your system, run "pip install open3d"')
-            exit(1)
-
         # Initialize GUI controls
         self.block_vis = True
         self.play_crun = False
@@ -97,8 +92,8 @@ class Visualizer(StubVisualizer):
         self.loop_closures_data = LoopClosureData()
 
         # Initialize visualizer
-        self.registration_vis = self.o3d.visualization.VisualizerWithKeyCallback()
-        self.closure_vis = self.o3d.visualization.VisualizerWithKeyCallback()
+        self.registration_vis = o3d.visualization.VisualizerWithKeyCallback()
+        self.closure_vis = o3d.visualization.VisualizerWithKeyCallback()
         self._registration_key_callbacks()
         self._initialize_registration_visualizers()
 
@@ -338,7 +333,7 @@ class Visualizer(StubVisualizer):
     def _update_registraion(self, source, keypoints, target, pose, frame_to_map_pose):
         # Source hot frame
         if self.render_source:
-            self.registration_data.source.points = self.o3d.utility.Vector3dVector(source)
+            self.registration_data.source.points = o3d.utility.Vector3dVector(source)
             self.registration_data.source.paint_uniform_color(CYAN)
             if self.global_view:
                 self.registration_data.source.transform(pose)
@@ -346,7 +341,7 @@ class Visualizer(StubVisualizer):
 
         # Keypoints
         if self.render_keypoints:
-            self.registration_data.keypoints.points = self.o3d.utility.Vector3dVector(keypoints)
+            self.registration_data.keypoints.points = o3d.utility.Vector3dVector(keypoints)
             self.registration_data.keypoints.paint_uniform_color(CYAN)
             if self.global_view:
                 self.registration_data.keypoints.transform(pose)
@@ -355,7 +350,7 @@ class Visualizer(StubVisualizer):
         # Target Map
         if self.render_map:
             target = copy.deepcopy(target)
-            self.registration_data.target.points = self.o3d.utility.Vector3dVector(target)
+            self.registration_data.target.points = o3d.utility.Vector3dVector(target)
             if self.global_view:
                 self.registration_data.target.paint_uniform_color(GRAY)
                 self.registration_data.target.transform(pose @ np.linalg.inv(frame_to_map_pose))
@@ -364,7 +359,7 @@ class Visualizer(StubVisualizer):
             self.registration_vis.update_geometry(self.registration_data.target)
 
         # Update always a list with all the trajectories
-        new_frame = self.o3d.geometry.TriangleMesh.create_sphere(SPHERE_SIZE)
+        new_frame = o3d.geometry.TriangleMesh.create_sphere(SPHERE_SIZE)
         new_frame.paint_uniform_color(BLUE)
         new_frame.compute_vertex_normals()
         new_frame.transform(pose)
@@ -382,16 +377,16 @@ class Visualizer(StubVisualizer):
             self.reset_bounding_box = False
 
     def _update_closures(self, source, target, closure_pose, closure_indices):
-        self.loop_closures_data.sources.append(self.o3d.utility.Vector3dVector(source))
-        self.loop_closures_data.targets.append(self.o3d.utility.Vector3dVector(target))
+        self.loop_closures_data.sources.append(o3d.utility.Vector3dVector(source))
+        self.loop_closures_data.targets.append(o3d.utility.Vector3dVector(target))
         self.loop_closures_data.closure_poses.append(closure_pose)
         self._update_closure(len(self.loop_closures_data.closure_poses) - 1)
 
         self.loop_closures_data.closure_lines.append(closure_indices)
-        self.loop_closures_data.loop_closures.points = self.o3d.utility.Vector3dVector(
+        self.loop_closures_data.loop_closures.points = o3d.utility.Vector3dVector(
             self.loop_closures_data.closure_points
         )
-        self.loop_closures_data.loop_closures.lines = self.o3d.utility.Vector2iVector(
+        self.loop_closures_data.loop_closures.lines = o3d.utility.Vector2iVector(
             self.loop_closures_data.closure_lines
         )
         self.loop_closures_data.loop_closures.paint_uniform_color(RED)
