@@ -38,6 +38,7 @@ if(NOT eigen_POPULATED)
     # consider this 3rdparty headers as source code and fail due the -Werror flag.
     add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} EXCLUDE_FROM_ALL)
     get_target_property(eigen_include_dirs eigen INTERFACE_INCLUDE_DIRECTORIES)
-    set_target_properties(eigen PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${eigen_include_dirs}")
+    set_target_properties(eigen PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                                           "${eigen_include_dirs}")
   endif()
 endif()

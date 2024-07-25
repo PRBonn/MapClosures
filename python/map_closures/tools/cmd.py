@@ -35,11 +35,7 @@ from map_closures.datasets import (
 
 
 def guess_dataloader(data: Path, default_dataloader: str):
-    """Guess which dataloader to use in case the user didn't specify with --dataloader flag.
-
-    TODO: Avoid having to return again the data Path. But when guessing multiple .bag files or the
-    metadata.yaml file, we need to change the Path specifed by the user.
-    """
+    """Guess which dataloader to use in case the user didn't specify with --dataloader flag."""
     if data.is_file():
         if data.name == "metadata.yaml":
             return "rosbag", data.parent  # database is in directory, not in .yml
@@ -207,7 +203,7 @@ def map_closure_pipeline(
         results_dir=results_dir,
         eval=eval,
         vis=vis,
-    ).run()
+    ).run().print()
 
 
 def run():
