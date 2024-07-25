@@ -23,7 +23,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 from kiss_icp.config import KISSConfig
@@ -32,9 +32,10 @@ from kiss_icp.mapping import get_voxel_hash_map
 from kiss_icp.voxelization import voxel_down_sample
 from tqdm.auto import trange
 
-from map_closures.config import MapClosuresConfig, load_config, write_config
+from map_closures.config import load_config, write_config
 from map_closures.map_closures import MapClosures
-from map_closures.tools.evaluation import LocalMap
+from map_closures.tools.evaluation import EvaluationPipeline, LocalMap, StubEvaluation
+from map_closures.tools.gt_closures import get_gt_closures
 from map_closures.tools.visualizer import StubVisualizer, Visualizer
 
 
@@ -89,29 +90,25 @@ class MapClosurePipeline:
                 np.where(self.gt_closures_overlap > self.closure_overlap_threshold)[0]
             ]
 
-            self.closure_distance_threshold = 6.0
-            self.results = EvaluationPipeline(
+        self.closure_distance_threshold = 6.0
+        self.results = (
+            EvaluationPipeline(
                 self.gt_closures,
                 self._dataset_name,
                 self.closure_distance_threshold,
             )
-        else:
-            self._eval = False
-            self.results = None
-            if not hasattr(self._dataset, "gt_poses"):
-                print(
-                    "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
-                )
+            if self._eval
+            else StubEvaluation()
+        )
+
         self.visualizer = Visualizer() if self._vis else StubVisualizer()
 
     def run(self):
         self._run_pipeline()
-        if self._eval:
-            self._run_evaluation()
-            self.results.print()
         self._save_config()
         self._log_to_file()
         self._log_to_console()
+        self.results.compute_closures_and_metrics()
 
         return self.results
 
@@ -206,22 +203,13 @@ class MapClosurePipeline:
 
         self.visualizer.pause_vis()
 
-    def _run_evaluation(self):
-        self.results.compute_closures_and_metrics()
-
     def _log_to_file(self):
-        if self._eval:
-            self.results.log_to_file_pr(
-                os.path.join(self._results_dir, "evaluation_metrics.txt"), self.closure_config
-            )
-            self.results.log_to_file_closures(
-                os.path.join(self._results_dir, "scan_level_closures.npy")
-            )
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
         np.savetxt(
             os.path.join(self._results_dir, "kiss_poses_kitti.txt"),
             np.asarray(self.odometry.poses)[:, :3].reshape(-1, 12),
         )
+        self.results.log_to_file(self._results_dir)
 
     def _log_to_console(self):
         from rich import box
