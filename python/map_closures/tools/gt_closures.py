@@ -132,5 +132,5 @@ def get_gt_closures(
         np.savetxt(file_path_closures, closures)
         np.savetxt(file_path_overlaps, overlaps)
 
-    closures = closures[np.where(overlap > overlap_threshold)[0]]
+    closures = closures[np.where(overlaps > overlap_threshold)[0]]
     return closures
