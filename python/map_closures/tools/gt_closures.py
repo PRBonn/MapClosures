@@ -24,7 +24,6 @@ import os
 from typing import List
 
 import numpy as np
-from kiss_icp.config import KISSConfig
 from kiss_icp.mapping import VoxelHashMap
 from tqdm import tqdm
 
@@ -81,7 +80,9 @@ def compute_overlap(query_points: np.ndarray, ref_points: np.ndarray, voxel_size
     return overlap
 
 
-def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
+def get_gt_closures(
+    dataset, gt_poses: List[np.ndarray], max_range: float, overlap_threshold: float = 0.5
+):
     base_dir = dataset.sequence_dir if hasattr(dataset, "sequence_dir") else ""
     os.makedirs(os.path.join(base_dir, "loop_closure"), exist_ok=True)
     file_path_closures = os.path.join(base_dir, "loop_closure", "gt_closures.txt")
@@ -96,7 +97,7 @@ def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
         print("Computing Ground Truth Closures, might take some time!")
         min_overlap = 0.1
         sampling_distance = 2.0
-        n_skip_segments = int(2 * config.data.max_range / sampling_distance)
+        n_skip_segments = int(2 * max_range / sampling_distance)
         segment_indices = get_segment_indices(gt_poses, sampling_distance)
         global_points_segments = [
             get_global_points(dataset, segment, gt_poses[segment]) for segment in segment_indices
@@ -118,7 +119,7 @@ def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
             ):
                 ref_pose = gt_poses[ref_segment[0]]
                 dist = np.linalg.norm(query_pose[:3, -1] - ref_pose[:3, -1])
-                if dist < config.data.max_range:
+                if dist < max_range:
                     overlap = compute_overlap(query_points, ref_points, voxel_size=0.5)
                     if overlap > min_overlap:
                         segment_closures = np.dstack(
@@ -130,4 +131,6 @@ def get_gt_closures(dataset, gt_poses: List[np.ndarray], config: KISSConfig):
                         )
         np.savetxt(file_path_closures, closures)
         np.savetxt(file_path_overlaps, overlaps)
-    return closures, overlaps
+
+    closures = closures[np.where(overlap > overlap_threshold)[0]]
+    return closures

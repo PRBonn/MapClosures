@@ -74,21 +74,20 @@ class MapClosurePipeline:
         self._map_range = self.closure_config.local_map_factor * self.kiss_config.data.max_range
         self.map_closures = MapClosures(self.closure_config)
 
-        self.local_maps: List[LocalMap] = []
-
         self.closures = []
+        self.local_maps = []
 
-        if self._eval and hasattr(self._dataset, "gt_poses"):
-            from map_closures.tools.evaluation import EvaluationPipeline
-            from map_closures.tools.gt_closures import get_gt_closures
-
-            self.gt_closures, self.gt_closures_overlap = get_gt_closures(
-                self._dataset, self._dataset.gt_poses, self.kiss_config
+        self.closure_overlap_threshold = 0.5
+        self.gt_closures = (
+            get_gt_closures(
+                self._dataset,
+                self._dataset.gt_poses,
+                self.kiss_config.data.max_range,
+                self.closure_overlap_threshold,
             )
-            self.closure_overlap_threshold = 0.5
-            self.gt_closures = self.gt_closures[
-                np.where(self.gt_closures_overlap > self.closure_overlap_threshold)[0]
-            ]
+            if (self._eval and hasattr(self._dataset, "gt_poses"))
+            else None
+        )
 
         self.closure_distance_threshold = 6.0
         self.results = (
