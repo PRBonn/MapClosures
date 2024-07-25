@@ -225,9 +225,9 @@ class MapClosurePipeline:
                 os.path.join(self._results_dir, "scan_level_closures.npy")
             )
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
-        np.save(
-            os.path.join(self._results_dir, "kiss_poses.npy"),
-            np.asarray(self.odometry.poses),
+        np.savetxt(
+            os.path.join(self._results_dir, "kiss_poses_kitti.txt"),
+            np.asarray(self.odometry.poses)[:, :3].reshape(-1, 12),
         )
 
     def _log_to_console(self):
