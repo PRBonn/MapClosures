@@ -205,12 +205,11 @@ class MapClosurePipeline:
                 current_map_pose = np.copy(current_frame_pose)
                 scan_indices_in_local_map.clear()
                 poses_in_local_map.clear()
-                scan_indices_in_local_map.append(scan_idx)
-                poses_in_local_map.append(current_frame_pose)
                 map_idx += 1
-            else:
-                scan_indices_in_local_map.append(scan_idx)
-                poses_in_local_map.append(current_frame_pose)
+
+            scan_indices_in_local_map.append(scan_idx)
+            poses_in_local_map.append(current_frame_pose)
+
         self.visualizer.pause_vis()
 
     def _run_evaluation(self):
