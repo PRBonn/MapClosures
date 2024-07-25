@@ -22,6 +22,7 @@
 # SOFTWARE.
 import os
 from abc import ABC
+from dataclasses import dataclass
 from typing import Dict, List, Set, Tuple
 
 import numpy as np
@@ -31,18 +32,12 @@ from rich.console import Console
 from rich.table import Table
 
 
+@dataclass
 class LocalMap:
-    def __init__(
-        self,
-        pointcloud: np.ndarray,
-        density_map: np.ndarray,
-        scan_indices: np.ndarray,
-        scan_poses: np.ndarray,
-    ):
-        self.pointcloud = pointcloud
-        self.density_map = density_map
-        self.scan_indices = scan_indices
-        self.scan_poses = scan_poses
+    pointcloud: np.ndarray
+    density_map: np.ndarray
+    scan_indices: np.ndarray
+    scan_poses: np.ndarray
 
 
 def compute_closure_indices(

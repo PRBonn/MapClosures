@@ -39,29 +39,29 @@ WHITE = np.array([1.0, 1.0, 1.0])
 SPHERE_SIZE = 0.20
 
 
+@dataclass
 class RegistrationData:
-    def __init__(self, o3d):
-        self.source = o3d.geometry.PointCloud()
-        self.keypoints = o3d.geometry.PointCloud()
-        self.target = o3d.geometry.PointCloud()
-        self.frames = []
+    source: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
+    keypoints: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
+    target: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
+    frames: list = field(default_factory=list)
 
 
+@dataclass
 class LoopClosureData:
-    def __init__(self, o3d):
-        self.loop_closures = o3d.geometry.LineSet()
-        self.closure_points = []
-        self.closure_lines = []
+    loop_closures: o3d.geometry.LineSet = o3d.geometry.LineSet()
+    closure_points: list = field(default_factory=list)
+    closure_lines: list = field(default_factory=list)
 
-        self.closures_exist = False
+    closures_exist: bool = False
 
-        self.sources = []
-        self.targets = []
-        self.closure_poses = []
+    sources: list = field(default_factory=list)
+    targets: list = field(default_factory=list)
+    closure_poses: list = field(default_factory=list)
 
-        self.current_closure_id = 0
-        self.current_source = o3d.geometry.PointCloud()
-        self.current_target = o3d.geometry.PointCloud()
+    current_closure_id: int = 0
+    current_source: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
+    current_target: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
 
 
 class StubVisualizer(ABC):
@@ -93,8 +93,8 @@ class Visualizer(StubVisualizer):
         self.reset_bounding_box = True
 
         # Create registration data
-        self.registration_data = RegistrationData(self.o3d)
-        self.loop_closures_data = LoopClosureData(self.o3d)
+        self.registration_data = RegistrationData()
+        self.loop_closures_data = LoopClosureData()
 
         # Initialize visualizer
         self.registration_vis = self.o3d.visualization.VisualizerWithKeyCallback()
