@@ -150,6 +150,7 @@ class EvaluationPipeline(StubEvaluation):
     def compute_closures_and_metrics(
         self,
     ):
+        print("[INFO] Computing Loop Closure Evaluation Metrics")
         for inliers_threshold in range(5, 15):
             closures = set()
             for closure_indices, inliers_count in zip(
@@ -165,8 +166,8 @@ class EvaluationPipeline(StubEvaluation):
             self.predicted_closures[inliers_threshold] = closures
 
     def _rich_table_pr(self, table_format: box.Box = box.HORIZONTALS) -> Table:
-        table = Table(box=table_format, title=self._dataset_name)
-        table.caption = f"Loop Closure Distance Threshold: {self._closure_distance_threshold}m"
+        table = Table(box=table_format)
+        table.caption = f"Loop Closure Evaluation Metrics\n"
         table.add_column("RANSAC #Inliers", justify="center", style="cyan")
         table.add_column("True Positives", justify="center", style="magenta")
         table.add_column("False Positives", justify="center", style="magenta")

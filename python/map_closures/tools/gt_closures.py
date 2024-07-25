@@ -94,7 +94,7 @@ def get_gt_closures(
         print(f"[INFO] Found closure ground truth at {file_path_closures}")
 
     else:
-        print("Computing Ground Truth Closures, might take some time!")
+        print("[INFO] Computing Ground Truth Closures, might take some time!")
         min_overlap = 0.1
         sampling_distance = 2.0
         n_skip_segments = int(2 * max_range / sampling_distance)

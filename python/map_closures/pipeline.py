@@ -117,7 +117,14 @@ class MapClosurePipeline:
         scan_indices_in_local_map = []
 
         current_map_pose = np.eye(4)
-        for scan_idx in trange(0, self._n_scans, ncols=8, unit=" frames", dynamic_ncols=True):
+        for scan_idx in trange(
+            0,
+            self._n_scans,
+            ncols=8,
+            unit=" frames",
+            dynamic_ncols=True,
+            desc="Processing for Loop Closures",
+        ):
             try:
                 frame, timestamps = self._dataset[scan_idx]
             except ValueError:
@@ -216,19 +223,19 @@ class MapClosurePipeline:
         from rich.table import Table
 
         console = Console()
-        table = Table(box=box.HORIZONTALS, title=f"MapClosures detected for {self._dataset_name}")
-        table.caption = f"Detected MapClosures"
+        table = Table(box=box.HORIZONTALS)
+        table.caption = f"Loop Closures Detected Between Local Maps\n"
         table.add_column("# MapClosure", justify="left", style="cyan")
         table.add_column("Ref Map Index", justify="left", style="magenta")
         table.add_column("Query Map Index", justify="left", style="magenta")
-        table.add_column("Relative Translation 2D", justify="right", style="magenta")
-        table.add_column("Relative Rotation 2D", justify="right", style="magenta")
+        table.add_column("Relative Translation 2D", justify="right", style="green")
+        table.add_column("Relative Rotation 2D", justify="right", style="green")
 
         for i, closure in enumerate(self.closures):
             table.add_row(
                 f"{i+1}",
-                f"{closure[0]}",
-                f"{closure[1]}",
+                f"{int(closure[0])}",
+                f"{int(closure[1])}",
                 f"[{closure[7]:.4f}, {closure[11]:.4f}] m",
                 f"{(np.arctan2(closure[8], closure[9]) * 180 / np.pi):.4f} deg",
             )
