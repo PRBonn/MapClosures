@@ -23,6 +23,27 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 </div>
 <hr />
 
+## Use MapClosures C++ API as 3rdparty package
+Include the following snippet in your project's `CMakeLists.txt` to access MapClosures C++ API:
+```cmake
+cmake_minimum_required(VERSION 3.18)
+include(FetchContent)
+FetchContent_Declare(
+    map_closures 
+        GIT_REPOSITORY https://github.com/PRBonn/MapClosures.git
+        GIT_TAG main
+        SOURCE_SUBDIR cpp
+)
+```
+Now, you can link your beautiful C++ library/executable against the MapClosures library using the following line:
+```cmake
+target_link_libraries(<your-beautiful-library> PUBLIC map_closures)
+```
+and use the following include directive in your source code file to access the core API of MapClosures:
+```cpp
+#include "map_closures/MapClosures.hpp"
+```
+
 ## Install
 
 ### Dependencies
