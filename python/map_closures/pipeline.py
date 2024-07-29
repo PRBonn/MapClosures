@@ -76,6 +76,7 @@ class MapClosurePipeline:
 
         self.closures = []
         self.local_maps = []
+        self.odom_poses = np.zeros((self._n_scans, 4, 4))
 
         self.closure_overlap_threshold = 0.5
         self.gt_closures = (
@@ -132,7 +133,8 @@ class MapClosurePipeline:
                 timestamps = np.zeros(len(frame))
 
             source, keypoints = self.odometry.register_frame(frame, timestamps)
-            current_frame_pose = self.odometry.poses[-1]
+            self.odom_poses[scan_idx] = self.odometry.last_pose
+            current_frame_pose = self.odometry.last_pose
 
             frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
@@ -213,7 +215,7 @@ class MapClosurePipeline:
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
         np.savetxt(
             os.path.join(self._results_dir, "kiss_poses_kitti.txt"),
-            np.asarray(self.odometry.poses)[:, :3].reshape(-1, 12),
+            np.asarray(self.odom_poses)[:, :3].reshape(-1, 12),
         )
         self.results.log_to_file(self._results_dir)
 
