@@ -23,16 +23,13 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 </div>
 <hr />
 
-## Guide to MapClosures C++ API
-<details>
-<summary>
-Instructions to use the MapClosures C++ API in your beautiful SLAM pipeline
-</summary>
-</br>
+## Use MapClosures in your C++ project
     
-1. Include the following snippet in your project's `CMakeLists.txt` and link your beautiful C++ library/executable against the MapClosures library:
+1. Include the following snippet in your project's `CMakeLists.txt`:
 ```cmake
-cmake_minimum_required(VERSION 3.18)
+option(USE_SYSTEM_EIGEN3 ON)
+option(USE_SYSTEM_TBB ON)
+option(USE_SYSTEM_OPENCV ON)
 include(FetchContent)
 FetchContent_Declare(
     map_closures 
@@ -40,15 +37,18 @@ FetchContent_Declare(
         GIT_TAG main
         SOURCE_SUBDIR cpp
 )
-target_link_libraries(<your-beautiful-library> PUBLIC map_closures)
-``` 
-2. The following include directive in your source code file will provide access to the core API of MapClosures:
-```cpp
-#include "map_closures/MapClosures.hpp"
+FetchContent_MakeAvailable(map_closures)
 ```
-3. The core API functionalities are as shown below:
-![image](https://github.com/user-attachments/assets/f2282b9f-f5ff-4a63-a422-cb2d6e554a6b)
-</details>
+You can trigger the automatic installation of the dependencies by playing around with the options in the snippet.
+
+2. Link **MapClosures** against your library or executable:
+```cmake
+target_link_libraries(my_target PUBLIC map_closures)
+```
+3. The following _include_ directive in your source code file will provide access to the core API of MapClosures:
+```cpp
+#include <map_closures/MapClosures.hpp>
+```
 
 ## Install
 
