@@ -39,6 +39,7 @@ FetchContent_Declare(
         SOURCE_SUBDIR cpp
 )
 FetchContent_MakeAvailable(map_closures)
+
 ```
 You can trigger the automatic installation of the dependencies by playing around with the options in the first three lines of the snippet.
 
