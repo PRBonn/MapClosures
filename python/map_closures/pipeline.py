@@ -102,6 +102,10 @@ class MapClosurePipeline:
         )
 
         self.visualizer = Visualizer() if self._vis else StubVisualizer()
+        self._vis_infos = {
+            "max_range": self.kiss_config.data.max_range,
+            "min_range": self.kiss_config.data.min_range,
+        }
 
     def run(self):
         self._run_pipeline()
@@ -139,8 +143,8 @@ class MapClosurePipeline:
             frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
-            self.visualizer.update_registration(
-                source, keypoints, self.voxel_local_map, current_frame_pose, frame_to_map_pose
+            self.visualizer.update(
+                source, self.voxel_local_map.point_cloud(), current_frame_pose, self._vis_infos
             )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
@@ -183,15 +187,15 @@ class MapClosurePipeline:
                             closure.number_of_inliers,
                         )
 
-                    self.visualizer.update_closures(
-                        reference_local_map.pointcloud,
-                        query_local_map.pointcloud,
-                        np.asarray(closure.pose),
-                        [
-                            reference_local_map.scan_indices[0],
-                            query_local_map.scan_indices[0],
-                        ],
-                    )
+                    # self.visualizer.update_closures(
+                    #     reference_local_map.pointcloud,
+                    #     query_local_map.pointcloud,
+                    #     np.asarray(closure.pose),
+                    #     [
+                    #         reference_local_map.scan_indices[0],
+                    #         query_local_map.scan_indices[0],
+                    #     ],
+                    # )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 pts_to_keep = self.voxel_local_map.point_cloud()
@@ -209,7 +213,7 @@ class MapClosurePipeline:
             scan_indices_in_local_map.append(scan_idx)
             poses_in_local_map.append(current_frame_pose)
 
-        self.visualizer.pause_vis()
+        # self.visualizer.pause_vis()
 
     def _log_to_file(self):
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
