@@ -23,54 +23,75 @@
 import datetime
 import importlib
 import os
+import time
 from abc import ABC
 from dataclasses import dataclass, field
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 # Button names
 START_BUTTON = "Play [SPACE]"
-PAUSE_BUTTON = "Pause [SPACE]"
-NEXT_FRAME_BUTTON = "Next Frame [N]"
-PREV_CLOSURE_BUTTON = "Previous Closure [P]"
-NEXT_CLOSURE_BUTTON = "Next Closure [N]"
+PAUSE_BUTTON = "Hold [SPACE]"
+NEXT_FRAME_BUTTON = "Step Frame [N]"
 SCREENSHOT_BUTTON = "Screenshot [S]"
 LOCAL_VIEW_BUTTON = "Local View [V]"
 GLOBAL_VIEW_BUTTON = "Global View [V]"
 CENTER_VIEWPOINT_BUTTON = "Center Viewpoint [C]"
-QUIT_BUTTON = "Quit [Q]"
+PREV_CLOSURE_BUTTON = "Prev Closure [P]"
+NEXT_CLOSURE_BUTTON = "Next Closure [N]"
+ALIGN_CLOSURE_BUTTON = "Align [A]"
+CLOSURES_VIEW_BUTTON = "Switch to MapClosures View [M]"
+REGISTRATION_VIEW_BUTTON = "Switch to Registration View [M]"
+OPEN_DENSITY_VIEW_BUTTON = "Open Density Maps Viewer [D]"
+QUIT_DENSITY_VIEW_BUTTON = "Quit Density Maps Viewer [D]"
+QUIT_BUTTON = "Quit [Esc]"
 
 # Colors
-BACKGROUND_COLOR = [0.0, 0.0, 0.0]
+BACKGROUND_COLOR = [1.0, 1.0, 1.0]
 SOURCE_COLOR = [0.8470, 0.1058, 0.3764]
-LOCAL_MAP_COLOR = [0.0, 0.3019, 0.2509]
+TARGET_COLOR = [0.0, 0.3019, 0.2509]
 TRAJECTORY_COLOR = [0.1176, 0.5333, 0.8980]
 
 # Size constants
-FRAME_PTS_SIZE = 0.06
-MAP_PTS_SIZE = 0.08
+SOURCE_PTS_SIZE = 0.06
+TARGET_PTS_SIZE = 0.08
 
-CYAN = np.array([0.24, 0.898, 1.0])
-GREEN = np.array([0.0, 1.0, 0.0])
 RED = np.array([0.5, 0.0, 0.0])
-BLACK = np.array([0.0, 0.0, 0.0])
 BLUE = np.array([0.4, 0.5, 0.9])
-GRAY = np.array([0.4, 0.4, 0.4])
-WHITE = np.array([1.0, 1.0, 1.0])
-SPHERE_SIZE = 0.20
 
 
 @dataclass
 class LoopClosureData:
-    closure_lines: list = field(default_factory=list)
-
-    closures_exist: bool = False
-
-    sources: list = field(default_factory=list)
-    targets: list = field(default_factory=list)
-    closure_poses: list = field(default_factory=list)
-
+    num_closures: int = 0
     current_closure_id: int = 0
+    closure_poses: list = field(default_factory=list)
+    closure_edges: list = field(default_factory=list)
+    source_local_maps: list = field(default_factory=list)
+    target_local_maps: list = field(default_factory=list)
+    source_density_maps: list = field(default_factory=list)
+    target_density_maps: list = field(default_factory=list)
+
+
+@dataclass
+class VisualizerStateMachine:
+    block_execution: bool = True
+    play_mode: bool = False
+    view_frame: bool = True
+    view_local_map: bool = True
+    global_view: bool = False
+
+    view_closures: bool = False
+    view_closure_query: bool = True
+    view_closure_reference: bool = True
+    align_closures: bool = True
+    view_density_map: bool = False
+
+    background_color: list = field(default_factory=lambda: BACKGROUND_COLOR)
+    source_points_size: float = SOURCE_PTS_SIZE
+    map_points_size: float = TARGET_PTS_SIZE
+    query_points_size: float = SOURCE_PTS_SIZE
+    reference_points_size: float = TARGET_PTS_SIZE
 
 
 class StubVisualizer(ABC):
@@ -88,9 +109,8 @@ class StubVisualizer(ABC):
 
 
 class Visualizer(StubVisualizer):
-    # Public Interaface ----------------------------------------------------------------------------
     def __init__(self):
-        # Initialize GUI controls
+        # Initialize GUI
         try:
             self._ps = importlib.import_module("polyscope")
             self._gui = self._ps.imgui
@@ -98,31 +118,17 @@ class Visualizer(StubVisualizer):
             print(f'polyscope is not installed on your system, run "pip install polyscope"')
             exit(1)
 
-        # Initialize GUI controls
-        self._background_color = BACKGROUND_COLOR
-        self._source_points_size = FRAME_PTS_SIZE
-        self._map_points_size = MAP_PTS_SIZE
-        self._block_execution = True
-        self._play_mode = False
-        self._toggle_source = True
-        self._toggle_local_map = True
-        self._global_view = False
-
-        self._query_points_size = FRAME_PTS_SIZE
-        self._reference_points_size = MAP_PTS_SIZE
-        self._toggle_closures = False
-        self._toggle_query_map = True
-        self._toggle_reference_map = True
-        self._toggle_closure_registration = True
-
-        # Create registration data
-        self.loop_closures_data = LoopClosureData()
+        # Initialize GUI States
+        self._states = VisualizerStateMachine()
+        self._ref_density_viewer = None
+        self._query_density_viewer = None
+        self.fig = None
 
         # Create data
         self._trajectory = []
         self._last_frame_pose = np.eye(4)
+        self.loop_closures_data = LoopClosureData()
         self._last_frame_to_local_map_pose = np.eye(4)
-        self._selected_frame_pose = ""
 
         self._initialize_registration_visualizers()
 
@@ -130,114 +136,110 @@ class Visualizer(StubVisualizer):
         self._update_registraion(source, local_map, frame_pose, frame_to_local_map_pose)
         self._last_frame_pose = frame_pose
         self._last_frame_to_local_map_pose = frame_to_local_map_pose
-        while self._block_execution:
+        while self._states.block_execution:
             self._ps.frame_tick()
-            if self._play_mode:
+            if self._states.play_mode:
                 break
-        self._block_execution = not self._block_execution
+        self._states.block_execution = not self._states.block_execution
 
-    def update_closures(self, query, reference, closure_pose, closure_indices):
-        if self.loop_closures_data.closures_exist == False:
-            self.loop_closures_data.closures_exist = True
-        self._update_closures(query, reference, closure_pose, closure_indices)
+    def update_closures(
+        self,
+        reference_local_map,
+        query_local_map,
+        reference_density_map,
+        query_density_map,
+        closure_pose,
+        closure_indices,
+    ):
+        self.loop_closures_data.num_closures += 1
+        self._update_closures(
+            reference_local_map,
+            query_local_map,
+            reference_density_map,
+            query_density_map,
+            closure_pose,
+            closure_indices,
+        )
 
     def _initialize_registration_visualizers(self):
         self._ps.set_program_name("MapClosures Visualizer")
         self._ps.init()
         self._ps.set_ground_plane_mode("none")
-        self._ps.set_background_color(WHITE)
+        self._ps.set_background_color(BACKGROUND_COLOR)
         self._ps.set_verbosity(0)
         self._ps.set_user_callback(self._main_gui_callback)
         self._ps.set_build_default_gui_panels(False)
 
     def _main_gui_callback(self):
         # GUI callbacks
-        if not self._toggle_closures:
+        if not self._states.view_closures:
             self._start_pause_callback()
-            if not self._play_mode:
+            if not self._states.play_mode:
                 self._gui.SameLine()
                 self._next_frame_callback()
             self._gui.SameLine()
             self._screenshot_callback()
             self._gui.Separator()
+            self._background_color_callback()
+            self._switch_view_callback()
+            self._gui.Separator()
             self._registration_controls_callback()
             self._gui.Separator()
-            self._background_color_callback()
-            self._gui.Separator()
-            self._global_view_callback()
-            self._gui.SameLine()
             self._center_viewpoint_callback()
             self._gui.SameLine()
-            self._quit_callback()
-            self._toggle_closure_view_callback()
-            # Mouse callbacks
-            self._trajectory_pick_callback()
-
+            self._global_view_callback()
         else:
-            self._previous_next_callback()
-            self._gui.SameLine()
             self._screenshot_callback()
             self._gui.Separator()
-            self._closure_controls_callback()
-            self._gui.SameLine()
             self._background_color_callback()
+            self._switch_view_callback()
+            self._gui.Separator()
+            self._closure_controls_callback()
             self._gui.Separator()
             self._center_viewpoint_callback()
-            self._gui.SameLine()
-            self._quit_callback()
-            self._toggle_closure_view_callback()
+        self._gui.SameLine()
+        self._quit_callback()
 
-    def _register_trajectory(self):
-        trajectory_cloud = self._ps.register_point_cloud(
-            "trajectory",
-            np.asarray(self._trajectory),
-            color=BLUE,
-        )
-        trajectory_cloud.set_radius(0.3, relative=False)
-        if self.loop_closures_data.closures_exist:
-            closure_lines = self._ps.register_curve_network(
-                "loop closures",
-                np.array(self._trajectory),
-                np.array(self.loop_closures_data.closure_lines),
-                color=RED,
-            )
-            closure_lines.set_radius(0.1, relative=False)
+    def _start_pause_callback(self):
+        button_name = PAUSE_BUTTON if self._states.play_mode else START_BUTTON
+        if self._gui.Button(button_name) or self._gui.IsKeyPressed(self._gui.ImGuiKey_Space):
+            self._states.play_mode = not self._states.play_mode
 
-    def _unregister_trajectory(self):
-        self._ps.remove_point_cloud("trajectory")
-        if self.loop_closures_data.closures_exist:
-            self._ps.remove_curve_network("loop closures")
+    def _next_frame_callback(self):
+        if self._gui.Button(NEXT_FRAME_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_N):
+            self._states.block_execution = not self._states.block_execution
 
-    def _registration_controls_callback(self):
-        if self._gui.TreeNodeEx("Odometry Information", self._gui.ImGuiTreeNodeFlags_DefaultOpen):
-            if not self._play_mode and self._global_view:
-                self._gui.TextUnformatted(f"Selected Pose: {self._selected_frame_pose}")
-            self._gui.TreePop()
-        self._gui.Separator()
-
-        # FRAME
-        changed, self._source_points_size = self._gui.SliderFloat(
-            "##frame_size", self._source_points_size, v_min=0.01, v_max=0.6
+    def _registration_source_callback(self):
+        changed, self._states.source_points_size = self._gui.SliderFloat(
+            "##frame_size", self._states.source_points_size, v_min=0.01, v_max=0.6
         )
         if changed:
             self._ps.get_point_cloud("current_frame").set_radius(
-                self._source_points_size, relative=False
+                self._states.source_points_size, relative=False
             )
         self._gui.SameLine()
-        changed, self._toggle_source = self._gui.Checkbox("Frame Cloud", self._toggle_source)
+        changed, self._states.view_frame = self._gui.Checkbox("Frame", self._states.view_frame)
         if changed:
-            self._ps.get_point_cloud("current_frame").set_enabled(self._toggle_source)
+            self._ps.get_point_cloud("current_frame").set_enabled(self._states.view_frame)
 
-        # LOCAL MAP
-        changed, self._map_points_size = self._gui.SliderFloat(
-            "##map_size", self._map_points_size, v_min=0.01, v_max=0.6
+    def _registration_localmap_callback(self):
+        changed, self._states.map_points_size = self._gui.SliderFloat(
+            "##map_size", self._states.map_points_size, v_min=0.01, v_max=0.6
         )
         if changed:
-            self._ps.get_point_cloud("local_map").set_radius(self._map_points_size, relative=False)
+            self._ps.get_point_cloud("local_map").set_radius(
+                self._states.map_points_size, relative=False
+            )
         self._gui.SameLine()
-        changed, self._toggle_local_map = self._gui.Checkbox("Local Map", self._toggle_local_map)
+        changed, self._states.view_local_map = self._gui.Checkbox(
+            "Local Map", self._states.view_local_map
+        )
         if changed:
-            self._ps.get_point_cloud("local_map").set_enabled(self._toggle_local_map)
+            self._ps.get_point_cloud("local_map").set_enabled(self._states.view_local_map)
+
+    def _registration_controls_callback(self):
+        self._registration_source_callback()
+        self._registration_localmap_callback()
 
     def _update_registraion(self, source, local_map, frame_pose, frame_to_local_map_pose):
         source_cloud = self._ps.register_point_cloud(
@@ -246,139 +248,295 @@ class Visualizer(StubVisualizer):
             color=SOURCE_COLOR,
             point_render_mode="quad",
         )
-        source_cloud.set_radius(self._source_points_size, relative=False)
-        if self._global_view:
+        source_cloud.set_radius(self._states.source_points_size, relative=False)
+        if self._states.global_view:
             source_cloud.set_transform(frame_pose)
         else:
             source_cloud.set_transform(np.eye(4))
-        source_cloud.set_enabled(self._toggle_source)
+        source_cloud.set_enabled(self._states.view_frame)
 
-        # Target Map
         map_cloud = self._ps.register_point_cloud(
             "local_map",
             local_map,
-            color=LOCAL_MAP_COLOR,
+            color=TARGET_COLOR,
             point_render_mode="quad",
         )
-        map_cloud.set_radius(self._map_points_size, relative=False)
-        if self._global_view:
+        map_cloud.set_radius(self._states.map_points_size, relative=False)
+        if self._states.global_view:
             map_cloud.set_transform(frame_pose @ np.linalg.inv(frame_to_local_map_pose))
         else:
             map_cloud.set_transform(np.linalg.inv(frame_to_local_map_pose))
-        map_cloud.set_enabled(self._toggle_local_map)
+        map_cloud.set_enabled(self._states.view_local_map)
 
         # TRAJECTORY (only visible in global view)
-        self._trajectory.append(frame_pose[:3, 3])
-        if self._global_view:
+        self._trajectory.append(frame_pose)
+        if self._states.global_view:
             self._register_trajectory()
 
-    def _toggle_closure_view_callback(self):
-        if self.loop_closures_data.closures_exist:
-            self._gui.Separator()
-            changed = self._gui.ArrowButton("View Closures", self._gui.ImGuiDir_Right)
-            self._toggle_closures = not self._toggle_closures if changed else self._toggle_closures
-            if changed:
-                if self._toggle_closures:
-                    self._ps.get_point_cloud("current_frame").set_enabled(False)
-                    self._ps.get_point_cloud("local_map").set_enabled(False)
-                    self._ps.get_point_cloud("query_map").set_enabled(self._toggle_query_map)
-                    self._ps.get_point_cloud("reference_map").set_enabled(
-                        self._toggle_reference_map
-                    )
-                    self._play_mode = False
-                    if self._global_view:
-                        self._unregister_trajectory()
-                else:
-                    self._ps.get_point_cloud("current_frame").set_enabled(self._toggle_source)
-                    self._ps.get_point_cloud("local_map").set_enabled(self._toggle_local_map)
-                    self._ps.get_point_cloud("query_map").set_enabled(False)
-                    self._ps.get_point_cloud("reference_map").set_enabled(False)
-                    if self._global_view:
-                        self._register_trajectory()
-            self._gui.Separator()
+    def _register_trajectory(self):
+        trajectory_cloud = self._ps.register_point_cloud(
+            "trajectory",
+            np.asarray(self._trajectory)[:, :3, -1],
+            color=BLUE,
+        )
+        trajectory_cloud.set_radius(0.3, relative=False)
+        if self.loop_closures_data.num_closures != 0:
+            closure_lines = self._ps.register_curve_network(
+                "loop closures",
+                np.array(self._trajectory)[:, :3, -1],
+                np.array(self.loop_closures_data.closure_edges),
+                color=RED,
+            )
+            closure_lines.set_radius(0.1, relative=False)
 
-    def _closure_controls_callback(self):
-        # Query Map
-        changed, self._query_points_size = self._gui.SliderFloat(
-            "##query_size", self._query_points_size, v_min=0.01, v_max=0.6
+    def _unregister_trajectory(self):
+        self._ps.remove_point_cloud("trajectory")
+        if self.loop_closures_data.num_closures != 0:
+            self._ps.remove_curve_network("loop closures")
+
+    def _switch_view_callback(self):
+        if self.loop_closures_data.num_closures != 0:
+            self._gui.Separator()
+            BUTTON_NAME = (
+                REGISTRATION_VIEW_BUTTON if self._states.view_closures else CLOSURES_VIEW_BUTTON
+            )
+            if self._gui.Button(BUTTON_NAME) or self._gui.IsKeyPressed(self._gui.ImGuiKey_M):
+                self._states.view_closures = not self._states.view_closures
+                if self._states.view_closures:
+                    if self._states.view_frame:
+                        self._ps.get_point_cloud("current_frame").set_enabled(False)
+                    if self._states.view_local_map:
+                        self._ps.get_point_cloud("local_map").set_enabled(False)
+                    self._states.play_mode = False
+                    if not self._states.global_view:
+                        self._register_trajectory()
+                else:
+                    if self._states.view_closure_query:
+                        self._ps.get_point_cloud("query_map").set_enabled(False)
+                    if self._states.view_closure_reference:
+                        self._ps.get_point_cloud("reference_map").set_enabled(False)
+                    self._ps.get_point_cloud("current_frame").set_enabled(self._states.view_frame)
+                    self._ps.get_point_cloud("local_map").set_enabled(self._states.view_local_map)
+                    if not self._states.global_view:
+                        self._unregister_trajectory()
+                    self._ref_density_viewer = None
+                    self._query_density_viewer = None
+                    if self._states.view_density_map:
+                        self._states.view_density_map = False
+                        plt.close("all")
+
+            self._gui.SameLine()
+            self._gui.TextUnformatted(f"No. of. Closures: {self.loop_closures_data.num_closures}")
+
+    def _closure_query_map_callback(self):
+        changed, self._states.query_points_size = self._gui.SliderFloat(
+            "##query_size", self._states.query_points_size, v_min=0.01, v_max=0.6
         )
         if changed:
             self._ps.get_point_cloud("query_map").set_radius(
-                self._query_points_size, relative=False
+                self._states.query_points_size, relative=False
             )
         self._gui.SameLine()
-        changed, self._toggle_query_map = self._gui.Checkbox("Query Map", self._toggle_query_map)
+        changed, self._states.view_closure_query = self._gui.Checkbox(
+            "Query Map", self._states.view_closure_query
+        )
         if changed:
-            self._ps.get_point_cloud("query_map").set_enabled(self._toggle_query_map)
+            self._ps.get_point_cloud("query_map").set_enabled(self._states.view_closure_query)
 
-        # LOCAL MAP
-        changed, self._reference_points_size = self._gui.SliderFloat(
-            "##reference_size", self._reference_points_size, v_min=0.01, v_max=0.6
+    def _closure_reference_map_callback(self):
+        changed, self._states.reference_points_size = self._gui.SliderFloat(
+            "##reference_size", self._states.reference_points_size, v_min=0.01, v_max=0.6
         )
         if changed:
             self._ps.get_point_cloud("reference_map").set_radius(
-                self._reference_points_size, relative=False
+                self._states.reference_points_size, relative=False
             )
         self._gui.SameLine()
-        changed, self._toggle_reference_map = self._gui.Checkbox(
-            "Reference Map", self._toggle_reference_map
+        changed, self._states.view_closure_reference = self._gui.Checkbox(
+            "Reference Map", self._states.view_closure_reference
         )
         if changed:
-            self._ps.get_point_cloud("reference_map").set_enabled(self._toggle_reference_map)
+            self._ps.get_point_cloud("reference_map").set_enabled(
+                self._states.view_closure_reference
+            )
 
+    def _closure_alignment_callback(self):
+        changed, self._states.align_closures = self._gui.Checkbox(
+            ALIGN_CLOSURE_BUTTON, self._states.align_closures
+        )
+        if changed:
+            self._render_closure(self.loop_closures_data.current_closure_id)
+
+        if self._gui.IsKeyPressed(self._gui.ImGuiKey_A):
+            self._states.align_closures = not self._states.align_closures
+            self._render_closure(self.loop_closures_data.current_closure_id)
+
+    def _closure_navigate_callback(self):
+        changed, self.loop_closures_data.current_closure_id = self._gui.SliderInt(
+            f"Closure Index",
+            self.loop_closures_data.current_closure_id,
+            v_min=0,
+            v_max=self.loop_closures_data.num_closures - 1,
+        )
+        if changed:
+            self._render_closure(self.loop_closures_data.current_closure_id)
+            if self._states.view_density_map:
+                self._ref_density_viewer.set_data(
+                    self.loop_closures_data.source_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ]
+                )
+                self._query_density_viewer.set_data(
+                    self.loop_closures_data.target_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ]
+                )
+                plt.gcf().canvas.draw_idle()
+                plt.gcf().canvas.start_event_loop(1e-6)
+
+    def _density_map_callback(self):
+        BUTTON = (
+            OPEN_DENSITY_VIEW_BUTTON
+            if not self._states.view_density_map
+            else QUIT_DENSITY_VIEW_BUTTON
+        )
+        if self._gui.Button(BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_D):
+            self._states.view_density_map = not self._states.view_density_map
+            if self._states.view_density_map:
+                self.fig = plt.figure()
+                plt.ion()
+                ax_ref = self.fig.add_subplot(1, 2, 1)
+                self._ref_density_viewer = ax_ref.imshow(
+                    self.loop_closures_data.source_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ],
+                    cmap="gray",
+                )
+                ax_ref.set_title("Reference Density Map")
+
+                ax_query = self.fig.add_subplot(1, 2, 2)
+                self._query_density_viewer = ax_query.imshow(
+                    self.loop_closures_data.target_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ],
+                    cmap="gray",
+                )
+                ax_query.set_title("Query Density Map")
+                plt.show(block=False)
+                plt.gcf().canvas.draw_idle()
+                plt.gcf().canvas.start_event_loop(1e-6)
+            else:
+                plt.close("all")
+
+    def _previous_next_closure_callback(self):
+        if self._gui.Button(PREV_CLOSURE_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_P):
+            self.loop_closures_data.current_closure_id = (
+                self.loop_closures_data.current_closure_id - 1
+            ) % self.loop_closures_data.num_closures
+            if self._states.view_density_map:
+                self._ref_density_viewer.set_data(
+                    self.loop_closures_data.source_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ]
+                )
+                self._query_density_viewer.set_data(
+                    self.loop_closures_data.target_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ]
+                )
+                plt.gcf().canvas.draw_idle()
+                plt.gcf().canvas.start_event_loop(1e-6)
+
+        self._gui.SameLine()
+        if self._gui.Button(NEXT_CLOSURE_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_N):
+            self.loop_closures_data.current_closure_id = (
+                self.loop_closures_data.current_closure_id + 1
+            ) % self.loop_closures_data.num_closures
+            if self._states.view_density_map:
+                self._ref_density_viewer.set_data(
+                    self.loop_closures_data.source_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ]
+                )
+                self._query_density_viewer.set_data(
+                    self.loop_closures_data.target_density_maps[
+                        self.loop_closures_data.current_closure_id
+                    ]
+                )
+                plt.gcf().canvas.draw_idle()
+                plt.gcf().canvas.start_event_loop(1e-6)
+
+        self._render_closure(self.loop_closures_data.current_closure_id)
+
+    def _closure_controls_callback(self):
+        self._closure_query_map_callback()
+        self._closure_reference_map_callback()
         self._gui.Separator()
-        changed, self._toggle_closure_registration = self._gui.Checkbox(
-            "Align MapClosures", self._toggle_closure_registration
-        )
-        if changed:
-            self._update_closure(self.loop_closures_data.current_closure_id)
+        self._density_map_callback()
+        self._gui.Separator()
+        self._previous_next_closure_callback()
+        self._gui.SameLine()
+        self._closure_alignment_callback()
+        self._closure_navigate_callback()
 
-    def _update_closures(self, query, reference, closure_pose, closure_indices):
-        self.loop_closures_data.sources.append(query)
-        self.loop_closures_data.targets.append(reference)
+    def _update_closures(
+        self,
+        reference_local_map,
+        query_local_map,
+        reference_density_map,
+        query_density_map,
+        closure_pose,
+        closure_indices,
+    ):
+        self.loop_closures_data.source_local_maps.append(reference_local_map)
+        self.loop_closures_data.target_local_maps.append(query_local_map)
+        self.loop_closures_data.source_density_maps.append(reference_density_map)
+        self.loop_closures_data.target_density_maps.append(query_density_map)
         self.loop_closures_data.closure_poses.append(closure_pose)
-        self.loop_closures_data.closure_lines.append(closure_indices)
-        self.loop_closures_data.current_closure_id = len(self.loop_closures_data.closure_poses) - 1
-        self._update_closure(self.loop_closures_data.current_closure_id)
+        self.loop_closures_data.closure_edges.append(closure_indices)
+        self.loop_closures_data.current_closure_id = self.loop_closures_data.num_closures - 1
+        if self._states.view_closures:
+            self._render_closure(self.loop_closures_data.current_closure_id)
 
-    def _update_closure(self, idx):
+    def _render_closure(self, idx):
+        ref_map_pose = self._trajectory[self.loop_closures_data.closure_edges[idx][0]]
+        query_map_pose = self._trajectory[self.loop_closures_data.closure_edges[idx][1]]
         query_map = self._ps.register_point_cloud(
             "query_map",
-            self.loop_closures_data.sources[idx],
+            self.loop_closures_data.target_local_maps[idx],
+            color=TARGET_COLOR,
+            point_render_mode="quad",
+        )
+        query_map.set_radius(self._states.query_points_size, relative=False)
+        query_map.set_transform(query_map_pose)
+        query_map.set_enabled(self._states.view_closure_query)
+
+        reference_map = self._ps.register_point_cloud(
+            "reference_map",
+            self.loop_closures_data.source_local_maps[idx],
             color=SOURCE_COLOR,
             point_render_mode="quad",
         )
-        query_map.set_radius(self._source_points_size, relative=False)
-        if self._toggle_closure_registration:
-            query_map.set_transform(self.loop_closures_data.closure_poses[idx])
+        reference_map.set_radius(self._states.reference_points_size, relative=False)
+        if self._states.align_closures:
+            reference_map.set_transform(query_map_pose @ self.loop_closures_data.closure_poses[idx])
         else:
-            query_map.set_transform(np.eye(4))
-        query_map.set_enabled(self._toggle_closures)
-
-        # Target Map
-        reference_map = self._ps.register_point_cloud(
-            "reference_map",
-            self.loop_closures_data.sources[idx],
-            color=LOCAL_MAP_COLOR,
-            point_render_mode="quad",
-        )
-        reference_map.set_radius(self._map_points_size, relative=False)
-        reference_map.set_transform(np.eye(4))
-        reference_map.set_enabled(self._toggle_closures)
+            reference_map.set_transform(ref_map_pose)
+        reference_map.set_enabled(self._states.view_closure_reference)
 
     def _background_color_callback(self):
-        changed, self._background_color = self._gui.ColorEdit3(
+        changed, self._states.background_color = self._gui.ColorEdit3(
             "Background Color",
-            self._background_color,
+            self._states.background_color,
         )
         if changed:
-            self._ps.set_background_color(self._background_color)
+            self._ps.set_background_color(self._states.background_color)
 
     def _global_view_callback(self):
-        button_name = LOCAL_VIEW_BUTTON if self._global_view else GLOBAL_VIEW_BUTTON
+        button_name = LOCAL_VIEW_BUTTON if self._states.global_view else GLOBAL_VIEW_BUTTON
         if self._gui.Button(button_name) or self._gui.IsKeyPressed(self._gui.ImGuiKey_V):
-            self._global_view = not self._global_view
-            if self._global_view:
+            self._states.global_view = not self._states.global_view
+            if self._states.global_view:
                 self._ps.get_point_cloud("current_frame").set_transform(self._last_frame_pose)
                 self._ps.get_point_cloud("local_map").set_transform(
                     self._last_frame_pose @ np.linalg.inv(self._last_frame_to_local_map_pose)
@@ -392,18 +550,17 @@ class Visualizer(StubVisualizer):
                 self._unregister_trajectory()
             self._ps.reset_camera_to_home_view()
 
-    def _start_pause_callback(self):
-        button_name = PAUSE_BUTTON if self._play_mode else START_BUTTON
-        if self._gui.Button(button_name) or self._gui.IsKeyPressed(self._gui.ImGuiKey_Space):
-            self._play_mode = not self._play_mode
-
-    def _next_frame_callback(self):
-        if self._gui.Button(NEXT_FRAME_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_N):
-            self._block_execution = not self._block_execution
-
     def _screenshot_callback(self):
+        posX = (
+            self._gui.GetCursorPosX()
+            + self._gui.GetColumnWidth()
+            - self._gui.CalcTextSize(SCREENSHOT_BUTTON)[0]
+            - self._gui.GetScrollX()
+            - self._gui.ImGuiStyleVar_ItemSpacing
+        )
+        self._gui.SetCursorPosX(posX)
         if self._gui.Button(SCREENSHOT_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_S):
-            image_filename = "kisshot_" + (
+            image_filename = "screenshot_" + (
                 datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
             )
             self._ps.screenshot(image_filename)
@@ -414,38 +571,16 @@ class Visualizer(StubVisualizer):
         ):
             self._ps.reset_camera_to_home_view()
 
-    def _previous_next_callback(self):
-        if self._gui.Button(PREV_CLOSURE_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_P):
-            self.loop_closures_data.current_closure_id = (
-                self.loop_closures_data.current_closure_id - 1
-            ) % len(self.loop_closures_data.closure_poses)
-        self._gui.SameLine()
-        if self._gui.Button(NEXT_CLOSURE_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_N):
-            self.loop_closures_data.current_closure_id = (
-                self.loop_closures_data.current_closure_id + 1
-            ) % len(self.loop_closures_data.closure_poses)
-        self._update_closure(self.loop_closures_data.current_closure_id)
-
     def _quit_callback(self):
-        self._gui.SetCursorPosX(
-            self._gui.GetCursorPosX() + self._gui.GetContentRegionAvail()[0] - 55
+        posX = (
+            self._gui.GetCursorPosX()
+            + self._gui.GetColumnWidth()
+            - self._gui.CalcTextSize(QUIT_BUTTON)[0]
+            - self._gui.GetScrollX()
+            - self._gui.ImGuiStyleVar_ItemSpacing
         )
-        if (
-            self._gui.Button(QUIT_BUTTON)
-            or self._gui.IsKeyPressed(self._gui.ImGuiKey_Escape)
-            or self._gui.IsKeyPressed(self._gui.ImGuiKey_Q)
-        ):
+        self._gui.SetCursorPosX(posX)
+        if self._gui.Button(QUIT_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_Escape):
             print("Destroying Visualizer")
             self._ps.unshow()
             os._exit(0)
-
-    def _trajectory_pick_callback(self):
-        if self._gui.GetIO().MouseClicked[0]:
-            name, idx = self._ps.get_selection()
-            if name == "trajectory" and self._ps.has_point_cloud(name):
-                frame_pose = self._trajectory[idx]
-                self._selected_frame_pose = (
-                    f"x: {frame_pose[0]:7.3f}, y: {frame_pose[1]:7.3f}, z: {frame_pose[2]:7.3f}>"
-                )
-            else:
-                self._selected_frame_pose = ""

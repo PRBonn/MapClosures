@@ -76,6 +76,7 @@ class MapClosurePipeline:
 
         self.closures = []
         self.local_maps = []
+        self.density_maps = []
         self.odom_poses = np.zeros((self._n_scans, 4, 4))
 
         self.closure_overlap_threshold = 0.5
@@ -163,8 +164,9 @@ class MapClosurePipeline:
                         np.copy(poses_in_local_map),
                     )
                 )
+                self.density_maps.append(self.map_closures.get_density_map_from_id(map_idx))
 
-                if closure.number_of_inliers > 0:
+                if closure.number_of_inliers > self.closure_config.inliers_threshold:
                     reference_local_map = self.local_maps[closure.source_id]
                     query_local_map = self.local_maps[closure.target_id]
                     self.closures.append(
@@ -189,6 +191,8 @@ class MapClosurePipeline:
                     self.visualizer.update_closures(
                         reference_local_map.pointcloud,
                         query_local_map.pointcloud,
+                        self.density_maps[closure.source_id],
+                        self.density_maps[closure.target_id],
                         np.asarray(closure.pose),
                         [
                             reference_local_map.scan_indices[0],
