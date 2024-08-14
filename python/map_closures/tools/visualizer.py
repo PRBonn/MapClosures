@@ -303,18 +303,22 @@ class Visualizer(StubVisualizer):
             if self._gui.Button(BUTTON_NAME) or self._gui.IsKeyPressed(self._gui.ImGuiKey_M):
                 self._states.view_closures = not self._states.view_closures
                 if self._states.view_closures:
-                    if self._states.view_frame:
-                        self._ps.get_point_cloud("current_frame").set_enabled(False)
-                    if self._states.view_local_map:
-                        self._ps.get_point_cloud("local_map").set_enabled(False)
+                    self._states.view_frame = False
+                    self._states.view_local_map = False
+                    self._states.view_closure_query = True
+                    self._states.view_closure_reference = True
+                    self._ps.get_point_cloud("current_frame").set_enabled(self._states.view_frame)
+                    self._ps.get_point_cloud("local_map").set_enabled(self._states.view_local_map)
                     self._states.play_mode = False
+                    self._render_closure(self.loop_closures_data.current_closure_id)
                     if not self._states.global_view:
                         self._register_trajectory()
                 else:
-                    if self._states.view_closure_query:
-                        self._ps.get_point_cloud("query_map").set_enabled(False)
-                    if self._states.view_closure_reference:
-                        self._ps.get_point_cloud("reference_map").set_enabled(False)
+                    self._states.view_frame = True
+                    self._states.view_local_map = True
+                    self._states.view_closure_query = False
+                    self._states.view_closure_reference = False
+                    self._render_closure(self.loop_closures_data.current_closure_id)
                     self._ps.get_point_cloud("current_frame").set_enabled(self._states.view_frame)
                     self._ps.get_point_cloud("local_map").set_enabled(self._states.view_local_map)
                     if not self._states.global_view:
