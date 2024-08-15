@@ -199,7 +199,9 @@ class Visualizer(StubVisualizer):
             self._closure_window_callback()
 
     def _closure_window_callback(self):
-        self._gui.Begin("Closures Window", open=True)
+        self._gui.Begin(
+            f"Closures Window: No. of Closures: {self.loop_closures_data.num_closures}", open=True
+        )
         self._switch_view_callback()
         if self._states.view_closures:
             self._gui.Separator()
@@ -335,9 +337,6 @@ class Visualizer(StubVisualizer):
                         self._states.view_density_map = False
                         plt.close("all")
 
-            self._gui.SameLine()
-            self._gui.TextUnformatted(f"No. of. Closures: {self.loop_closures_data.num_closures}")
-
     def _closure_query_map_callback(self):
         changed, self._states.query_points_size = self._gui.SliderFloat(
             "##query_size", self._states.query_points_size, v_min=0.01, v_max=0.6
@@ -383,10 +382,11 @@ class Visualizer(StubVisualizer):
 
     def _closure_navigate_callback(self):
         changed, self.loop_closures_data.current_closure_id = self._gui.SliderInt(
-            f"Closure Index",
+            f"###Closure Index",
             self.loop_closures_data.current_closure_id,
             v_min=0,
             v_max=self.loop_closures_data.num_closures - 1,
+            format="Closure Id: %d",
         )
         if changed:
             self._render_closure(self.loop_closures_data.current_closure_id)
@@ -480,10 +480,10 @@ class Visualizer(StubVisualizer):
 
     def _closure_controls_callback(self):
         self._density_map_callback()
-        self._gui.Separator()
-        self._previous_next_closure_callback()
         self._gui.SameLine()
+        self._previous_next_closure_callback()
         self._closure_alignment_callback()
+        self._gui.SameLine()
         self._closure_navigate_callback()
 
     def _update_closures(
