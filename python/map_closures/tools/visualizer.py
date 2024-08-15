@@ -34,7 +34,6 @@ from matplotlib import pyplot as plt
 START_BUTTON = "Play [SPACE]"
 PAUSE_BUTTON = "Hold [SPACE]"
 NEXT_FRAME_BUTTON = "Step Frame [N]"
-SCREENSHOT_BUTTON = "Screenshot [S]"
 LOCAL_VIEW_BUTTON = "Local View [V]"
 GLOBAL_VIEW_BUTTON = "Global View [V]"
 CENTER_VIEWPOINT_BUTTON = "Center Viewpoint [C]"
@@ -178,8 +177,6 @@ class Visualizer(StubVisualizer):
             if not self._states.play_mode:
                 self._gui.SameLine()
                 self._next_frame_callback()
-            self._gui.SameLine()
-            self._screenshot_callback()
             self._gui.Separator()
             self._background_color_callback()
             self._gui.Separator()
@@ -189,8 +186,6 @@ class Visualizer(StubVisualizer):
             self._gui.SameLine()
             self._global_view_callback()
         else:
-            self._screenshot_callback()
-            self._gui.Separator()
             self._background_color_callback()
             self._gui.Separator()
             self._closure_query_map_callback()
@@ -561,21 +556,6 @@ class Visualizer(StubVisualizer):
                 )
                 self._unregister_trajectory()
             self._ps.reset_camera_to_home_view()
-
-    def _screenshot_callback(self):
-        posX = (
-            self._gui.GetCursorPosX()
-            + self._gui.GetColumnWidth()
-            - self._gui.CalcTextSize(SCREENSHOT_BUTTON)[0]
-            - self._gui.GetScrollX()
-            - self._gui.ImGuiStyleVar_ItemSpacing
-        )
-        self._gui.SetCursorPosX(posX)
-        if self._gui.Button(SCREENSHOT_BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_S):
-            image_filename = "screenshot_" + (
-                datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
-            )
-            self._ps.screenshot(image_filename)
 
     def _center_viewpoint_callback(self):
         if self._gui.Button(CENTER_VIEWPOINT_BUTTON) or self._gui.IsKeyPressed(
