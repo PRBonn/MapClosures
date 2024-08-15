@@ -170,6 +170,7 @@ class Visualizer(StubVisualizer):
         self._ps.set_user_callback(self._main_gui_callback)
         self._ps.set_build_default_gui_panels(False)
 
+    # --- GUI Callbacks ------------------------------------------------
     def _main_gui_callback(self):
         # GUI callbacks
         if not self._states.view_closures:
@@ -181,7 +182,6 @@ class Visualizer(StubVisualizer):
             self._screenshot_callback()
             self._gui.Separator()
             self._background_color_callback()
-            self._switch_view_callback()
             self._gui.Separator()
             self._registration_controls_callback()
             self._gui.Separator()
@@ -192,13 +192,24 @@ class Visualizer(StubVisualizer):
             self._screenshot_callback()
             self._gui.Separator()
             self._background_color_callback()
-            self._switch_view_callback()
             self._gui.Separator()
-            self._closure_controls_callback()
+            self._closure_query_map_callback()
+            self._closure_reference_map_callback()
             self._gui.Separator()
             self._center_viewpoint_callback()
         self._gui.SameLine()
         self._quit_callback()
+
+        if self.loop_closures_data.num_closures != 0:
+            self._closure_window_callback()
+
+    def _closure_window_callback(self):
+        self._gui.Begin("Closures Window", open=True)
+        self._switch_view_callback()
+        if self._states.view_closures:
+            self._gui.Separator()
+            self._closure_controls_callback()
+        self._gui.End()
 
     def _start_pause_callback(self):
         button_name = PAUSE_BUTTON if self._states.play_mode else START_BUTTON
@@ -473,9 +484,6 @@ class Visualizer(StubVisualizer):
         self._render_closure(self.loop_closures_data.current_closure_id)
 
     def _closure_controls_callback(self):
-        self._closure_query_map_callback()
-        self._closure_reference_map_callback()
-        self._gui.Separator()
         self._density_map_callback()
         self._gui.Separator()
         self._previous_next_closure_callback()
