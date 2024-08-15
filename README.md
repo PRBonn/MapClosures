@@ -24,7 +24,7 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 <hr />
 
 ## Use MapClosures in your C++ project
-    
+
 1. Include the following snippet in your project's `CMakeLists.txt`:
 ```cmake
 set(USE_SYSTEM_EIGEN3 ON CACHE BOOL "use system eigen3")
@@ -33,7 +33,7 @@ set(USE_SYSTEM_OPENCV ON CACHE BOOL "use system opencv")
 
 include(FetchContent)
 FetchContent_Declare(
-    map_closures 
+    map_closures
         GIT_REPOSITORY https://github.com/PRBonn/MapClosures.git
         GIT_TAG main
         SOURCE_SUBDIR cpp
@@ -52,7 +52,7 @@ target_link_libraries(my_target PUBLIC map_closures)
 #include <map_closures/MapClosures.hpp>
 ```
 
-## Install the Python API and CLI 
+## Install the Python API and CLI
 1. First, install the necessary system dependencies
     ```sh
     sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev libeigen3-dev libopencv-dev libtbb-dev
@@ -61,7 +61,7 @@ target_link_libraries(my_target PUBLIC map_closures)
     ```sh
     pip install kiss-icp
     ```
-3. Then run:  
+3. Then run:
     ```sh
     make
     ```

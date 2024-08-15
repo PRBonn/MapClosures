@@ -76,6 +76,7 @@ class MapClosurePipeline:
 
         self.closures = []
         self.local_maps = []
+        self.density_maps = []
         self.odom_poses = np.zeros((self._n_scans, 4, 4))
 
         self.closure_overlap_threshold = 0.5
@@ -140,7 +141,10 @@ class MapClosurePipeline:
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
             self.visualizer.update_registration(
-                source, keypoints, self.voxel_local_map, current_frame_pose, frame_to_map_pose
+                source,
+                self.voxel_local_map.point_cloud(),
+                current_frame_pose,
+                frame_to_map_pose,
             )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
@@ -160,6 +164,7 @@ class MapClosurePipeline:
                         np.copy(poses_in_local_map),
                     )
                 )
+                self.density_maps.append(self.map_closures.get_density_map_from_id(map_idx))
 
                 if closure.number_of_inliers > self.closure_config.inliers_threshold:
                     reference_local_map = self.local_maps[closure.source_id]
@@ -186,6 +191,8 @@ class MapClosurePipeline:
                     self.visualizer.update_closures(
                         reference_local_map.pointcloud,
                         query_local_map.pointcloud,
+                        self.density_maps[closure.source_id],
+                        self.density_maps[closure.target_id],
                         np.asarray(closure.pose),
                         [
                             reference_local_map.scan_indices[0],
@@ -209,7 +216,7 @@ class MapClosurePipeline:
             scan_indices_in_local_map.append(scan_idx)
             poses_in_local_map.append(current_frame_pose)
 
-        self.visualizer.pause_vis()
+        # self.visualizer.pause_vis()
 
     def _log_to_file(self):
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
