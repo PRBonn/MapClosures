@@ -36,7 +36,7 @@ from map_closures.config import load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import EvaluationPipeline, LocalMap, StubEvaluation
 from map_closures.tools.gt_closures import get_gt_closures
-from map_closures.tools.visualizer import StubVisualizer, Visualizer
+from map_closures.visualizer.visualizer import StubVisualizer, Visualizer
 
 
 def transform_points(pcd, T):
