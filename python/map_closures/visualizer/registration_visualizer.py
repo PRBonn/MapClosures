@@ -90,20 +90,20 @@ class RegistrationVisualizer:
             "##frame_size", self.states.source_points_size, v_min=0.01, v_max=0.6
         )
         if changed:
-            self._ps.get_point_cloud("current_frame").set_radius(
+            self._ps.get_point_cloud("source").set_radius(
                 self.states.source_points_size, relative=False
             )
         self._gui.SameLine()
         changed, self.states.view_frame = self._gui.Checkbox("Frame", self.states.view_frame)
         if changed:
-            self._ps.get_point_cloud("current_frame").set_enabled(self.states.view_frame)
+            self._ps.get_point_cloud("source").set_enabled(self.states.view_frame)
 
     def _localmap_callback(self):
         changed, self.states.map_points_size = self._gui.SliderFloat(
             "##map_size", self.states.map_points_size, v_min=0.01, v_max=0.6
         )
         if changed:
-            self._ps.get_point_cloud("local_map").set_radius(
+            self._ps.get_point_cloud("target").set_radius(
                 self.states.map_points_size, relative=False
             )
         self._gui.SameLine()
@@ -111,18 +111,18 @@ class RegistrationVisualizer:
             "Local Map", self.states.view_local_map
         )
         if changed:
-            self._ps.get_point_cloud("local_map").set_enabled(self.states.view_local_map)
+            self._ps.get_point_cloud("target").set_enabled(self.states.view_local_map)
 
     def _update(self, source, local_map, frame_pose, frame_to_local_map_pose):
         source_cloud = self._ps.register_point_cloud(
-            "current_frame",
+            "source",
             source,
             color=SOURCE_COLOR,
             point_render_mode="quad",
         )
         source_cloud.set_radius(self.states.source_points_size, relative=False)
         map_cloud = self._ps.register_point_cloud(
-            "local_map",
+            "target",
             local_map,
             color=TARGET_COLOR,
             point_render_mode="quad",

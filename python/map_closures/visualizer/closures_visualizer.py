@@ -77,7 +77,7 @@ class ClosuresVisualizer:
         self.fig = None
 
         # Create data
-        self._localmap_data = localmap_data
+        self.localmap_data = localmap_data
         self.data = LoopClosureData()
 
     def update_closures(self, alignment_pose, closure_edge):
@@ -167,10 +167,10 @@ class ClosuresVisualizer:
                 ax_query = self.fig.add_subplot(1, 2, 2)
                 ax_query.set_title("Query Density Map")
                 self.ref_density_viewer = ax_ref.imshow(
-                    self._localmap_data.density_maps[ref_id], cmap="gray"
+                    self.localmap_data.density_maps[ref_id], cmap="gray"
                 )
                 self.query_density_viewer = ax_query.imshow(
-                    self._localmap_data.density_maps[query_id], cmap="gray"
+                    self.localmap_data.density_maps[query_id], cmap="gray"
                 )
                 self.matplotlib_eventloop()
             else:
@@ -179,18 +179,18 @@ class ClosuresVisualizer:
     def _render_closure(self):
         id = self.data.current_id
         [ref_id, query_id] = self.data.closure_edges[id]
-        ref_map_pose = self._localmap_data.local_map_poses[ref_id]
-        query_map_pose = self._localmap_data.local_map_poses[query_id]
+        ref_map_pose = self.localmap_data.local_map_poses[ref_id]
+        query_map_pose = self.localmap_data.local_map_poses[query_id]
         query_map = self._ps.register_point_cloud(
             "query_map",
-            self._localmap_data.local_maps[query_id],
+            self.localmap_data.local_maps[query_id],
             color=TARGET_COLOR,
             point_render_mode="quad",
         )
         query_map.set_radius(self.states.query_points_size, relative=False)
         reference_map = self._ps.register_point_cloud(
             "reference_map",
-            self._localmap_data.local_maps[ref_id],
+            self.localmap_data.local_maps[ref_id],
             color=SOURCE_COLOR,
             point_render_mode="quad",
         )
@@ -210,14 +210,14 @@ class ClosuresVisualizer:
         query_map.set_enabled(self.states.view_query)
         reference_map.set_enabled(self.states.view_reference)
         if self.states.view_density_map:
-            self.ref_density_viewer.set_data(self._localmap_data.density_maps[ref_id])
-            self.query_density_viewer.set_data(self._localmap_data.density_maps[query_id])
+            self.ref_density_viewer.set_data(self.localmap_data.density_maps[ref_id])
+            self.query_density_viewer.set_data(self.localmap_data.density_maps[query_id])
             self.matplotlib_eventloop()
 
     def _register_trajectory(self):
         closure_lines = self._ps.register_curve_network(
             "loop closures",
-            np.array(self._localmap_data.local_map_poses)[:, :3, -1],
+            np.array(self.localmap_data.local_map_poses)[:, :3, -1],
             np.array(self.data.closure_edges),
             color=TRAJECTORY_COLOR,
         )
