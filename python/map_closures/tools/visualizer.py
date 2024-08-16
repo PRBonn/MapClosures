@@ -437,7 +437,6 @@ class Visualizer(StubVisualizer):
             point_render_mode="quad",
         )
         reference_map.set_radius(self._states.reference_points_size, relative=False)
-
         if self._states.global_view:
             query_map.set_transform(query_map_pose)
             if self._states.align_closures:
@@ -454,7 +453,6 @@ class Visualizer(StubVisualizer):
                 reference_map.set_transform(I)
         query_map.set_enabled(self._states.view_closure_query)
         reference_map.set_enabled(self._states.view_closure_reference)
-
         if self._states.view_density_map:
             self._ref_density_viewer.set_data(self._closures_data.density_maps[ref_id])
             self._query_density_viewer.set_data(self._closures_data.density_maps[query_id])

@@ -29,7 +29,6 @@
 #include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
-#include <map>
 #include <opencv2/core.hpp>
 #include <utility>
 #include <vector>
@@ -79,7 +78,8 @@ ClosureCandidate MapClosures::MatchAndAdd(const int id,
                                    srrg_hbst::SplittingStrategy::SplitEven);
     density_maps_.emplace(id, std::move(density_map));
     std::vector<int> indices(descriptor_matches_.size());
-    std::iota(indices.begin(), indices.end(), 0);
+    std::transform(descriptor_matches_.cbegin(), descriptor_matches_.cend(), indices.begin(),
+                   [](const auto &descriptor_match) { return descriptor_match.first; });
     auto compare_closure_candidates = [](ClosureCandidate a,
                                          const ClosureCandidate &b) -> ClosureCandidate {
         return a.number_of_inliers > b.number_of_inliers ? a : b;

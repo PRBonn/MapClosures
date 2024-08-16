@@ -76,6 +76,7 @@ class MapClosurePipeline:
 
         self.closures = []
         self.local_maps = []
+        self.density_maps = []
         self.odom_poses = np.zeros((self._n_scans, 4, 4))
 
         self.closure_overlap_threshold = 0.5
