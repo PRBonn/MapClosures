@@ -142,7 +142,7 @@ class MapClosurePipeline:
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
             self.visualizer.update_registration(
                 frame,
-                self.voxel_local_map.point_cloud(),
+                self.odometry.local_map.point_cloud(),
                 current_frame_pose,
                 frame_to_map_pose,
             )
