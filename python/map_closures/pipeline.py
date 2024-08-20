@@ -144,7 +144,6 @@ class MapClosurePipeline:
                 frame,
                 self.odometry.local_map.point_cloud(),
                 current_frame_pose,
-                frame_to_map_pose,
             )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (

@@ -78,7 +78,7 @@ class Visualizer(StubVisualizer):
             exit(1)
 
         self.localmap_data = LocalMapData()
-        self.registration = RegistrationVisualizer(self._ps, self._gui, self.localmap_data)
+        self.registration = RegistrationVisualizer(self._ps, self._gui)
         self.closures = ClosuresVisualizer(self._ps, self._gui, self.localmap_data)
         self.local_maps = LocalMapVisualizer(self._ps, self._gui, self.localmap_data)
         self.background_color = BACKGROUND_COLOR
@@ -86,8 +86,8 @@ class Visualizer(StubVisualizer):
 
         self._initialize_visualizers()
 
-    def update_registration(self, source, local_map, frame_pose, frame_to_local_map_pose):
-        self.registration.update(source, local_map, frame_pose, frame_to_local_map_pose)
+    def update_registration(self, source, local_map, frame_pose):
+        self.registration.update(source, local_map, frame_pose)
 
     def update_data(self, local_map, density_map, local_map_pose):
         self.localmap_data.size += 1
@@ -271,15 +271,12 @@ class Visualizer(StubVisualizer):
             self.closures.states.global_view = self.global_view
             if self.global_view:
                 self._ps.get_point_cloud("source").set_transform(self.registration.last_frame_pose)
-                self._ps.get_point_cloud("target").set_transform(
-                    self.registration.last_frame_pose
-                    @ np.linalg.inv(self.registration.last_frame_to_local_map_pose)
-                )
+                self._ps.get_point_cloud("target").set_transform(I)
                 self._register_trajectory()
             else:
                 self._ps.get_point_cloud("source").set_transform(I)
                 self._ps.get_point_cloud("target").set_transform(
-                    np.linalg.inv(self.registration.last_frame_to_local_map_pose)
+                    np.linalg.inv(self.registration.last_frame_pose)
                 )
                 self._unregister_trajectory()
             if self.closures.states.toggle_view:

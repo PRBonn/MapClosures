@@ -53,7 +53,7 @@ class RegsitrationStateMachine:
 
 
 class RegistrationVisualizer:
-    def __init__(self, ps, gui, localmap_data):
+    def __init__(self, ps, gui):
         self._ps = ps
         self._gui = gui
 
@@ -63,13 +63,10 @@ class RegistrationVisualizer:
         # Create data
         self.trajectory = []
         self.last_frame_pose = I
-        self.localmap_data = localmap_data
-        self.last_frame_to_local_map_pose = I
 
-    def update(self, source, local_map, frame_pose, frame_to_local_map_pose):
-        self._update(source, local_map, frame_pose, frame_to_local_map_pose)
+    def update(self, source, local_map, frame_pose):
+        self._update(source, local_map, frame_pose)
         self.last_frame_pose = frame_pose
-        self.last_frame_to_local_map_pose = frame_to_local_map_pose
         while self.states.block_execution:
             self._ps.frame_tick()
             if self.states.play_mode:
@@ -113,7 +110,7 @@ class RegistrationVisualizer:
         if changed:
             self._ps.get_point_cloud("target").set_enabled(self.states.view_local_map)
 
-    def _update(self, source, local_map, frame_pose, frame_to_local_map_pose):
+    def _update(self, source, local_map, frame_pose):
         source_cloud = self._ps.register_point_cloud(
             "source",
             source,
@@ -130,10 +127,10 @@ class RegistrationVisualizer:
         map_cloud.set_radius(self.states.map_points_size, relative=False)
         if self.states.global_view:
             source_cloud.set_transform(frame_pose)
-            map_cloud.set_transform(frame_pose @ np.linalg.inv(frame_to_local_map_pose))
+            map_cloud.set_transform(I)
         else:
             source_cloud.set_transform(I)
-            map_cloud.set_transform(np.linalg.inv(frame_to_local_map_pose))
+            map_cloud.set_transform(np.linalg.inv(frame_pose))
         source_cloud.set_enabled(self.states.view_frame)
         map_cloud.set_enabled(self.states.view_local_map)
 

@@ -81,7 +81,7 @@ map_closure_pipeline --help
 <details>
 <summary>
 Providing the -v flag will initialize the visualizer:
-    
+
 ```sh
 map_closure_pipeline -v
 ```
