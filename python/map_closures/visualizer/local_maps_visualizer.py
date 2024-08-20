@@ -84,7 +84,7 @@ class LocalMapVisualizer:
             self.local_map_id = (self.local_map_id - 1) % self.localmap_data.size
         self._gui.SameLine()
         if self._gui.Button(NEXT_LOCAL_MAP) or self._gui.IsKeyPressed(self._gui.ImGuiKey_N):
-            self.local_map_id = (self.local_map_id - 1) % self.localmap_data.size
+            self.local_map_id = (self.local_map_id + 1) % self.localmap_data.size
         self._update_callback()
 
     def _update_callback(self):
