@@ -78,6 +78,17 @@ map_closure_pipeline --help
 ![CLI_usage](https://github.com/PRBonn/MapClosures/assets/28734882/6dfbd767-ca63-4671-9582-3129752d0244)
 </details>
 
+<details>
+<summary>
+Providing the -v flag will initialize the visualizer:
+
+```sh
+map_closure_pipeline -v
+```
+</summary>
+
+![Visualizer](https://github.com/user-attachments/assets/34aa2b2f-c0ce-4dfb-a0e0-cbcc04487a5a)
+</details>
 
 ## Citation
 

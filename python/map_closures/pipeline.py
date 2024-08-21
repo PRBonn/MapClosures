@@ -36,7 +36,7 @@ from map_closures.config import load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import EvaluationPipeline, LocalMap, StubEvaluation
 from map_closures.tools.gt_closures import get_gt_closures
-from map_closures.tools.visualizer import StubVisualizer, Visualizer
+from map_closures.visualizer.visualizer import StubVisualizer, Visualizer
 
 
 def transform_points(pcd, T):
@@ -141,10 +141,9 @@ class MapClosurePipeline:
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
             self.visualizer.update_registration(
-                source,
-                self.voxel_local_map.point_cloud(),
+                frame,
+                self.odometry.local_map.point_cloud(),
                 current_frame_pose,
-                frame_to_map_pose,
             )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
@@ -164,8 +163,11 @@ class MapClosurePipeline:
                         np.copy(poses_in_local_map),
                     )
                 )
-                self.density_maps.append(self.map_closures.get_density_map_from_id(map_idx))
-
+                self.visualizer.update_data(
+                    self.local_maps[-1].pointcloud,
+                    self.local_maps[-1].density_map,
+                    current_map_pose,
+                )
                 if closure.number_of_inliers > self.closure_config.inliers_threshold:
                     reference_local_map = self.local_maps[closure.source_id]
                     query_local_map = self.local_maps[closure.target_id]
@@ -189,15 +191,7 @@ class MapClosurePipeline:
                         )
 
                     self.visualizer.update_closures(
-                        reference_local_map.pointcloud,
-                        query_local_map.pointcloud,
-                        self.density_maps[closure.source_id],
-                        self.density_maps[closure.target_id],
-                        np.asarray(closure.pose),
-                        [
-                            reference_local_map.scan_indices[0],
-                            query_local_map.scan_indices[0],
-                        ],
+                        np.asarray(closure.pose), [closure.source_id, closure.target_id]
                     )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
@@ -215,8 +209,6 @@ class MapClosurePipeline:
 
             scan_indices_in_local_map.append(scan_idx)
             poses_in_local_map.append(current_frame_pose)
-
-        # self.visualizer.pause_vis()
 
     def _log_to_file(self):
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
