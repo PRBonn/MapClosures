@@ -1,7 +1,7 @@
 # MIT License
 #
-# Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-# Ignacio Vizzo, Cyrill Stachniss.
+# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
+# Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,19 +20,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-cmake_minimum_required(VERSION 3.22)
-project(map_closures_cpp VERSION 0.2.0 LANGUAGES CXX)
-
-option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
-option(USE_SYSTEM_TBB "Use system pre-installed TBB" ON)
-option(USE_SYSTEM_OPENCV "Use system pre-installed OpenCV" ON)
-
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-include(3rdparty/find_dependencies.cmake)
-
-add_subdirectory(map_closures)
-add_subdirectory(gt_closures)
+include(FetchContent)
+FetchContent_Declare(tessil SYSTEM
+                     URL https://github.com/Tessil/robin-map/archive/refs/tags/v1.2.1.tar.gz)
+FetchContent_MakeAvailable(tessil)

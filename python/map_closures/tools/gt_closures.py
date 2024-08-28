@@ -20,117 +20,139 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import glob
 import os
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
 import numpy as np
-from kiss_icp.mapping import VoxelHashMap
+import typer
 from tqdm import tqdm
 
-
-def get_segment_indices(poses, sampling_distance):
-    segments = []
-    current_segment = []
-    last_pose = poses[0]
-    traveled_distance = 0.0
-    for index, pose in enumerate(poses):
-        traveled_distance += np.linalg.norm(last_pose[:3, -1] - pose[:3, -1])
-        if traveled_distance > sampling_distance:
-            segments.append(current_segment)
-
-            # Start new segment
-            current_segment = [index]
-            traveled_distance = 0.0
-        else:
-            current_segment.append(index)
-        last_pose = pose
-
-    segments.append(current_segment)
-    return segments
+from map_closures.datasets import eval_dataloaders, sequence_dataloaders
+from map_closures.pybind import gt_closures_pybind
 
 
-def get_global_points(dataset, indices, poses):
-    global_points = []
-    for index, pose in zip(indices, poses):
-        try:
-            points, _ = dataset[index]
-        except ValueError:
-            points = dataset[index]
-        R = pose[:3, :3]
-        t = pose[:3, -1]
-        global_points.append(points @ R.T + t)
-    return np.concatenate(global_points, axis=0)
+def name_callback(value: str):
+    if not value:
+        return value
+    dl = eval_dataloaders()
+    if value not in dl:
+        raise typer.BadParameter(f"Supported dataloaders are:\n{', '.join(dl)}")
+    return value
 
 
-def compute_overlap(query_points: np.ndarray, ref_points: np.ndarray, voxel_size: float):
-    # Compute Szymkiewicz–Simpson coefficient
-    # See https://en.wikipedia.org/wiki/Overlap_coefficient
-    query_map = VoxelHashMap(voxel_size, 1, 1)
-    query_map.add_points(query_points)
-    n_query_voxels = len(query_map.point_cloud())
+app = typer.Typer(add_completion=False, rich_markup_mode="rich")
 
-    ref_map = VoxelHashMap(voxel_size, 1, 1)
-    ref_map.add_points(ref_points)
-    n_ref_voxels = len(ref_map.point_cloud())
+_available_dl_help = eval_dataloaders()
 
-    ref_map.add_points(query_points)
-    union = len(ref_map.point_cloud())
-    intersection = n_query_voxels + n_ref_voxels - union
-    overlap = intersection / min(n_query_voxels, n_ref_voxels)
-    return overlap
+docstring = f"""
+Generate Ground Truth Loop Closure Indices\n
+\b
+Examples:\n
+# Use a specific dataloader with groundtruth poses: apollo, kitti, mulran, ncd, helipr
+$ gt_closure_pipeline mulran <path-to-mulran-sequence-root>
+"""
 
 
-def get_gt_closures(
-    dataset, gt_poses: List[np.ndarray], max_range: float, overlap_threshold: float = 0.5
+@app.command(help=docstring)
+def gt_closure_pipeline(
+    dataloader: str = typer.Argument(
+        None,
+        show_default=False,
+        case_sensitive=False,
+        autocompletion=eval_dataloaders,
+        callback=name_callback,
+        help="[Optional] Use a specific dataloader from those supported by MapClosures",
+    ),
+    data: Path = typer.Argument(
+        ...,
+        help="The data directory used by the specified dataloader",
+        show_default=False,
+    ),
+    # Aditional Options ---------------------------------------------------------------------------
+    sequence: Optional[str] = typer.Option(
+        None,
+        "--sequence",
+        "-s",
+        show_default=False,
+        help="[Optional] For some dataloaders, you need to specify a given sequence",
+        rich_help_panel="Additional Options",
+    ),
+    max_range: Optional[float] = typer.Option(
+        100.0,
+        "--max_range",
+        "-r",
+        show_default=True,
+        help="[Optional] Maximum distance between closures",
+        rich_help_panel="Additional Options",
+    ),
+    overlap_threshold: Optional[float] = typer.Option(
+        0.5,
+        "--overlap",
+        "-o",
+        show_default=True,
+        help="[Optional] Overlap Threshold between scans at closures",
+        rich_help_panel="Additional Options",
+    ),
 ):
+    if dataloader in sequence_dataloaders() and sequence is None:
+        print('[ERROR] You must specify a sequence "--sequence"')
+        raise typer.Exit(code=1)
+
+    from map_closures.datasets import dataset_factory
+
+    dataset = dataset_factory(
+        dataloader=dataloader,
+        data_dir=data,
+        # Additional options
+        sequence=sequence,
+    )
+    if hasattr(dataset, "gt_poses"):
+        generate_gt_closures(dataset, max_range, overlap_threshold)
+    else:
+        print("[ERROR] Groundtruth poses not found")
+        raise typer.Exit(code=1)
+
+
+def run():
+    app()
+
+
+def generate_gt_closures(dataset, max_range: float, overlap_threshold: float = 0.5):
     base_dir = dataset.sequence_dir if hasattr(dataset, "sequence_dir") else ""
     os.makedirs(os.path.join(base_dir, "loop_closure"), exist_ok=True)
     file_path_closures = os.path.join(base_dir, "loop_closure", "gt_closures.txt")
-    file_path_overlaps = os.path.join(base_dir, "loop_closure", "gt_overlaps.txt")
-    if os.path.exists(file_path_closures) and os.path.exists(file_path_overlaps):
+    if os.path.exists(file_path_closures):
         closures = np.loadtxt(file_path_closures, dtype=int)
-        overlaps = np.loadtxt(file_path_overlaps)
-        assert len(closures) == len(overlaps)
         print(f"[INFO] Found closure ground truth at {file_path_closures}")
 
     else:
         print("[INFO] Computing Ground Truth Closures, might take some time!")
-        min_overlap = 0.1
         sampling_distance = 2.0
-        n_skip_segments = int(2 * max_range / sampling_distance)
-        segment_indices = get_segment_indices(gt_poses, sampling_distance)
-        global_points_segments = [
-            get_global_points(dataset, segment, gt_poses[segment]) for segment in segment_indices
-        ]
-        closures = np.empty((0, 2), dtype=int)
-        overlaps = np.empty((0,), dtype=float)
-        tbar = tqdm(
-            zip(segment_indices, global_points_segments),
-            total=len(segment_indices),
+        overlap_voxel_size = 0.5
+        gt_closures_pipeline = gt_closures_pybind._GTClosures(
+            len(dataset), sampling_distance, overlap_threshold, overlap_voxel_size, max_range
         )
-        for i, (query_segment, query_points) in enumerate(tbar):
-            query_pose = gt_poses[query_segment[0]]
-            for _, (ref_segment, ref_points) in enumerate(
-                zip(
-                    segment_indices[i + n_skip_segments :],
-                    global_points_segments[i + n_skip_segments :],
-                ),
-                start=n_skip_segments + 1,
-            ):
-                ref_pose = gt_poses[ref_segment[0]]
-                dist = np.linalg.norm(query_pose[:3, -1] - ref_pose[:3, -1])
-                if dist < max_range:
-                    overlap = compute_overlap(query_points, ref_points, voxel_size=0.5)
-                    if overlap > min_overlap:
-                        segment_closures = np.dstack(
-                            np.meshgrid(query_segment, ref_segment)
-                        ).reshape(-1, 2)
-                        closures = np.vstack((closures, segment_closures), dtype=int)
-                        overlaps = np.hstack(
-                            (overlaps, np.full(segment_closures.shape[0], overlap))
-                        )
+        for idx in tqdm(range(len(dataset)), "Loading Data ..."):
+            try:
+                points, _ = dataset[idx]
+            except ValueError:
+                points = dataset[idx]
+            gt_closures_pipeline._AddPointCloud(
+                idx, gt_closures_pybind._Vector3dVector(points), dataset.gt_poses[idx]
+            )
+        num_query_segments = gt_closures_pipeline._GetSegments()
+        closures = []
+        for query_segment_idx in tqdm(
+            range(num_query_segments), "Computing Groundtruth Closures ..."
+        ):
+            closures.append(
+                np.asarray(
+                    gt_closures_pipeline._ComputeClosuresForQuerySegment(query_segment_idx), int
+                )
+            )
+        closures = np.vstack(closures)
         np.savetxt(file_path_closures, closures)
-        np.savetxt(file_path_overlaps, overlaps)
 
-    closures = closures[np.where(overlaps > overlap_threshold)[0]]
     return closures

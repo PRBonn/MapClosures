@@ -43,5 +43,7 @@ endmacro()
 find_dependency("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake")
 find_dependency("TBB" "TBB::tbb" "${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake")
 find_dependency("OpenCV" "opencv_features2d" "${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake")
+find_dependency("tsl-robin-map" "tsl::robin_map"
+                "${CMAKE_CURRENT_LIST_DIR}/tsl_robin/tsl_robin.cmake")
 
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)

@@ -21,18 +21,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-cmake_minimum_required(VERSION 3.22)
-project(map_closures_cpp VERSION 0.2.0 LANGUAGES CXX)
-
-option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
-option(USE_SYSTEM_TBB "Use system pre-installed TBB" ON)
-option(USE_SYSTEM_OPENCV "Use system pre-installed OpenCV" ON)
-
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-include(3rdparty/find_dependencies.cmake)
-
-add_subdirectory(map_closures)
-add_subdirectory(gt_closures)
+add_library(gt_closures STATIC)
+target_sources(gt_closures PRIVATE VoxelHashMap.cpp GTClosures.cpp)
+target_include_directories(gt_closures PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_link_libraries(gt_closures PUBLIC Eigen3::Eigen TBB::tbb tsl::robin_map)
+target_compile_features(gt_closures PUBLIC cxx_std_17)

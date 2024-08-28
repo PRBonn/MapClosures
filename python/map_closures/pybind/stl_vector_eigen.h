@@ -79,6 +79,21 @@ std::vector<EigenVector> py_array_to_vectors_double(
     }
     return eigen_vectors;
 }
+
+template <typename EigenVector>
+std::vector<EigenVector> py_array_to_vectors_int(
+    py::array_t<int, py::array::c_style | py::array::forcecast> array) {
+    int64_t eigen_vector_size = EigenVector::SizeAtCompileTime;
+    if (array.ndim() != 2 || array.shape(1) != eigen_vector_size) {
+        throw py::cast_error();
+    }
+    std::vector<EigenVector> eigen_vectors(array.shape(0));
+    auto array_unchecked = array.mutable_unchecked<2>();
+    for (auto i = 0; i < array_unchecked.shape(0); ++i) {
+        eigen_vectors[i] = Eigen::Map<EigenVector>(&array_unchecked(i, 0));
+    }
+    return eigen_vectors;
+}
 }  // namespace pybind11
 
 template <typename EigenVector,
