@@ -52,7 +52,7 @@ PYBIND11_MODULE(gt_closures_pybind, m) {
     py::class_<GTClosures, std::shared_ptr<GTClosures>> gt_closures(m, "_GTClosures", "");
     gt_closures
         .def(py::init<int, double, double, double, double>(), "dataset_size"_a,
-             "sampling_distance"_a, "overlap_threshold"_a, "overlap_voxel_size"_a, "max_range"_a)
+             "sampling_distance"_a, "overlap_threshold"_a, "voxel_size"_a, "max_range"_a)
         .def("_AddPointCloud", &GTClosures::AddPointCloud, "idx"_a, "pointcloud"_a, "pose"_a)
         .def("_GetSegments", &GTClosures::GetSegments)
         .def("_ComputeClosuresForQuerySegment", &GTClosures::ComputeClosuresForQuerySegment,

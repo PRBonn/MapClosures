@@ -41,7 +41,9 @@ struct std::hash<Voxel> {
 struct VoxelHashSet {
     VoxelHashSet(const double voxel_size) : voxel_size_(voxel_size) {}
 
-    void AddVoxels(const std::vector<Eigen::Vector3d> &points);
+    void AddPoints(const std::vector<Eigen::Vector3d> &points,
+                   const Eigen::Matrix3d &R,
+                   const Eigen::Vector3d &t);
     void AddVoxels(const VoxelHashSet &other_set);
     double ComputeOverlap(const VoxelHashSet &other_set);
     int size() const { return set_.size(); }

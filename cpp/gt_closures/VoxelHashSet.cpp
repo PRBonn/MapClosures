@@ -32,9 +32,11 @@ inline Voxel PointToVoxel(const Eigen::Vector3d &point, const double voxel_size)
                  static_cast<int>(std::floor(point.z() / voxel_size)));
 }
 
-void VoxelHashSet::AddVoxels(const std::vector<Eigen::Vector3d> &points) {
+void VoxelHashSet::AddPoints(const std::vector<Eigen::Vector3d> &points,
+                             const Eigen::Matrix3d &R,
+                             const Eigen::Vector3d &t) {
     std::for_each(points.cbegin(), points.cend(), [&](const auto &point) {
-        const auto voxel = PointToVoxel(point, voxel_size_);
+        const auto voxel = PointToVoxel(R * point + t, voxel_size_);
         if (set_.find(voxel) == set_.end()) {
             set_.insert(voxel);
         }

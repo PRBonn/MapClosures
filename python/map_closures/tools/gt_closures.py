@@ -129,9 +129,9 @@ def generate_gt_closures(dataset, max_range: float, overlap_threshold: float = 0
     else:
         print("[INFO] Computing Ground Truth Closures!")
         sampling_distance = 2.0
-        overlap_voxel_size = 0.5
+        voxel_size = 0.5
         gt_closures_pipeline = gt_closures_pybind._GTClosures(
-            len(dataset), sampling_distance, overlap_threshold, overlap_voxel_size, max_range
+            len(dataset), sampling_distance, overlap_threshold, voxel_size, max_range
         )
         for idx in tqdm(range(len(dataset)), "Loading Data ..."):
             try:

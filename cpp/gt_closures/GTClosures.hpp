@@ -55,14 +55,14 @@ public:
 private:
     std::vector<int> dataset_indices_;
     std::unordered_map<int, Eigen::Matrix4d> poses_;
-    std::unordered_map<int, VoxelHashSet> voxel_occupancies_;
+    std::unordered_map<int, VoxelHashSet> scan_occupancies_;
 
     std::vector<int> segments_indices_;
     std::unordered_map<int, Segment> segments_;
 
     double sampling_distance_ = 2.0;
     double overlap_threshold_ = 0.5;
-    double overlap_voxel_size_ = 0.5;
+    double voxel_size_ = 0.5;
     double max_range_ = 100.0;
     int n_skip_segments_ = 0;
 };
