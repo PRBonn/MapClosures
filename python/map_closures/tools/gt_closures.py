@@ -128,7 +128,7 @@ def generate_gt_closures(dataset, max_range: float, overlap_threshold: float = 0
         print(f"[INFO] Found closure ground truth at {file_path_closures}")
 
     else:
-        print("[INFO] Computing Ground Truth Closures, might take some time!")
+        print("[INFO] Computing Ground Truth Closures!")
         sampling_distance = 2.0
         overlap_voxel_size = 0.5
         gt_closures_pipeline = gt_closures_pybind._GTClosures(
