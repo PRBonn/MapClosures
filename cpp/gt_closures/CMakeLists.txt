@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 add_library(gt_closures STATIC)
-target_sources(gt_closures PRIVATE VoxelHashMap.cpp GTClosures.cpp)
+target_sources(gt_closures PRIVATE VoxelHashSet.cpp GTClosures.cpp)
 target_include_directories(gt_closures PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(gt_closures PUBLIC Eigen3::Eigen TBB::tbb tsl::robin_map)
 target_compile_features(gt_closures PUBLIC cxx_std_17)

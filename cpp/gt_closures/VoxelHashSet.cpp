@@ -20,8 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-#include "VoxelHashMap.hpp"
+#include "VoxelHashSet.hpp"
 
 #include <Eigen/Core>
 #include <algorithm>
@@ -33,39 +32,31 @@ inline Voxel PointToVoxel(const Eigen::Vector3d &point, const double voxel_size)
                  static_cast<int>(std::floor(point.z() / voxel_size)));
 }
 
-void VoxelHashMap::AddPoints(const std::vector<Eigen::Vector3d> &points) {
-    const double map_resolution = std::sqrt(voxel_size_ * voxel_size_ / max_points_per_voxel_);
+void VoxelHashSet::AddVoxels(const std::vector<Eigen::Vector3d> &points) {
     std::for_each(points.cbegin(), points.cend(), [&](const auto &point) {
         const auto voxel = PointToVoxel(point, voxel_size_);
-        auto search = map_.find(voxel);
-        if (search != map_.end()) {
-            auto &voxel_points = search.value();
-            if (voxel_points.size() == max_points_per_voxel_ ||
-                std::any_of(voxel_points.cbegin(), voxel_points.cend(),
-                            [&](const auto &voxel_point) {
-                                return (voxel_point - point).norm() < map_resolution;
-                            })) {
-                return;
-            }
-            voxel_points.emplace_back(point);
-        } else {
-            std::vector<Eigen::Vector3d> voxel_points;
-            voxel_points.reserve(max_points_per_voxel_);
-            voxel_points.emplace_back(point);
-            map_.insert({voxel, std::move(voxel_points)});
+        if (set_.find(voxel) == set_.end()) {
+            set_.insert(voxel);
         }
     });
 }
 
-double VoxelHashMap::ComputeOverlap(const VoxelHashMap &other_map) {
+void VoxelHashSet::AddVoxels(const VoxelHashSet &other_set) {
+    std::for_each(other_set.set_.cbegin(), other_set.set_.cend(), [&](const auto &voxel) {
+        if (set_.find(voxel) == set_.end()) {
+            set_.insert(voxel);
+        }
+    });
+}
+
+double VoxelHashSet::ComputeOverlap(const VoxelHashSet &other_set) {
     int overlapping_voxels = 0;
-    std::for_each(other_map.map_.cbegin(), other_map.map_.cend(), [&](const auto &map_element) {
-        const auto &query_voxel = map_element.first;
-        if (map_.find(query_voxel) != map_.end()) {
+    std::for_each(other_set.set_.cbegin(), other_set.set_.cend(), [&](const auto &voxel) {
+        if (set_.find(voxel) != set_.end()) {
             overlapping_voxels++;
         }
     });
     double overlap_score = static_cast<double>(overlapping_voxels) /
-                           static_cast<double>(std::min(this->size(), other_map.size()));
+                           static_cast<double>(std::min(this->size(), other_set.size()));
     return overlap_score;
 }

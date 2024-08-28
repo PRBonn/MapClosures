@@ -27,7 +27,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "VoxelHashMap.hpp"
+#include "VoxelHashSet.hpp"
 
 using Closures = std::vector<Eigen::Vector2i>;
 
@@ -35,7 +35,7 @@ namespace gt_closures {
 
 struct Segment {
     std::vector<int> indices;
-    VoxelHashMap map;
+    VoxelHashSet occupancy;
 };
 
 class GTClosures {
@@ -55,7 +55,7 @@ public:
 private:
     std::vector<int> dataset_indices_;
     std::unordered_map<int, Eigen::Matrix4d> poses_;
-    std::unordered_map<int, std::vector<Eigen::Vector3d>> pointclouds_;
+    std::unordered_map<int, VoxelHashSet> voxel_occupancies_;
 
     std::vector<int> segments_indices_;
     std::unordered_map<int, Segment> segments_;

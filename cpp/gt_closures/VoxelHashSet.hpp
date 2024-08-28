@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include <tsl/robin_map.h>
+#include <tsl/robin_set.h>
 
 #include <Eigen/Core>
 #include <vector>
@@ -38,16 +38,15 @@ struct std::hash<Voxel> {
     }
 };
 
-struct VoxelHashMap {
-    VoxelHashMap(const double voxel_size, const unsigned int max_points_per_voxel = 1)
-        : voxel_size_(voxel_size), max_points_per_voxel_(max_points_per_voxel) {}
+struct VoxelHashSet {
+    VoxelHashSet(const double voxel_size) : voxel_size_(voxel_size) {}
 
-    void AddPoints(const std::vector<Eigen::Vector3d> &points);
-    double ComputeOverlap(const VoxelHashMap &other_map);
-    int size() const { return map_.size(); }
-    void clear() { map_.clear(); }
+    void AddVoxels(const std::vector<Eigen::Vector3d> &points);
+    void AddVoxels(const VoxelHashSet &other_set);
+    double ComputeOverlap(const VoxelHashSet &other_set);
+    int size() const { return set_.size(); }
+    void clear() { set_.clear(); }
 
     double voxel_size_;
-    unsigned int max_points_per_voxel_;
-    tsl::robin_map<Voxel, std::vector<Eigen::Vector3d>> map_;
+    tsl::robin_set<Voxel> set_;
 };

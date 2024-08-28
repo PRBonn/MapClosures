@@ -33,7 +33,7 @@
 #include <numeric>
 #include <vector>
 
-#include "VoxelHashMap.hpp"
+#include "VoxelHashSet.hpp"
 
 namespace gt_closures {
 
@@ -49,10 +49,11 @@ GTClosures::GTClosures(const int dataset_size,
     n_skip_segments_ = static_cast<int>(2 * max_range_ / sampling_distance_);
 
     poses_.reserve(dataset_size);
-    pointclouds_.reserve(dataset_size);
+    voxel_occupancies_.reserve(dataset_size);
     dataset_indices_.resize(dataset_size);
     std::iota(dataset_indices_.begin(), dataset_indices_.end(), 0);
 }
+
 void GTClosures::AddPointCloud(const int idx,
                                const std::vector<Eigen::Vector3d> &pointcloud,
                                const Eigen::Matrix4d &pose) {
@@ -62,7 +63,9 @@ void GTClosures::AddPointCloud(const int idx,
         [&](const auto &point) { return pose.block<3, 3>(0, 0) * point + pose.block<3, 1>(0, 3); });
 
     poses_.insert({idx, pose});
-    pointclouds_.insert({idx, pointcloud_global});
+    auto voxel_occupancy = VoxelHashSet(overlap_voxel_size_);
+    voxel_occupancy.AddVoxels(pointcloud_global);
+    voxel_occupancies_.insert({idx, voxel_occupancy});
 }
 
 int GTClosures::GetSegments() {
@@ -71,22 +74,23 @@ int GTClosures::GetSegments() {
 
     int segment_idx = 0;
     std::vector<int> segment_indices;
-    VoxelHashMap segment_map(overlap_voxel_size_);
+    VoxelHashSet segment_occupancy(overlap_voxel_size_);
 
     std::for_each(dataset_indices_.begin(), dataset_indices_.end(), [&](const int idx) {
         traveled_distance +=
             (last_pose.block<3, 1>(0, 3) - poses_.at(idx).block<3, 1>(0, 3)).norm();
         if (traveled_distance > sampling_distance_) {
-            segments_.insert({segment_idx, {segment_indices, segment_map}});
+            segments_.insert({segment_idx, {segment_indices, segment_occupancy}});
             segments_indices_.emplace_back(segment_idx);
             traveled_distance = 0.0;
             segment_indices.clear();
-            segment_map.clear();
+            segment_occupancy.clear();
             segment_idx++;
         }
         segment_indices.emplace_back(idx);
-        segment_map.AddPoints(pointclouds_.at(idx));
+        segment_occupancy.AddVoxels(voxel_occupancies_.at(idx));
         last_pose = poses_.at(idx);
+        voxel_occupancies_.erase(idx);
     });
     return segments_.size() - n_skip_segments_;
 }
@@ -135,6 +139,7 @@ std::vector<Eigen::Vector2i> GTClosures::ComputeClosuresForQuerySegment(
             return lhs;
         });
     closures.shrink_to_fit();
+    segments_.erase(query_segment_idx);
     return closures;
 }
 }  // namespace gt_closures
