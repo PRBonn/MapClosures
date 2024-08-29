@@ -94,6 +94,14 @@ def gt_closure_pipeline(
         help="[Optional] Overlap Threshold between scans at closures",
         rich_help_panel="Additional Options",
     ),
+    voxel_size: Optional[float] = typer.Option(
+        0.5,
+        "--voxel_size",
+        "-v",
+        show_default=True,
+        help="[Optional] Voxel size for downsamlping scans",
+        rich_help_panel="Additional Options",
+    ),
 ):
     if dataloader in sequence_dataloaders() and sequence is None:
         print('[ERROR] You must specify a sequence "--sequence"')
@@ -108,7 +116,7 @@ def gt_closure_pipeline(
         sequence=sequence,
     )
     if hasattr(dataset, "gt_poses"):
-        generate_gt_closures(dataset, max_range, overlap_threshold)
+        generate_gt_closures(dataset, max_range, overlap_threshold, voxel_size)
     else:
         print("[ERROR] Groundtruth poses not found")
         raise typer.Exit(code=1)
@@ -118,7 +126,9 @@ def run():
     app()
 
 
-def generate_gt_closures(dataset, max_range: float, overlap_threshold: float = 0.5):
+def generate_gt_closures(
+    dataset, max_range: float, overlap_threshold: float = 0.5, voxel_size: float = 0.5
+):
     base_dir = dataset.sequence_dir if hasattr(dataset, "sequence_dir") else ""
     os.makedirs(os.path.join(base_dir, "loop_closure"), exist_ok=True)
     file_path_closures = os.path.join(base_dir, "loop_closure", "gt_closures.txt")
@@ -129,7 +139,6 @@ def generate_gt_closures(dataset, max_range: float, overlap_threshold: float = 0
     else:
         print("[INFO] Computing Ground Truth Closures!")
         sampling_distance = 2.0
-        voxel_size = 0.5
         gt_closures_pipeline = gt_closures_pybind._GTClosures(
             len(dataset), sampling_distance, overlap_threshold, voxel_size, max_range
         )
