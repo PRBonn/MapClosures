@@ -75,6 +75,7 @@ int GTClosures::GetSegments() {
         traveled_distance +=
             (last_pose.block<3, 1>(0, 3) - poses_.at(idx).block<3, 1>(0, 3)).norm();
         if (traveled_distance > sampling_distance_) {
+            segment_indices.shrink_to_fit();
             segments_.insert({segment_idx, {segment_indices, segment_occupancy}});
             segments_indices_.emplace_back(segment_idx);
             traveled_distance = 0.0;
