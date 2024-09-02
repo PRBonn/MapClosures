@@ -83,7 +83,7 @@ def gt_closure_pipeline(
         "--max_range",
         "-r",
         show_default=True,
-        help="[Optional] Maximum distance between closures",
+        help="[Optional] Maximum range of sensor / Maximum distance between closures",
         rich_help_panel="Additional Options",
     ),
     overlap_threshold: Optional[float] = typer.Option(
@@ -147,6 +147,7 @@ def generate_gt_closures(
                 points, _ = dataset[idx]
             except ValueError:
                 points = dataset[idx]
+            points = points[np.where(np.linalg.norm(points, axis=1) < max_range)[0]]
             gt_closures_pipeline._AddPointCloud(
                 idx, gt_closures_pybind._Vector3dVector(points), dataset.gt_poses[idx]
             )
