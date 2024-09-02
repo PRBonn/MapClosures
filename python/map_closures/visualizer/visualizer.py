@@ -142,9 +142,8 @@ class Visualizer(StubVisualizer):
         self._gui.Separator()
         self._background_color_callback()
         self._gui.Separator()
-        if not self.local_maps.toggle_view:
-            self._global_view_callback()
-            self._gui.SameLine()
+        self._global_view_callback()
+        self._gui.SameLine()
         self._center_viewpoint_callback()
         self._gui.SameLine()
         self._quit_callback()
@@ -205,8 +204,6 @@ class Visualizer(StubVisualizer):
                 self.local_maps._update_callback()
                 if self.local_maps.view_density_map:
                     self.local_maps.matplotlib_eventloop()
-                if self.global_view:
-                    self._unregister_trajectory()
             else:
                 self.registration.states.view_frame = True
                 self.registration.states.view_local_map = True
@@ -219,8 +216,6 @@ class Visualizer(StubVisualizer):
                 if self.local_maps.view_density_map:
                     self.local_maps.view_density_map = False
                     self.local_maps.close_density_map_fig()
-                if self.global_view:
-                    self._register_trajectory()
 
     def _switch_to_closures_view_callback(self):
         BUTTON_NAME = REGISTRATION_VIEW_2 if self.closures.states.toggle_view else CLOSURES_VIEW
@@ -269,6 +264,7 @@ class Visualizer(StubVisualizer):
             self.global_view = not self.global_view
             self.registration.states.global_view = self.global_view
             self.closures.states.global_view = self.global_view
+            self.local_maps.global_view = self.global_view
             if self.global_view:
                 self._ps.get_point_cloud("source").set_transform(self.registration.last_frame_pose)
                 self._ps.get_point_cloud("target").set_transform(I)
