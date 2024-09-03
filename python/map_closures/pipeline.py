@@ -117,7 +117,7 @@ class MapClosurePipeline:
         self._log_to_console()
         self.results.compute_closures_and_metrics()
 
-        self.pgo_optimizer.optimize(self.closures, self.local_maps, np.array(self.odometry.poses))
+        self.pgo_optimizer.optimize(self.closures, self.local_maps, self.odom_poses)
         self.pgo_optimizer._log_to_file(self._results_dir)
         self.pgo_optimizer._plot_trajectories()
 
