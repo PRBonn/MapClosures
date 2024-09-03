@@ -20,27 +20,27 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import importlib
 import os
 import sys
-import importlib
 from abc import ABC
 from typing import List
 
 import numpy as np
+from pgo.pose_graph_optimizer import PoseGraphOptimizer
 from tqdm.auto import trange
 
-from pgo.pose_graph_optimizer import PoseGraphOptimizer
 from map_closures.tools.evaluation import LocalMap
 
 
 class StubOptimizer(ABC):
-    def __init__(self, gt_poses):
+    def __init__(self, *kwargs):
         pass
 
-    def optimize(self, closures, local_maps, odom_poses):
+    def optimize(self, *kwargs):
         pass
 
-    def _log_to_file(self, output_dir):
+    def _log_to_file(self, *kwargs):
         pass
 
     def _plot_trajectories(self):

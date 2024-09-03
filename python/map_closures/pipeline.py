@@ -107,7 +107,7 @@ class MapClosurePipeline:
         )
 
         self.visualizer = Visualizer() if self._vis else StubVisualizer()
-        self.pgo_optimizer = Optimizer(self.gt_poses) if self._opt else StubOptimizer(self.gt_poses)
+        self.pgo_optimizer = Optimizer(self.gt_poses) if self._opt else StubOptimizer()
 
     def run(self):
         self._run_pipeline()
