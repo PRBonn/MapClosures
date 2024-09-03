@@ -68,6 +68,7 @@ class MapClosurePipeline:
         self._results_dir = results_dir
         self._eval = eval
         self._vis = vis
+        self._opt = opt
 
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
