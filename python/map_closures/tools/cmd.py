@@ -210,6 +210,7 @@ def map_closure_pipeline(
         results_dir=results_dir,
         eval=eval,
         vis=vis,
+        opt=opt,
     ).run().print()
 
 
