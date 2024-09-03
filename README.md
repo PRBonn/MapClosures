@@ -23,39 +23,48 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 </div>
 <hr />
 
-## Install
+## Use MapClosures in your C++ project
 
-### Dependencies
-- *Essentials*
+1. Include the following snippet in your project's `CMakeLists.txt`:
+```cmake
+set(USE_SYSTEM_EIGEN3 ON CACHE BOOL "use system eigen3")
+set(USE_SYSTEM_TBB ON CACHE BOOL "use system tbb")
+set(USE_SYSTEM_OPENCV ON CACHE BOOL "use system opencv")
+
+include(FetchContent)
+FetchContent_Declare(
+    map_closures
+        GIT_REPOSITORY https://github.com/PRBonn/MapClosures.git
+        GIT_TAG main
+        SOURCE_SUBDIR cpp
+)
+FetchContent_MakeAvailable(map_closures)
+
+```
+You can trigger the automatic installation of the dependencies by playing around with the options in the first three lines of the snippet.
+
+2. Link **MapClosures** against your library or executable:
+```cmake
+target_link_libraries(my_target PUBLIC map_closures)
+```
+3. The following _include_ directive in your source code file will provide access to the core API of MapClosures:
+```cpp
+#include <map_closures/MapClosures.hpp>
+```
+
+## Install the Python API and CLI
+1. First, install the necessary system dependencies
     ```sh
-    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev python3-dev python3-pip
-    pip install kiss-icp==0.4.0
+    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev libeigen3-dev libopencv-dev libtbb-dev
     ```
-
-- *Optionally Built* \
-  In this case you have two options:
-  - **Option 1**: You can install them by the package manager in your operative system, e.g. in Ubuntu 22.04:
-      ```sh
-      sudo apt-get install libeigen3-dev libopencv-dev libtbb-dev
-      ```
-      this will of course make the build of **MapClosures** much faster.
-  - **Option 2**: Let the build system handle them:
-      ```sh
-      cmake -B build -S cpp -DUSE_SYSTEM_TBB=OFF -DUSE_SYSTEM_OPENCV=OFF -DUSE_SYSTEM_EIGEN3=OFF
-      ```
-      this will be slower in terms of build time, but will enable you to have a different version of this libraries installed in your system without interfering with the build of **MapClosures**.
-
-Once the dependencies are installed, the C++ library can be build by using standard cmake commands:
-```sh
-cmake -B build -S cpp
-cmake --build build -j8
-```
-
-## Python Package
-We provide a _python_ wrapper for **MapClosures** which can be easily installed by simply running:
-```sh
-make
-```
+2. To get an odometry estimate in our Python CLI we rely on [KISS-ICP](https://github.com/PRBonn/kiss-icp), you can install it using
+    ```sh
+    pip install kiss-icp
+    ```
+3. Then run:
+    ```sh
+    make
+    ```
 ### Usage
 <details>
 <summary>
@@ -69,6 +78,17 @@ map_closure_pipeline --help
 ![CLI_usage](https://github.com/user-attachments/assets/a56bc3e6-2ee6-4f59-92e8-66d03f70e561)
 </details>
 
+<details>
+<summary>
+Providing the -v flag will initialize the visualizer:
+
+```sh
+map_closure_pipeline -v
+```
+</summary>
+
+![Visualizer](https://github.com/user-attachments/assets/34aa2b2f-c0ce-4dfb-a0e0-cbcc04487a5a)
+</details>
 
 ## Citation
 

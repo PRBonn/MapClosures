@@ -20,6 +20,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os
+from abc import ABC
+from dataclasses import dataclass
 from typing import Dict, List, Set, Tuple
 
 import numpy as np
@@ -29,18 +32,12 @@ from rich.console import Console
 from rich.table import Table
 
 
+@dataclass
 class LocalMap:
-    def __init__(
-        self,
-        pointcloud: np.ndarray,
-        density_map: np.ndarray,
-        scan_indices: np.ndarray,
-        scan_poses: np.ndarray,
-    ):
-        self.pointcloud = pointcloud
-        self.density_map = density_map
-        self.scan_indices = scan_indices
-        self.scan_poses = scan_poses
+    pointcloud: np.ndarray
+    density_map: np.ndarray
+    scan_indices: np.ndarray
+    scan_poses: np.ndarray
 
 
 def compute_closure_indices(
@@ -92,7 +89,24 @@ class EvaluationMetrics:
             self.F1 = np.nan
 
 
-class EvaluationPipeline:
+class StubEvaluation(ABC):
+    def __init__(self):
+        pass
+
+    def print(self):
+        pass
+
+    def append(self, *kwargs):
+        pass
+
+    def compute_closures_and_metrics(self):
+        pass
+
+    def log_to_file(self, *kwargs):
+        pass
+
+
+class EvaluationPipeline(StubEvaluation):
     def __init__(
         self,
         gt_closures: np.ndarray,
@@ -112,7 +126,7 @@ class EvaluationPipeline:
         self.gt_closures: Set[Tuple[int]] = set(map(lambda x: tuple(sorted(x)), gt_closures))
 
     def print(self):
-        self.log_to_console()
+        self._log_to_console()
 
     def append(
         self,
@@ -136,6 +150,7 @@ class EvaluationPipeline:
     def compute_closures_and_metrics(
         self,
     ):
+        print("[INFO] Computing Loop Closure Evaluation Metrics")
         for inliers_threshold in range(5, 15):
             closures = set()
             for closure_indices, inliers_count in zip(
@@ -151,8 +166,8 @@ class EvaluationPipeline:
             self.predicted_closures[inliers_threshold] = closures
 
     def _rich_table_pr(self, table_format: box.Box = box.HORIZONTALS) -> Table:
-        table = Table(box=table_format, title=self._dataset_name)
-        table.caption = f"Loop Closure Distance Threshold: {self._closure_distance_threshold}m"
+        table = Table(box=table_format)
+        table.caption = f"Loop Closure Evaluation Metrics\n"
         table.add_column("RANSAC #Inliers", justify="center", style="cyan")
         table.add_column("True Positives", justify="center", style="magenta")
         table.add_column("False Positives", justify="center", style="magenta")
@@ -172,16 +187,13 @@ class EvaluationPipeline:
             )
         return table
 
-    def log_to_console(self):
+    def _log_to_console(self):
         console = Console()
         console.print(self._rich_table_pr())
 
-    def log_to_file_pr(self, filename, config):
-        with open(filename, "wt") as logfile:
+    def log_to_file(self, results_dir):
+        with open(os.path.join(results_dir, "evaluation_metrics.txt"), "wt") as logfile:
             console = Console(file=logfile, width=100, force_jupyter=False)
             table = self._rich_table_pr(table_format=box.ASCII_DOUBLE_HEAD)
             console.print(table)
-            console.print(config)
-
-    def log_to_file_closures(self, filename):
-        np.save(filename, self.predicted_closures)
+        np.save(os.path.join(results_dir, "scan_level_closures.npy"), self.predicted_closures)

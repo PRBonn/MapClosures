@@ -23,7 +23,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 from kiss_icp.config import KISSConfig
@@ -32,11 +32,12 @@ from kiss_icp.mapping import get_voxel_hash_map
 from kiss_icp.voxelization import voxel_down_sample
 from tqdm.auto import trange
 
-from map_closures.config import MapClosuresConfig, load_config, write_config
+from map_closures.config import load_config, write_config
 from map_closures.map_closures import MapClosures
-from map_closures.tools.evaluation import LocalMap
-from map_closures.tools.visualizer import StubVisualizer, Visualizer
+from map_closures.tools.evaluation import EvaluationPipeline, LocalMap, StubEvaluation
+from map_closures.tools.gt_closures import get_gt_closures
 from map_closures.tools.pgo_optimize import Optimizer, StubOptimizer
+from map_closures.visualizer.visualizer import StubVisualizer, Visualizer
 
 
 def transform_points(pcd, T):
@@ -67,63 +68,53 @@ class MapClosurePipeline:
         self._results_dir = results_dir
         self._eval = eval
         self._vis = vis
-        self._opt = opt
-
-        if config_path is not None:
-            self.config_name = os.path.basename(config_path)
-            self.closure_config = load_config(config_path)
-        else:
-            self.config_name = "base_config.yaml"
-            self.closure_config = MapClosuresConfig()
 
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
         self.odometry = KissICP(self.kiss_config)
         self.voxel_local_map = get_voxel_hash_map(self.kiss_config)
 
+        self.closure_config = load_config(config_path)
         self._map_range = self.closure_config.local_map_factor * self.kiss_config.data.max_range
         self.map_closures = MapClosures(self.closure_config)
 
-        self.local_maps: List[LocalMap] = []
-
         self.closures = []
+        self.local_maps = []
+        self.density_maps = []
+        self.odom_poses = np.zeros((self._n_scans, 4, 4))
 
-        if self._eval and self.gt_poses:
-            from map_closures.tools.evaluation import EvaluationPipeline
-            from map_closures.tools.gt_closures import get_gt_closures
-
-            self.gt_closures, self.gt_closures_overlap = get_gt_closures(
-                self._dataset, self._dataset.gt_poses, self.kiss_config
+        self.closure_overlap_threshold = 0.5
+        self.gt_closures = (
+            get_gt_closures(
+                self._dataset,
+                self._dataset.gt_poses,
+                self.kiss_config.data.max_range,
+                self.closure_overlap_threshold,
             )
-            self.closure_overlap_threshold = 0.5
-            self.gt_closures = self.gt_closures[
-                np.where(self.gt_closures_overlap > self.closure_overlap_threshold)[0]
-            ]
+            if (self._eval and hasattr(self._dataset, "gt_poses"))
+            else None
+        )
 
-            self.closure_distance_threshold = 6.0
-            self.results = EvaluationPipeline(
+        self.closure_distance_threshold = 6.0
+        self.results = (
+            EvaluationPipeline(
                 self.gt_closures,
                 self._dataset_name,
                 self.closure_distance_threshold,
             )
-        else:
-            self._eval = False
-            self.results = None
-            if self.gt_poses is None:
-                print(
-                    "[WARNING] Cannot compute ground truth closures, no ground truth poses available\n"
-                )
+            if self._eval
+            else StubEvaluation()
+        )
+
         self.visualizer = Visualizer() if self._vis else StubVisualizer()
         self.pgo_optimizer = Optimizer(self.gt_poses) if self._opt else StubOptimizer(self.gt_poses)
 
     def run(self):
         self._run_pipeline()
-        if self._eval:
-            self._run_evaluation()
-            self.results.print()
         self._save_config()
         self._log_to_file()
         self._log_to_console()
+        self.results.compute_closures_and_metrics()
 
         self.pgo_optimizer.optimize(self.closures, self.local_maps, np.array(self.odometry.poses))
         self.pgo_optimizer._log_to_file(self._results_dir)
@@ -137,7 +128,14 @@ class MapClosurePipeline:
         scan_indices_in_local_map = []
 
         current_map_pose = np.eye(4)
-        for scan_idx in trange(0, self._n_scans, ncols=8, unit=" frames", dynamic_ncols=True):
+        for scan_idx in trange(
+            0,
+            self._n_scans,
+            ncols=8,
+            unit=" frames",
+            dynamic_ncols=True,
+            desc="Processing for Loop Closures",
+        ):
             try:
                 frame, timestamps = self._dataset[scan_idx]
             except ValueError:
@@ -145,13 +143,16 @@ class MapClosurePipeline:
                 timestamps = np.zeros(len(frame))
 
             source, keypoints = self.odometry.register_frame(frame, timestamps)
-            current_frame_pose = self.odometry.poses[-1]
+            self.odom_poses[scan_idx] = self.odometry.last_pose
+            current_frame_pose = self.odometry.last_pose
 
             frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
             self.visualizer.update_registration(
-                source, keypoints, self.voxel_local_map, current_frame_pose, frame_to_map_pose
+                frame,
+                self.odometry.local_map.point_cloud(),
+                current_frame_pose,
             )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
@@ -171,7 +172,11 @@ class MapClosurePipeline:
                         np.copy(poses_in_local_map),
                     )
                 )
-
+                self.visualizer.update_data(
+                    self.local_maps[-1].pointcloud,
+                    self.local_maps[-1].density_map,
+                    current_map_pose,
+                )
                 if closure.number_of_inliers > self.closure_config.inliers_threshold:
                     reference_local_map = self.local_maps[closure.source_id]
                     query_local_map = self.local_maps[closure.target_id]
@@ -195,13 +200,7 @@ class MapClosurePipeline:
                         )
 
                     self.visualizer.update_closures(
-                        reference_local_map.pointcloud,
-                        query_local_map.pointcloud,
-                        np.asarray(closure.pose),
-                        [
-                            reference_local_map.scan_indices[0],
-                            query_local_map.scan_indices[0],
-                        ],
+                        np.asarray(closure.pose), [closure.source_id, closure.target_id]
                     )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
@@ -215,30 +214,18 @@ class MapClosurePipeline:
                 current_map_pose = np.copy(current_frame_pose)
                 scan_indices_in_local_map.clear()
                 poses_in_local_map.clear()
-                scan_indices_in_local_map.append(scan_idx)
-                poses_in_local_map.append(current_frame_pose)
                 map_idx += 1
-            else:
-                scan_indices_in_local_map.append(scan_idx)
-                poses_in_local_map.append(current_frame_pose)
-        self.visualizer.pause_vis()
 
-    def _run_evaluation(self):
-        self.results.compute_closures_and_metrics()
+            scan_indices_in_local_map.append(scan_idx)
+            poses_in_local_map.append(current_frame_pose)
 
     def _log_to_file(self):
-        if self._eval:
-            self.results.log_to_file_pr(
-                os.path.join(self._results_dir, "evaluation_metrics.txt"), self.closure_config
-            )
-            self.results.log_to_file_closures(
-                os.path.join(self._results_dir, "scan_level_closures.npy")
-            )
         np.savetxt(os.path.join(self._results_dir, "map_closures.txt"), np.asarray(self.closures))
-        np.save(
-            os.path.join(self._results_dir, "kiss_poses.npy"),
-            np.asarray(self.odometry.poses),
+        np.savetxt(
+            os.path.join(self._results_dir, "kiss_poses_kitti.txt"),
+            np.asarray(self.odom_poses)[:, :3].reshape(-1, 12),
         )
+        self.results.log_to_file(self._results_dir)
 
     def _log_to_console(self):
         from rich import box
@@ -246,19 +233,19 @@ class MapClosurePipeline:
         from rich.table import Table
 
         console = Console()
-        table = Table(box=box.HORIZONTALS, title=f"MapClosures detected for {self._dataset_name}")
-        table.caption = f"Detected MapClosures"
+        table = Table(box=box.HORIZONTALS)
+        table.caption = f"Loop Closures Detected Between Local Maps\n"
         table.add_column("# MapClosure", justify="left", style="cyan")
         table.add_column("Ref Map Index", justify="left", style="magenta")
         table.add_column("Query Map Index", justify="left", style="magenta")
-        table.add_column("Relative Translation 2D", justify="right", style="magenta")
-        table.add_column("Relative Rotation 2D", justify="right", style="magenta")
+        table.add_column("Relative Translation 2D", justify="right", style="green")
+        table.add_column("Relative Rotation 2D", justify="right", style="green")
 
         for i, closure in enumerate(self.closures):
             table.add_row(
                 f"{i+1}",
-                f"{closure[0]}",
-                f"{closure[1]}",
+                f"{int(closure[0])}",
+                f"{int(closure[1])}",
                 f"[{closure[7]:.4f}, {closure[11]:.4f}] m",
                 f"{(np.arctan2(closure[8], closure[9]) * 180 / np.pi):.4f} deg",
             )
@@ -266,7 +253,7 @@ class MapClosurePipeline:
 
     def _save_config(self):
         self._results_dir = self._create_results_dir()
-        write_config(self.closure_config, os.path.join(self._results_dir, self.config_name))
+        write_config(self.closure_config, os.path.join(self._results_dir, "config"))
 
     def _write_data_to_disk(self):
         import open3d as o3d

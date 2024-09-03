@@ -54,7 +54,9 @@ def load_config(config_file: Optional[Path]) -> MapClosuresConfig:
             sys.exit(1)
         with open(config_file) as cfg_file:
             config = yaml.safe_load(cfg_file)
-    return MapClosuresConfig(**config)
+        return MapClosuresConfig(**config)
+    else:
+        return MapClosuresConfig()
 
 
 def write_config(config: MapClosuresConfig, filename: str):

@@ -124,3 +124,6 @@ __pypackages__/
 
 # VSCode
 .vscode
+
+# Polyscope
+*.ini
