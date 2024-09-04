@@ -36,6 +36,7 @@ from map_closures.config import load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import EvaluationPipeline, LocalMap, StubEvaluation
 from map_closures.tools.gt_closures import get_gt_closures
+from map_closures.tools.pgo_optimize import Optimizer, StubOptimizer
 from map_closures.visualizer.visualizer import StubVisualizer, Visualizer
 
 
@@ -53,6 +54,7 @@ class MapClosurePipeline:
         results_dir: Path,
         eval: Optional[bool] = False,
         vis: Optional[bool] = False,
+        opt: Optional[bool] = False,
     ):
         self._dataset = dataset
         self._dataset_name = (
@@ -60,10 +62,13 @@ class MapClosurePipeline:
             if hasattr(self._dataset, "sequence_id")
             else os.path.basename(self._dataset.data_dir)
         )
+        self.gt_poses = self._dataset.gt_poses if hasattr(self._dataset, "gt_poses") else None
+
         self._n_scans = len(self._dataset)
         self._results_dir = results_dir
         self._eval = eval
         self._vis = vis
+        self._opt = opt
 
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
@@ -103,6 +108,7 @@ class MapClosurePipeline:
         )
 
         self.visualizer = Visualizer() if self._vis else StubVisualizer()
+        self.pgo_optimizer = Optimizer(self.gt_poses) if self._opt else StubOptimizer()
 
     def run(self):
         self._run_pipeline()
@@ -110,6 +116,10 @@ class MapClosurePipeline:
         self._log_to_file()
         self._log_to_console()
         self.results.compute_closures_and_metrics()
+
+        self.pgo_optimizer.optimize(self.closures, self.local_maps, self.odom_poses)
+        self.pgo_optimizer._log_to_file(self._results_dir)
+        self.pgo_optimizer._plot_trajectories()
 
         return self.results
 

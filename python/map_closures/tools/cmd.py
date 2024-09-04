@@ -139,6 +139,13 @@ def map_closure_pipeline(
         rich_help_panel="Additional Options",
         help="[Optional] Visualization of closures",
     ),
+    opt: Optional[bool] = typer.Option(
+        False,
+        "--opt",
+        "-o",
+        rich_help_panel="Additional Options",
+        help="[Optional] Run g2o optimization with detected closures",
+    ),
     # Aditional Options ---------------------------------------------------------------------------
     sequence: Optional[str] = typer.Option(
         None,
@@ -203,6 +210,7 @@ def map_closure_pipeline(
         results_dir=results_dir,
         eval=eval,
         vis=vis,
+        opt=opt,
     ).run().print()
 
 
