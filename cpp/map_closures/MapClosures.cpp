@@ -71,7 +71,10 @@ ClosureCandidate MapClosures::MatchAndAdd(const int id,
     std::vector<cv::KeyPoint> orb_keypoints;
     orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
                                      orb_descriptors);
-
+    std::for_each(orb_keypoints.begin(), orb_keypoints.end(), [&](cv::KeyPoint &keypoint) {
+        keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+        keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+    });
     auto hbst_matchable = Tree::getMatchables(orb_descriptors, orb_keypoints, id);
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
@@ -105,19 +108,15 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
 
     ClosureCandidate closure;
     if (num_matches > 2) {
-        const auto &ref_map_lower_bound = density_maps_.at(reference_id).lower_bound;
-        const auto &qry_map_lower_bound = density_maps_.at(query_id).lower_bound;
-        auto to_world_point = [](const auto &p, const auto &offset) {
-            return Eigen::Vector2d(p.y + offset.x(), p.x + offset.y());
-        };
         std::vector<PointPair> keypoint_pairs(num_matches);
-        std::transform(
-            matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
-            [&](const Tree::Match &match) {
-                auto ref_point = to_world_point(match.object_references[0].pt, ref_map_lower_bound);
-                auto query_point = to_world_point(match.object_query.pt, qry_map_lower_bound);
-                return PointPair(ref_point, query_point);
-            });
+        std::transform(matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
+                       [&](const Tree::Match &match) {
+                           auto ref_point = Eigen::Vector2d(match.object_references[0].pt.y,
+                                                            match.object_references[0].pt.x);
+                           auto query_point =
+                               Eigen::Vector2d(match.object_query.pt.y, match.object_query.pt.x);
+                           return PointPair(ref_point, query_point);
+                       });
 
         const auto &[pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
         closure.source_id = reference_id;
