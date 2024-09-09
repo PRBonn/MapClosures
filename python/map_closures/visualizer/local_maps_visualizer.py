@@ -46,6 +46,7 @@ class LocalMapVisualizer:
         self.view_local_map = True
         self.local_map_id: int = 0
         self.toggle_view: bool = False
+        self.global_view: bool = False
         self.view_density_map: bool = False
         self.local_map_points_size: float = PTS_SIZE
 
@@ -94,7 +95,11 @@ class LocalMapVisualizer:
             color=LOCAL_MAP_COLOR,
             point_render_mode="quad",
         )
-        local_map.set_transform(I)
+        if self.global_view:
+            local_map_pose = self.localmap_data.local_map_poses[self.local_map_id]
+            local_map.set_transform(local_map_pose)
+        else:
+            local_map.set_transform(I)
         local_map.set_enabled(self.view_local_map)
         local_map.set_radius(self.local_map_points_size, relative=False)
         if self.view_density_map:
