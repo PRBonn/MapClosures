@@ -29,7 +29,7 @@ endif()
 # will transfer the control from the calling scope to the function and the back to the calling scope once the function
 # as done whatever it has to do. This transfer will cause how black magic forwarded include dirs for the OpenCV targets to dont work anymore, as this will be confined to the local scope of the cmake function.
 # The easier solution for us was to just change function to macro, as the later will just copy paste the content adjusting the parameters (exactly like a C macro). This is horrible of course, but it is caused by the build system of OpenCV.
-macro(find_dependency PACKAGE_NAME TARGET_NAME INCLUDED_CMAKE_PATH)
+macro(find_external_dependency PACKAGE_NAME TARGET_NAME INCLUDED_CMAKE_PATH)
   string(TOUPPER ${PACKAGE_NAME} PACKAGE_NAME_UP)
   set(USE_FROM_SYSTEM_OPTION "USE_SYSTEM_${PACKAGE_NAME_UP}")
   if(${${USE_FROM_SYSTEM_OPTION}})
@@ -40,10 +40,11 @@ macro(find_dependency PACKAGE_NAME TARGET_NAME INCLUDED_CMAKE_PATH)
   endif()
 endmacro()
 
-find_dependency("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake")
-find_dependency("TBB" "TBB::tbb" "${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake")
-find_dependency("OpenCV" "opencv_features2d" "${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake")
-find_dependency("tsl-robin-map" "tsl::robin_map"
-                "${CMAKE_CURRENT_LIST_DIR}/tsl_robin/tsl_robin.cmake")
+find_external_dependency("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake")
+find_external_dependency("TBB" "TBB::tbb" "${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake")
+find_external_dependency("OpenCV" "opencv_features2d"
+                         "${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake")
+find_external_dependency("tsl-robin-map" "tsl::robin_map"
+                         "${CMAKE_CURRENT_LIST_DIR}/tsl_robin/tsl_robin.cmake")
 
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)
