@@ -40,7 +40,7 @@ namespace gt_closures {
 GTClosures::GTClosures(const int dataset_size,
                        const double sampling_distance,
                        const double overlap_threshold,
-                       double voxel_size,
+                       const double voxel_size,
                        const double max_range) {
     sampling_distance_ = sampling_distance;
     overlap_threshold_ = overlap_threshold;
