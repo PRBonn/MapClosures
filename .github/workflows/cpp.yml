@@ -2,7 +2,8 @@ name: C++ API
 
 on:
   push:
-    branches: ["main", "add_github_actions"]
+    branches:
+      - "**"
   pull_request:
     branches: ["main"]
 
