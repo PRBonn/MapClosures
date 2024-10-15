@@ -26,11 +26,13 @@
 #include <algorithm>
 #include <vector>
 
-inline Voxel PointToVoxel(const Eigen::Vector3d &point, const double voxel_size) {
+namespace {
+Voxel PointToVoxel(const Eigen::Vector3d &point, const double voxel_size) {
     return Voxel(static_cast<int>(std::floor(point.x() / voxel_size)),
                  static_cast<int>(std::floor(point.y() / voxel_size)),
                  static_cast<int>(std::floor(point.z() / voxel_size)));
 }
+}  // namespace
 
 void VoxelHashSet::AddPoints(const std::vector<Eigen::Vector3d> &points,
                              const Eigen::Matrix3d &R,

@@ -62,7 +62,7 @@ def gt_closure_pipeline(
         case_sensitive=False,
         autocompletion=eval_dataloaders,
         callback=name_callback,
-        help="[Optional] Use a specific dataloader from those supported by MapClosures",
+        help="Use a specific dataloader from those supported by MapClosures",
     ),
     data: Path = typer.Argument(
         ...,
