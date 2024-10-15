@@ -35,7 +35,7 @@ from tqdm.auto import trange
 from map_closures.config import load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import EvaluationPipeline, LocalMap, StubEvaluation
-from map_closures.tools.gt_closures import get_gt_closures
+from map_closures.tools.gt_closures import generate_gt_closures
 from map_closures.visualizer.visualizer import StubVisualizer, Visualizer
 
 
@@ -81,9 +81,8 @@ class MapClosurePipeline:
 
         self.closure_overlap_threshold = 0.5
         self.gt_closures = (
-            get_gt_closures(
+            generate_gt_closures(
                 self._dataset,
-                self._dataset.gt_poses,
                 self.kiss_config.data.max_range,
                 self.closure_overlap_threshold,
             )

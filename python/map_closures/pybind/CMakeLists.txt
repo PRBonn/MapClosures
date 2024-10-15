@@ -23,3 +23,7 @@
 pybind11_add_module(map_closures_pybind MODULE map_closures_pybind.cpp)
 target_link_libraries(map_closures_pybind PUBLIC map_closures)
 install(TARGETS map_closures_pybind DESTINATION .)
+
+pybind11_add_module(gt_closures_pybind MODULE gt_closures_pybind.cpp)
+target_link_libraries(gt_closures_pybind PUBLIC gt_closures)
+install(TARGETS gt_closures_pybind DESTINATION .)

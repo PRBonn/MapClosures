@@ -36,7 +36,9 @@ class HeLiPRDataset:
         self.scans_dir = os.path.join(self.sequence_dir, "LiDAR", self.sequence_id)
         self.scan_files = sorted(glob.glob(self.scans_dir + "/*.bin"))
 
-        self.gt_file = os.path.join(self.sequence_dir, "LiDAR_GT", f"{self.sequence_id}_gt.txt")
+        self.gt_file = os.path.join(
+            self.sequence_dir, "LiDAR_GT", f"global_{self.sequence_id}_gt.txt"
+        )
         self.gt_poses = self.load_poses(self.gt_file)
 
         if len(self.scan_files) == 0:
