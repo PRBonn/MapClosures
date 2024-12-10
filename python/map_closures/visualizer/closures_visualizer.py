@@ -28,8 +28,11 @@ from matplotlib.patches import ConnectionPatch
 from matplotlib.backend_tools import ToolToggleBase
 import warnings
 
-# Ignore matplotlib warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+# Ignore only the specific warning about the toolbar
+warnings.filterwarnings(
+    "ignore", 
+    message="Treat the new Tool classes introduced in v1.5 as experimental for now; the API and rcParam may change in future versions."
+)
 plt.rcParams['toolbar'] = 'toolmanager'
 
 class ToggleOutliersTool(ToolToggleBase):
