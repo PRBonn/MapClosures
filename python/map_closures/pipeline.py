@@ -177,6 +177,8 @@ class MapClosurePipeline:
                             reference_local_map.scan_indices[0],
                             query_local_map.scan_indices[0],
                             closure.pose.flatten(),
+                            closure.number_of_inliers,
+                            closure.alignment_time,
                         ]
                     )
 
@@ -190,7 +192,7 @@ class MapClosurePipeline:
                         )
 
                     self.visualizer.update_closures(
-                        np.asarray(closure.pose), [closure.source_id, closure.target_id]
+                        np.asarray(closure.pose), [closure.source_id, closure.target_id], closure.keypoint_pairs, closure.inliers, closure.alignment_time
                     )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
@@ -230,6 +232,8 @@ class MapClosurePipeline:
         table.add_column("Query Map Index", justify="left", style="magenta")
         table.add_column("Relative Translation 2D", justify="right", style="green")
         table.add_column("Relative Rotation 2D", justify="right", style="green")
+        table.add_column("Inliers", justify="right", style="green")
+        table.add_column("Alignment Time", justify="right", style="green")
 
         for i, closure in enumerate(self.closures):
             table.add_row(
@@ -238,6 +242,8 @@ class MapClosurePipeline:
                 f"{int(closure[1])}",
                 f"[{closure[7]:.4f}, {closure[11]:.4f}] m",
                 f"{(np.arctan2(closure[8], closure[9]) * 180 / np.pi):.4f} deg",
+                f"{int(closure[20])}",
+                f"{closure[21]:.4f} ms",
             )
         console.print(table)
 

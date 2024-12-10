@@ -51,6 +51,9 @@ struct ClosureCandidate {
     int target_id = -1;
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     size_t number_of_inliers = 0;
+    std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> keypoint_pairs;
+    std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> inliers;
+    double alignment_time = 0.0;
 };
 
 class MapClosures {

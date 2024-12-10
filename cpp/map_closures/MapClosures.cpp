@@ -28,6 +28,7 @@
 
 #include <Eigen/Core>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <opencv2/core.hpp>
 #include <utility>
@@ -119,12 +120,31 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
                 return PointPair(ref_point, query_point);
             });
 
-        const auto &[pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
+        const auto start = std::chrono::high_resolution_clock::now();
+        const auto &[pose2d, inliers] = RansacAlignment2D(keypoint_pairs);
+        const auto end = std::chrono::high_resolution_clock::now();
         closure.source_id = reference_id;
         closure.target_id = query_id;
         closure.pose.block<2, 2>(0, 0) = pose2d.linear();
         closure.pose.block<2, 1>(0, 3) = pose2d.translation() * config_.density_map_resolution;
-        closure.number_of_inliers = number_of_inliers;
+        closure.number_of_inliers = inliers.size();
+        closure.alignment_time = std::chrono::duration<double, std::milli>(end - start).count();
+        closure.keypoint_pairs.reserve(keypoint_pairs.size());
+        closure.inliers.reserve(inliers.size());
+        auto to_map_point = [](const auto &p, const auto &offset) {
+            return Eigen::Vector2d(p.y() - offset.y(), p.x() - offset.x());
+        };
+        std::transform(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
+                       std::back_inserter(closure.keypoint_pairs), [&](const PointPair &pair) {
+                           return std::make_pair(to_map_point(pair.ref, ref_map_lower_bound),
+                                                 to_map_point(pair.query, qry_map_lower_bound));
+                       });
+
+        std::transform(inliers.cbegin(), inliers.cend(), std::back_inserter(closure.inliers),
+                       [&](const PointPair &pair) {
+                           return std::make_pair(to_map_point(pair.ref, ref_map_lower_bound),
+                                                 to_map_point(pair.query, qry_map_lower_bound));
+                       });
     }
     return closure;
 }
