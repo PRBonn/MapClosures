@@ -24,6 +24,29 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.patches import ConnectionPatch
+from matplotlib.backend_tools import ToolToggleBase
+import warnings
+
+# Ignore matplotlib warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+plt.rcParams['toolbar'] = 'toolmanager'
+
+class ToggleOutliersTool(ToolToggleBase):
+    """
+    Tool to toggle the visibility of outliers in the density maps viewer.
+    """
+    default_keymap = 'O'
+    description = 'Toggle Outliers'
+    image = r"icons/outliers.png"
+    
+    def __init__(self, *args, visualizer, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.visualizer = visualizer
+
+    def trigger(self, sender, event, data=None):
+        self.visualizer.show_outliers = not self.visualizer.show_outliers
+        self.visualizer.update_connection_visibility()
 
 # Button names
 PREV_CLOSURE = "Prev Closure [P]"
@@ -49,6 +72,9 @@ class LoopClosureData:
     current_id: int = 0
     closure_edges: list = field(default_factory=list)
     alignment_pose: list = field(default_factory=list)
+    keypoints_pairs: list = field(default_factory=list)
+    inliers: list = field(default_factory=list)
+    alignment_time: list = field(default_factory=list)
 
 
 @dataclass
@@ -79,8 +105,13 @@ class ClosuresVisualizer:
         # Create data
         self.localmap_data = localmap_data
         self.data = LoopClosureData()
+        
+        # Initialize connections list for density map viewer
+        self.connections = []
+        self.show_outliers = False
+        self.update_connection_visibility = None
 
-    def update_closures(self, alignment_pose, closure_edge):
+    def update_closures(self, alignment_pose, closure_edge, keypoints_pairs, inliers, alignment_time):
         self.data.closure_edges.append(closure_edge)
         self.data.alignment_pose.append(alignment_pose)
         self.data.size += 1
@@ -89,6 +120,9 @@ class ClosuresVisualizer:
             self._register_trajectory()
         if self.states.toggle_view:
             self._render_closure()
+        self.data.keypoints_pairs.append(keypoints_pairs)
+        self.data.inliers.append(inliers)
+        self.data.alignment_time.append(alignment_time)
 
     def matplotlib_eventloop(self):
         plt.gcf().canvas.draw()
@@ -161,6 +195,9 @@ class ClosuresVisualizer:
                 [ref_id, query_id] = self.data.closure_edges[id]
                 plt.ion()
                 self.fig = plt.figure()
+                self.update_connection_visibility = self._update_connection_visibility
+                self.fig.canvas.manager.toolmanager.add_tool('ToggleOutliers', ToggleOutliersTool, visualizer=self)
+                self.fig.canvas.manager.toolbar.add_tool('ToggleOutliers', 'toolgroup')
                 plt.show(block=False)
                 ax_ref = self.fig.add_subplot(1, 2, 1)
                 ax_ref.set_title("Reference Density Map")
@@ -172,9 +209,61 @@ class ClosuresVisualizer:
                 self.query_density_viewer = ax_query.imshow(
                     self.localmap_data.density_maps[query_id], cmap="gray"
                 )
+                keypoints_pairs = self.data.keypoints_pairs[id]
+                inliers = set((tuple(ref_kp), tuple(query_kp)) for ref_kp, query_kp in self.data.inliers[id])
+                alignment_time = self.data.alignment_time[id]
+                self.fig.suptitle(f"Alignment Time: {alignment_time:.2f}ms, Inliers: {len(inliers)}")
+                
+                def is_within_limits(point, ax):
+                    xlim = ax.get_xlim()
+                    ylim = ax.get_ylim()
+                    return xlim[0] <= point[0] <= xlim[1] and ylim[1] <= point[1] <= ylim[0]
+
+                def update_connection_visibility(event=None):
+                    for con, ref_kp, query_kp, is_inlier in self.connections:
+                        ref_visible = is_within_limits(ref_kp, ax_ref)
+                        query_visible = is_within_limits(query_kp, ax_query)
+                        con.set_visible(ref_visible and query_visible and (is_inlier or self.show_outliers))
+                    self.fig.canvas.draw_idle()
+                    
+                self.update_connection_visibility = update_connection_visibility
+                    
+                for ref_kp, query_kp in keypoints_pairs:
+                    is_inlier = (tuple(ref_kp), tuple(query_kp)) in inliers
+                    if is_inlier:
+                        color = 'g'
+                        marker = 'o'
+                        markersize = 5
+                        linewidth = 1
+                    else:
+                        color = 'r'
+                        marker = 'x'
+                        markersize = 2
+                        linewidth = 0.5
+                    ax_ref.plot(ref_kp[0], ref_kp[1], marker, color=color, markersize=markersize)
+                    ax_query.plot(query_kp[0], query_kp[1], marker, color=color, markersize=markersize)
+                    con = ConnectionPatch(
+                        xyA=ref_kp, coordsA=ax_ref.transData,
+                        xyB=query_kp, coordsB=ax_query.transData,
+                        color=color, linewidth=linewidth, linestyle='dashed'
+                    )
+                    con.set_visible(True)
+                    self.fig.add_artist(con)
+                    self.connections.append((con, ref_kp, query_kp, is_inlier))
+                    
+                ax_ref.callbacks.connect('xlim_changed', update_connection_visibility)
+                ax_ref.callbacks.connect('ylim_changed', update_connection_visibility)
+                ax_query.callbacks.connect('xlim_changed', update_connection_visibility)
+                ax_query.callbacks.connect('ylim_changed', update_connection_visibility)
+                
+                update_connection_visibility()
                 self.matplotlib_eventloop()
             else:
                 plt.close(self.fig)
+                
+    def _update_connection_visibility(self):
+        if self.update_connection_visibility:
+            self.update_connection_visibility()
 
     def _render_closure(self):
         id = self.data.current_id
