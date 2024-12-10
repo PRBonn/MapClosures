@@ -61,7 +61,10 @@ PYBIND11_MODULE(map_closures_pybind, m) {
         .def_readwrite("source_id", &ClosureCandidate::source_id)
         .def_readwrite("target_id", &ClosureCandidate::target_id)
         .def_readwrite("pose", &ClosureCandidate::pose)
-        .def_readwrite("number_of_inliers", &ClosureCandidate::number_of_inliers);
+        .def_readwrite("number_of_inliers", &ClosureCandidate::number_of_inliers)
+        .def_readwrite("keypoint_pairs", &ClosureCandidate::keypoint_pairs)
+        .def_readwrite("inliers", &ClosureCandidate::inliers)
+        .def_readwrite("alignment_time", &ClosureCandidate::alignment_time);
 
     py::class_<MapClosures, std::shared_ptr<MapClosures>> map_closures(m, "_MapClosures", "");
     map_closures

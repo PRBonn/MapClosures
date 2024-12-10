@@ -95,8 +95,8 @@ class Visualizer(StubVisualizer):
         self.localmap_data.density_maps.append(density_map)
         self.localmap_data.local_map_poses.append(local_map_pose)
 
-    def update_closures(self, alignment_pose, closure_edge):
-        self.closures.update_closures(alignment_pose, closure_edge)
+    def update_closures(self, alignment_pose, closure_edge, keypoints_pairs, inliers, alignment_time):
+        self.closures.update_closures(alignment_pose, closure_edge, keypoints_pairs, inliers, alignment_time)
 
     def _initialize_visualizers(self):
         self._ps.set_program_name("MapClosures Visualizer")
