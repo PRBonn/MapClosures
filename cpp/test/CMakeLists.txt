@@ -21,19 +21,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-cmake_minimum_required(VERSION 3.16...3.26)
-project(map_closures_cpp VERSION 1.0.0 LANGUAGES CXX)
+find_package(Open3D REQUIRED)
 
-option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
-option(USE_SYSTEM_TBB "Use system pre-installed TBB" ON)
-option(USE_SYSTEM_OPENCV "Use system pre-installed OpenCV" ON)
-
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-include(3rdparty/find_dependencies.cmake)
-
-add_subdirectory(map_closures)
-add_subdirectory(gt_closures)
-add_subdirectory(test)
+add_executable(map_closures_test test.cpp)
+target_link_libraries(map_closures_test PUBLIC map_closures Open3D::Open3D Eigen3::Eigen)
+target_compile_features(map_closures_test PUBLIC cxx_std_17)
+set_target_properties(map_closures_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                                   ${CMAKE_CURRENT_SOURCE_DIR})
