@@ -10,6 +10,13 @@
 
 namespace fs = std::filesystem;
 
+void TransformPoints(const Eigen::Matrix4d &T, std::vector<Eigen::Vector3d> &pointcloud) {
+    auto R = T.block<3, 3>(0, 0);
+    auto t = T.block<3, 1>(0, 3);
+    std::transform(pointcloud.cbegin(), pointcloud.cend(), pointcloud.begin(),
+                   [&](const auto &point) { return R * point + t; });
+}
+
 int main(int argc, char *argv[]) {
     const fs::path datadir{argv[1]};
     std::vector<fs::path> local_map_files;
@@ -29,7 +36,8 @@ int main(int argc, char *argv[]) {
 
         auto points = pointcloud.points_;
         auto T_ground = map_closures::AlignToLocalGround(points, 5.0);
-        auto closure = pipeline.MatchAndAdd(map_id, points_);
+        TransformPoints(T_ground, points);
+        auto closure = pipeline.MatchAndAdd(map_id, points);
         map_id++;
     });
     return 0;
