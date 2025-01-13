@@ -34,6 +34,7 @@
 #include <tuple>
 #include <vector>
 
+#include "map_closures/GroundAlign.hpp"
 #include "map_closures/MapClosures.hpp"
 #include "stl_vector_eigen.h"
 
@@ -79,5 +80,6 @@ PYBIND11_MODULE(map_closures_pybind, m) {
              })
         .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_id"_a, "local_map"_a)
         .def("_ValidateClosure", &MapClosures::ValidateClosure, "reference_id"_a, "query_id"_a);
+    m.def("_align_to_local_ground", &AlignToLocalGround, "pointcloud"_a, "resolution"_a);
 }
 }  // namespace map_closures

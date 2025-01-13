@@ -43,3 +43,14 @@ class MapClosures:
 
     def validate_closure(self, ref_idx: int, query_idx: int) -> ClosureCandidate:
         return self._pipeline._ValidateClosure(ref_idx, query_idx)
+
+    def align_to_local_ground(
+        self,
+        pointcloud: np.ndarray,
+        grid_resolution: float,
+    ) -> np.ndarray:
+        pointcloud_eigen = map_closures_pybind._Vector3dVector(pointcloud)
+        ground_alignment, ground_points = map_closures_pybind._align_to_local_ground(
+            pointcloud_eigen, grid_resolution
+        )
+        return np.asarray(ground_alignment)

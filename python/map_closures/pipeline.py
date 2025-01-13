@@ -149,7 +149,12 @@ class MapClosurePipeline:
                 scan_idx == self._n_scans - 1
             ):
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
-                closure = self.map_closures.match_and_add(map_idx, local_map_pointcloud)
+                T_ground = self.map_closures.align_to_local_ground(
+                    local_map_pointcloud, grid_resolution=5.0
+                )
+                closure = self.map_closures.match_and_add(
+                    map_idx, transform_points(local_map_pointcloud, T_ground)
+                )
 
                 scan_indices_in_local_map.append(scan_idx)
                 poses_in_local_map.append(current_frame_pose)
@@ -160,6 +165,7 @@ class MapClosurePipeline:
                         self.map_closures.get_density_map_from_id(map_idx),
                         np.copy(scan_indices_in_local_map),
                         np.copy(poses_in_local_map),
+                        T_ground,
                     )
                 )
                 self.visualizer.update_data(
@@ -170,6 +176,11 @@ class MapClosurePipeline:
                 if closure.number_of_inliers > self.closure_config.inliers_threshold:
                     reference_local_map = self.local_maps[closure.source_id]
                     query_local_map = self.local_maps[closure.target_id]
+                    closure.pose = (
+                        np.linalg.inv(T_ground)
+                        @ np.asarray(closure.pose)
+                        @ self.local_maps[closure.source_id].T_ground
+                    )
                     self.closures.append(
                         np.r_[
                             closure.source_id,

@@ -38,6 +38,7 @@ class LocalMap:
     density_map: np.ndarray
     scan_indices: np.ndarray
     scan_poses: np.ndarray
+    T_ground: np.ndarray
 
 
 def compute_closure_indices(
