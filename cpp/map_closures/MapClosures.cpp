@@ -90,9 +90,6 @@ ClosureCandidate MapClosures::MatchAndAdd(const int id,
                 auto keypoint = orb_keypoints[index_descriptor];
                 hbst_matchable.emplace_back(
                     new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
-                density_map.keypoints.emplace_back(Eigen::Vector2d(
-                    keypoint.pt.x - static_cast<float>(density_map.lower_bound.y()),
-                    keypoint.pt.y - static_cast<float>(density_map.lower_bound.x())));
             }
         });
     } else {
