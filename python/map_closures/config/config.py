@@ -36,6 +36,7 @@ class MapClosuresConfig(BaseModel):
     hamming_distance_threshold: int = 50
     inliers_threshold: int = 10
     local_map_factor: float = 1.0
+    self_similarity_filter: bool = True
 
 
 def load_config(config_file: Optional[Path]) -> MapClosuresConfig:
