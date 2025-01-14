@@ -113,7 +113,7 @@ std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair>
     std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),
                    inlier_keypoint_pairs.begin(),
                    [&](const auto index) { return keypoint_pairs[index]; });
-    auto T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
+    Eigen::Isometry2d T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
     return {T, num_inliers};
 }
 }  // namespace map_closures
