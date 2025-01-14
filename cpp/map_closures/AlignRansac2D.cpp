@@ -28,6 +28,7 @@
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <algorithm>
+#include <numeric>
 #include <random>
 #include <utility>
 #include <vector>
@@ -35,15 +36,16 @@
 namespace {
 Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const std::vector<map_closures::PointPair> &keypoint_pairs) {
-    auto mean = std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
-                            map_closures::PointPair(), [](auto lhs, const auto &rhs) {
-                                lhs.ref += rhs.ref;
-                                lhs.query += rhs.query;
-                                return lhs;
-                            });
-    mean.query /= keypoint_pairs.size();
-    mean.ref /= keypoint_pairs.size();
-    auto covariance_matrix = std::transform_reduce(
+    map_closures::PointPair mean =
+        std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(), map_closures::PointPair(),
+                    [](auto lhs, const auto &rhs) {
+                        lhs.ref += rhs.ref;
+                        lhs.query += rhs.query;
+                        return lhs;
+                    });
+    mean.query /= static_cast<double>(keypoint_pairs.size());
+    mean.ref /= static_cast<double>(keypoint_pairs.size());
+    Eigen::Matrix2d covariance_matrix = std::transform_reduce(
         keypoint_pairs.cbegin(), keypoint_pairs.cend(), Eigen::Matrix2d().setZero(),
         std::plus<Eigen::Matrix2d>(), [&](const auto &keypoint_pair) {
             return (keypoint_pair.ref - mean.ref) *
@@ -106,7 +108,7 @@ std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair>
         }
     }
 
-    const int num_inliers = optimal_inlier_indices.size();
+    const std::size_t num_inliers = optimal_inlier_indices.size();
     std::vector<PointPair> inlier_keypoint_pairs(num_inliers);
     std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),
                    inlier_keypoint_pairs.begin(),

@@ -32,6 +32,7 @@ function(set_global_target_properties target)
             $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-fcolor-diagnostics>
             $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wall>
             $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wextra>
+            $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wconversion>
             $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wno-sign-conversion>
             # GNU
             $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-fdiagnostics-color=always>
@@ -40,6 +41,7 @@ function(set_global_target_properties target)
             $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-pedantic>
             $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wcast-align>
             $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wcast-qual>
+            $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wconversion>
             $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wdisabled-optimization>
             $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Woverloaded-virtual>)
   set(INCLUDE_DIRS ${PROJECT_SOURCE_DIR})

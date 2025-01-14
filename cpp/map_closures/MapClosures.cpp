@@ -29,6 +29,7 @@
 #include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <opencv2/core.hpp>
 #include <utility>
 #include <vector>
@@ -108,7 +109,8 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
         const auto &ref_map_lower_bound = density_maps_.at(reference_id).lower_bound;
         const auto &qry_map_lower_bound = density_maps_.at(query_id).lower_bound;
         auto to_world_point = [](const auto &p, const auto &offset) {
-            return Eigen::Vector2d(p.y + offset.x(), p.x + offset.y());
+            return Eigen::Vector2d(p.y + static_cast<float>(offset.x()),
+                                   p.x + static_cast<float>(offset.y()));
         };
         std::vector<PointPair> keypoint_pairs(num_matches);
         std::transform(
