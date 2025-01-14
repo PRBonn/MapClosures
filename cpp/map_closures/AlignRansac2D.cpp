@@ -66,8 +66,8 @@ static constexpr double inliers_distance_threshold = 3.0;
 static constexpr double inliers_ratio = 0.3;
 static constexpr double probability_success = 0.999;
 static constexpr int min_points = 2;
-static constexpr int __RANSAC_TRIALS__ = std::ceil(
-    std::log(1.0 - probability_success) / std::log(1.0 - std::pow(inliers_ratio, min_points)));
+static int __RANSAC_TRIALS__ = std::ceil(std::log(1.0 - probability_success) /
+                                         std::log(1.0 - std::pow(inliers_ratio, min_points)));
 }  // namespace
 
 namespace map_closures {
