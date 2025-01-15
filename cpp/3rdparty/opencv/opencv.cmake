@@ -49,6 +49,7 @@ set(BUILD_opencv_python_tests OFF CACHE BOOL "Build OpenCV Python tests")
 set(BUILD_opencv_stitching OFF CACHE BOOL "Build OpenCV stitching module")
 set(BUILD_opencv_video OFF CACHE BOOL "Build OpenCV video module")
 set(BUILD_opencv_videoio OFF CACHE BOOL "Build OpenCV video IO module")
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "CMake build type")
 
 message(STATUS "Fetching OpenCV from Github")
 include(FetchContent)
