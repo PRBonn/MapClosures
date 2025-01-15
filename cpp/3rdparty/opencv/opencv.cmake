@@ -25,6 +25,7 @@ set(BUILD_opencv_features2d ON CACHE BOOL "Build OpenCV features2d module")
 set(BUILD_opencv_imgproc ON CACHE BOOL "Build OpenCV imgproc module")
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+set(BUILD_WITH_STATIC_CRT OFF CACHE BOOL "Build with statically linked CRT")
 set(BUILD_JAVA OFF CACHE BOOL "Build Java bindings")
 set(BUILD_PERF_TESTS OFF CACHE BOOL "Build performance tests")
 set(BUILD_PROTOBUF OFF CACHE BOOL "Build protobuf")
