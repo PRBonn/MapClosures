@@ -28,6 +28,7 @@
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <algorithm>
+#include <numeric>
 #include <random>
 #include <utility>
 #include <vector>
@@ -35,15 +36,16 @@
 namespace {
 Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const std::vector<map_closures::PointPair> &keypoint_pairs) {
-    auto mean = std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
-                            map_closures::PointPair(), [](auto lhs, const auto &rhs) {
-                                lhs.ref += rhs.ref;
-                                lhs.query += rhs.query;
-                                return lhs;
-                            });
-    mean.query /= keypoint_pairs.size();
-    mean.ref /= keypoint_pairs.size();
-    auto covariance_matrix = std::transform_reduce(
+    map_closures::PointPair mean =
+        std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(), map_closures::PointPair(),
+                    [](auto lhs, const auto &rhs) {
+                        lhs.ref += rhs.ref;
+                        lhs.query += rhs.query;
+                        return lhs;
+                    });
+    mean.query /= static_cast<double>(keypoint_pairs.size());
+    mean.ref /= static_cast<double>(keypoint_pairs.size());
+    Eigen::Matrix2d covariance_matrix = std::transform_reduce(
         keypoint_pairs.cbegin(), keypoint_pairs.cend(), Eigen::Matrix2d().setZero(),
         std::plus<Eigen::Matrix2d>(), [&](const auto &keypoint_pair) {
             return (keypoint_pair.ref - mean.ref) *
@@ -66,8 +68,8 @@ static constexpr double inliers_distance_threshold = 3.0;
 static constexpr double inliers_ratio = 0.3;
 static constexpr double probability_success = 0.999;
 static constexpr int min_points = 2;
-static constexpr int __RANSAC_TRIALS__ = std::ceil(
-    std::log(1.0 - probability_success) / std::log(1.0 - std::pow(inliers_ratio, min_points)));
+static int __RANSAC_TRIALS__ = std::ceil(std::log(1.0 - probability_success) /
+                                         std::log(1.0 - std::pow(inliers_ratio, min_points)));
 }  // namespace
 
 namespace map_closures {
@@ -106,12 +108,12 @@ std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair>
         }
     }
 
-    const int num_inliers = optimal_inlier_indices.size();
+    const std::size_t num_inliers = optimal_inlier_indices.size();
     std::vector<PointPair> inlier_keypoint_pairs(num_inliers);
     std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),
                    inlier_keypoint_pairs.begin(),
                    [&](const auto index) { return keypoint_pairs[index]; });
-    auto T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
+    Eigen::Isometry2d T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
     return {T, num_inliers};
 }
 }  // namespace map_closures
