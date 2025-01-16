@@ -49,6 +49,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: ${{ matrix.machine }}-${{ matrix.cloud }}-${{ matrix.region }}-${{ matrix.arch }}-${{ matrix.distro }}-${{ matrix.stage }}-${{ matrix.theater }}
           path: ./wheelhouse/*.whl
 
   pypi:
