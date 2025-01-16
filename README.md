@@ -3,6 +3,8 @@
     <a href="https://github.com/PRBonn/MapClosures/releases"><img src="https://img.shields.io/github/v/release/PRBonn/MapClosures?label=version" /></a>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/LICENSE"><img src=https://img.shields.io/badge/license-MIT-green" /></a>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/"><img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" /></a>
+    <a href="https://github.com/PRBonn/MapClosures/blob/main/"><img src="https://img.shields.io/badge/Windows-0078D6?st&logo=windows&logoColor=white" /></a>
+    <a href="https://github.com/PRBonn/MapClosures/blob/main/"><img src="https://img.shields.io/badge/mac%20os-000000?&logo=apple&logoColor=white" /></a>
     <br />
     <br />
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
@@ -53,18 +55,8 @@ target_link_libraries(my_target PUBLIC map_closures)
 ```
 
 ## Install the Python API and CLI
-1. First, install the necessary system dependencies
-    ```sh
-    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev libeigen3-dev libopencv-dev libtbb-dev
-    ```
-2. To get an odometry estimate in our Python CLI we rely on [KISS-ICP](https://github.com/PRBonn/kiss-icp), you can install it using
-    ```sh
-    pip install kiss-icp
-    ```
-3. Then run:
-    ```sh
-    make
-    ```
+`pip install map-closures`
+
 ### Usage
 <details>
 <summary>
