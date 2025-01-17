@@ -37,7 +37,10 @@ int main(int argc, char *argv[]) {
         auto points = pointcloud.points_;
         auto T_ground = map_closures::AlignToLocalGround(points, 5.0);
         TransformPoints(T_ground, points);
-        auto closure = pipeline.MatchAndAdd(map_id, points);
+        auto ref_indices = pipeline.MatchAndAdd(map_id, points);
+        std::for_each(ref_indices.cbegin(), ref_indices.cend(), [&](const int ref_id) {
+            auto closure = pipeline.ValidateClosure(ref_id, map_id);
+        });
         map_id++;
     });
     return 0;
