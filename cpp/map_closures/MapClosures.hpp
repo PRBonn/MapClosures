@@ -44,7 +44,6 @@ struct Config {
     float density_map_resolution = 0.5;
     float density_threshold = 0.05;
     int hamming_distance_threshold = 50;
-    bool self_similarity_filter = true;
 };
 
 struct ClosureCandidate {

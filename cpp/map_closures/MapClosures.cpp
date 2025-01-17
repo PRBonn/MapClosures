@@ -83,18 +83,14 @@ ClosureCandidate MapClosures::MatchAndAdd(const int id,
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    if (config_.self_similarity_filter) {
-        std::for_each(bf_matches.cbegin(), bf_matches.cend(), [&](const auto &bf_match) {
-            if (bf_match[1].distance > 35.0) {
-                auto index_descriptor = bf_match[0].queryIdx;
-                auto keypoint = orb_keypoints[index_descriptor];
-                hbst_matchable.emplace_back(
-                    new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
-            }
-        });
-    } else {
-        hbst_matchable = Tree::getMatchables(orb_descriptors, orb_keypoints, id);
-    }
+    std::for_each(bf_matches.cbegin(), bf_matches.cend(), [&](const auto &bf_match) {
+        if (bf_match[1].distance > 35.0) {
+            auto index_descriptor = bf_match[0].queryIdx;
+            auto keypoint = orb_keypoints[index_descriptor];
+            hbst_matchable.emplace_back(
+                new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
+        }
+    });
     hbst_matchable.shrink_to_fit();
 
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,

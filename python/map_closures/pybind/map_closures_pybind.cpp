@@ -49,7 +49,6 @@ Config GetConfigFromYAML(const py::dict &yaml_cfg) {
     cpp_config.density_threshold = yaml_cfg["density_threshold"].cast<float>();
     cpp_config.density_map_resolution = yaml_cfg["density_map_resolution"].cast<float>();
     cpp_config.hamming_distance_threshold = yaml_cfg["hamming_distance_threshold"].cast<int>();
-    cpp_config.self_similarity_filter = yaml_cfg["self_similarity_filter"].cast<bool>();
     return cpp_config;
 }
 
