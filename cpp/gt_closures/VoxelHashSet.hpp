@@ -46,7 +46,7 @@ struct VoxelHashSet {
                    const Eigen::Vector3d &t);
     void AddVoxels(const VoxelHashSet &other_set);
     double ComputeOverlap(const VoxelHashSet &other_set);
-    int size() const { return set_.size(); }
+    std::size_t size() const { return set_.size(); }
     void clear() { set_.clear(); }
 
     double voxel_size_;

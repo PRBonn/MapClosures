@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 cmake_minimum_required(VERSION 3.16...3.26)
-project(map_closures_cpp VERSION 1.0.0 LANGUAGES CXX)
+project(map_closures_cpp VERSION 1.0.1 LANGUAGES CXX)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 option(USE_SYSTEM_TBB "Use system pre-installed TBB" ON)
@@ -33,6 +33,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(3rdparty/find_dependencies.cmake)
+include(cmake/CompilerOptions.cmake)
 
 add_subdirectory(map_closures)
 add_subdirectory(gt_closures)

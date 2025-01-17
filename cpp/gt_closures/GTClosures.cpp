@@ -88,7 +88,7 @@ int GTClosures::GetSegments() {
         last_pose = poses_.at(idx);
         scan_occupancies_.erase(idx);
     });
-    return segments_.size() - n_skip_segments_;
+    return static_cast<int>(segments_.size()) - n_skip_segments_;
 }
 
 std::vector<Eigen::Vector2i> GTClosures::ComputeClosuresForQuerySegment(

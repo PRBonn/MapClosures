@@ -105,10 +105,10 @@ class MapClosurePipeline:
 
     def run(self):
         self._run_pipeline()
+        self.results.compute_closures_and_metrics()
         self._save_config()
         self._log_to_file()
         self._log_to_console()
-        self.results.compute_closures_and_metrics()
 
         return self.results
 

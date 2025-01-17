@@ -26,4 +26,4 @@ target_sources(map_closures PRIVATE DensityMap.cpp AlignRansac2D.cpp GroundAlign
                                     MapClosures.cpp)
 target_include_directories(map_closures PUBLIC ${hbst_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(map_closures PUBLIC Eigen3::Eigen ${OpenCV_LIBS} Sophus::Sophus)
-target_compile_features(map_closures PUBLIC cxx_std_17)
+set_global_target_properties(map_closures)

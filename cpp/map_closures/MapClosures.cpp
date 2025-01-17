@@ -26,6 +26,7 @@
 #include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <opencv2/core.hpp>
 #include <utility>
 #include <vector>
