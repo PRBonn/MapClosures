@@ -23,9 +23,6 @@
 
 #include "MapClosures.hpp"
 
-#include <tbb/blocked_range.h>
-#include <tbb/parallel_reduce.h>
-
 #include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
@@ -63,7 +60,7 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
-ClosureCandidate MapClosures::MatchAndAdd(const int id,
+std::vector<int> MapClosures::MatchAndAdd(const int id,
                                           const std::vector<Eigen::Vector3d> &local_map) {
     DensityMap density_map =
         GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
@@ -97,26 +94,15 @@ ClosureCandidate MapClosures::MatchAndAdd(const int id,
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
     density_maps_.emplace(id, std::move(density_map));
-    std::vector<int> indices(descriptor_matches_.size());
-    std::transform(descriptor_matches_.cbegin(), descriptor_matches_.cend(), indices.begin(),
-                   [](const auto &descriptor_match) { return descriptor_match.first; });
-    auto compare_closure_candidates = [](ClosureCandidate a,
-                                         const ClosureCandidate &b) -> ClosureCandidate {
-        return a.number_of_inliers > b.number_of_inliers ? a : b;
-    };
-    using iterator_type = std::vector<int>::const_iterator;
-    const auto &closure = tbb::parallel_reduce(
-        tbb::blocked_range<iterator_type>{indices.cbegin(), indices.cend()}, ClosureCandidate(),
-        [&](const tbb::blocked_range<iterator_type> &r,
-            ClosureCandidate candidate) -> ClosureCandidate {
-            return std::transform_reduce(
-                r.begin(), r.end(), candidate, compare_closure_candidates, [&](const auto &ref_id) {
-                    const bool is_far_enough = std::abs(static_cast<int>(ref_id) - id) > 3;
-                    return is_far_enough ? ValidateClosure(ref_id, id) : ClosureCandidate();
-                });
-        },
-        compare_closure_candidates);
-    return closure;
+    std::vector<int> reference_indices;
+    reference_indices.reserve(descriptor_matches_.size());
+    std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
+                  [&](const auto &descriptor_match) {
+                      if ((id - descriptor_match.first) > 3) {
+                          reference_indices.emplace_back(descriptor_match.first);
+                      }
+                  });
+    return reference_indices;
 }
 
 ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {

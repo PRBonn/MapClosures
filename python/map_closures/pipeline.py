@@ -152,7 +152,7 @@ class MapClosurePipeline:
                 T_ground = self.map_closures.align_to_local_ground(
                     local_map_pointcloud, grid_resolution=5.0
                 )
-                closure = self.map_closures.match_and_add(
+                reference_indices = self.map_closures.match_and_add(
                     map_idx, transform_points(local_map_pointcloud, T_ground)
                 )
 
@@ -173,36 +173,38 @@ class MapClosurePipeline:
                     self.local_maps[-1].density_map,
                     current_map_pose,
                 )
-                if closure.number_of_inliers > self.closure_config.inliers_threshold:
-                    reference_local_map = self.local_maps[closure.source_id]
-                    query_local_map = self.local_maps[closure.target_id]
-                    closure.pose = (
-                        np.linalg.inv(T_ground)
-                        @ np.asarray(closure.pose)
-                        @ self.local_maps[closure.source_id].T_ground
-                    )
-                    self.closures.append(
-                        np.r_[
-                            closure.source_id,
-                            closure.target_id,
-                            reference_local_map.scan_indices[0],
-                            query_local_map.scan_indices[0],
-                            closure.pose.flatten(),
-                        ]
-                    )
-
-                    if self._eval:
-                        self.results.append(
-                            reference_local_map,
-                            query_local_map,
-                            closure.pose,
-                            self.closure_distance_threshold,
-                            closure.number_of_inliers,
+                for ref_idx in reference_indices:
+                    closure = self.map_closures.validate_closure(ref_idx, map_idx)
+                    if closure.number_of_inliers > self.closure_config.inliers_threshold:
+                        reference_local_map = self.local_maps[closure.source_id]
+                        query_local_map = self.local_maps[closure.target_id]
+                        closure.pose = (
+                            np.linalg.inv(T_ground)
+                            @ np.asarray(closure.pose)
+                            @ self.local_maps[closure.source_id].T_ground
+                        )
+                        self.closures.append(
+                            np.r_[
+                                closure.source_id,
+                                closure.target_id,
+                                reference_local_map.scan_indices[0],
+                                query_local_map.scan_indices[0],
+                                closure.pose.flatten(),
+                            ]
                         )
 
-                    self.visualizer.update_closures(
-                        np.asarray(closure.pose), [closure.source_id, closure.target_id]
-                    )
+                        if self._eval:
+                            self.results.append(
+                                reference_local_map,
+                                query_local_map,
+                                closure.pose,
+                                self.closure_distance_threshold,
+                                closure.number_of_inliers,
+                            )
+
+                        self.visualizer.update_closures(
+                            np.asarray(closure.pose), [closure.source_id, closure.target_id]
+                        )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 pts_to_keep = self.voxel_local_map.point_cloud()

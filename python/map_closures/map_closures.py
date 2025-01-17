@@ -34,9 +34,9 @@ class MapClosures:
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
-    def match_and_add(self, map_idx: int, local_map: np.ndarray) -> ClosureCandidate:
+    def match_and_add(self, map_idx: int, local_map: np.ndarray) -> np.ndarray:
         pcd = map_closures_pybind._Vector3dVector(local_map)
-        return self._pipeline._MatchAndAdd(map_idx, pcd)
+        return np.asarray(self._pipeline._MatchAndAdd(map_idx, pcd), int)
 
     def get_density_map_from_id(self, map_id: int) -> np.ndarray:
         return self._pipeline._getDensityMapFromId(map_id)

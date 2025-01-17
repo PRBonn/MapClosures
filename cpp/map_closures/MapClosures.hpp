@@ -59,7 +59,7 @@ public:
     explicit MapClosures(const Config &config);
     ~MapClosures() = default;
 
-    ClosureCandidate MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
+    std::vector<int> MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
     ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
 
     const DensityMap &getDensityMapFromId(const int &map_id) const {
