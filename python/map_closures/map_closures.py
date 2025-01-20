@@ -36,7 +36,7 @@ class MapClosures:
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
-    def get_best_closures(self, query_idx: int, local_map: np.ndarray) -> ClosureCandidate:
+    def get_best_closure(self, query_idx: int, local_map: np.ndarray) -> ClosureCandidate:
         pcd = map_closures_pybind._Vector3dVector(local_map)
         closure = self._pipeline._GetBestClosure(query_idx, pcd)
         return closure
