@@ -101,11 +101,6 @@ git checkout ICRA2024
 ```
 Our development aims to push the performances of **MapClosures** above the original results of the paper.
 
-**Note**: You can download the ground-truth loop closure candidates for the datasets used in the paper from [here](https://www.ipb.uni-bonn.de/html/projects/gupta2024icra/MapClosuresGroundtruth.zip). When run with `-e` flag, our pipeline will search for groundtruth data under the folder at path `<data>/loop_closure/`. If not found, it will first generate the groundtruth closures which might consume some time. You can also generate the groundtruth closures following the approach mentioned in our paper using the following command:
-```sh
-gt_closure_pipeline <dataloader> <path-to-data>
-```
-
 
 ## Acknowledgement
 
