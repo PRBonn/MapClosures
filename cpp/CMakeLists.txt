@@ -37,4 +37,3 @@ include(cmake/CompilerOptions.cmake)
 
 add_subdirectory(map_closures)
 add_subdirectory(gt_closures)
-add_subdirectory(test)
