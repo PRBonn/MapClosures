@@ -36,20 +36,21 @@ class MapClosures:
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
-    def match_and_add(self, map_idx: int, local_map: np.ndarray):
+    def get_best_closures(self, query_idx: int, local_map: np.ndarray) -> ClosureCandidate:
         pcd = map_closures_pybind._Vector3dVector(local_map)
-        self._pipeline._MatchAndAdd(map_idx, pcd)
-
-    def get_best_closures(self, query_idx: int) -> ClosureCandidate:
-        closure = self._pipeline._GetBestClosure(query_idx)
+        closure = self._pipeline._GetBestClosure(query_idx, pcd)
         return closure
 
-    def get_top_k_closures(self, query_idx: int, k: int) -> List[ClosureCandidate]:
-        top_k_closures = self._pipeline._GetTopKClosures(query_idx, k)
+    def get_top_k_closures(
+        self, query_idx: int, local_map: np.ndarray, k: int
+    ) -> List[ClosureCandidate]:
+        pcd = map_closures_pybind._Vector3dVector(local_map)
+        top_k_closures = self._pipeline._GetTopKClosures(query_idx, pcd, k)
         return top_k_closures
 
-    def get_closures(self, query_idx: int) -> List[ClosureCandidate]:
-        closures = self._pipeline._GetClosures(query_idx)
+    def get_closures(self, query_idx: int, local_map: np.ndarray) -> List[ClosureCandidate]:
+        pcd = map_closures_pybind._Vector3dVector(local_map)
+        closures = self._pipeline._GetClosures(query_idx, pcd)
         return closures
 
     def get_density_map_from_id(self, map_id: int) -> np.ndarray:

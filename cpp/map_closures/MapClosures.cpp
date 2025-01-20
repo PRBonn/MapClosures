@@ -67,7 +67,8 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
-void MapClosures::MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map) {
+void MapClosures::MatchAndAddToDatabase(const int id,
+                                        const std::vector<Eigen::Vector3d> &local_map) {
     Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
@@ -104,9 +105,37 @@ void MapClosures::MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &
                                    srrg_hbst::SplittingStrategy::SplitEven);
 }
 
+ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
+    const Tree::MatchVector &matches = descriptor_matches_.at(reference_id);
+    const size_t num_matches = matches.size();
+
+    ClosureCandidate closure;
+    if (num_matches > min_no_of_matches) {
+        std::vector<PointPair> keypoint_pairs(num_matches);
+        std::transform(matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
+                       [&](const Tree::Match &match) {
+                           auto query_point =
+                               Eigen::Vector2d(match.object_query.pt.y, match.object_query.pt.x);
+                           auto ref_point = Eigen::Vector2d(match.object_references[0].pt.y,
+                                                            match.object_references[0].pt.x);
+                           return PointPair(ref_point, query_point);
+                       });
+
+        const auto &[pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
+        closure.source_id = reference_id;
+        closure.target_id = query_id;
+        closure.pose.block<2, 2>(0, 0) = pose2d.linear();
+        closure.pose.block<2, 1>(0, 3) = pose2d.translation() * config_.density_map_resolution;
+        closure.pose = ground_alignments_.at(query_id).inverse() * closure.pose *
+                       ground_alignments_.at(reference_id);
+        closure.number_of_inliers = number_of_inliers;
+    }
+    return closure;
+}
+
 ClosureCandidate MapClosures::GetBestClosure(const int query_id,
                                              const std::vector<Eigen::Vector3d> &local_map) {
-    MatchAndAdd(query_id, local_map);
+    MatchAndAddToDatabase(query_id, local_map);
     auto compare_closure_candidates = [](ClosureCandidate a,
                                          const ClosureCandidate &b) -> ClosureCandidate {
         return a.number_of_inliers > b.number_of_inliers ? a : b;
@@ -126,7 +155,7 @@ ClosureCandidate MapClosures::GetBestClosure(const int query_id,
 
 std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
     const int query_id, const std::vector<Eigen::Vector3d> &local_map, const int k) {
-    MatchAndAdd(query_id, local_map);
+    MatchAndAddToDatabase(query_id, local_map);
     auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
         return a.number_of_inliers >= b.number_of_inliers;
     };
@@ -155,33 +184,5 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
     std::copy_n(closures.cbegin(), std::min(k, static_cast<int>(closures.size())),
                 std::back_inserter(top_k_closures));
     return top_k_closures;
-}
-
-ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
-    const Tree::MatchVector &matches = descriptor_matches_.at(reference_id);
-    const size_t num_matches = matches.size();
-
-    ClosureCandidate closure;
-    if (num_matches > min_no_of_matches) {
-        std::vector<PointPair> keypoint_pairs(num_matches);
-        std::transform(matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
-                       [&](const Tree::Match &match) {
-                           auto query_point =
-                               Eigen::Vector2d(match.object_query.pt.y, match.object_query.pt.x);
-                           auto ref_point = Eigen::Vector2d(match.object_references[0].pt.y,
-                                                            match.object_references[0].pt.x);
-                           return PointPair(ref_point, query_point);
-                       });
-
-        const auto &[pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
-        closure.source_id = reference_id;
-        closure.target_id = query_id;
-        closure.pose.block<2, 2>(0, 0) = pose2d.linear();
-        closure.pose.block<2, 1>(0, 3) = pose2d.translation() * config_.density_map_resolution;
-        closure.pose = ground_alignments_.at(query_id).inverse() * closure.pose *
-                       ground_alignments_.at(reference_id);
-        closure.number_of_inliers = number_of_inliers;
-    }
-    return closure;
 }
 }  // namespace map_closures

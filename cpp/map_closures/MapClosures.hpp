@@ -47,7 +47,6 @@ struct Config {
 };
 
 struct ClosureCandidate {
-    ClosureCandidate() = default;
     int source_id = -1;
     int target_id = -1;
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
@@ -74,8 +73,8 @@ public:
     }
 
 protected:
+    void MatchAndAddToDatabase(const int id, const std::vector<Eigen::Vector3d> &local_map);
     ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
-    void MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
 
     Config config_;
     Tree::MatchVectorMap descriptor_matches_;
