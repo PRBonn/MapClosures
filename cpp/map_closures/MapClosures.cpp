@@ -104,7 +104,9 @@ void MapClosures::MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &
                                    srrg_hbst::SplittingStrategy::SplitEven);
 }
 
-ClosureCandidate MapClosures::GetBestClosure(const int query_id) {
+ClosureCandidate MapClosures::GetBestClosure(const int query_id,
+                                             const std::vector<Eigen::Vector3d> &local_map) {
+    MatchAndAdd(query_id, local_map);
     auto compare_closure_candidates = [](ClosureCandidate a,
                                          const ClosureCandidate &b) -> ClosureCandidate {
         return a.number_of_inliers > b.number_of_inliers ? a : b;
@@ -122,7 +124,9 @@ ClosureCandidate MapClosures::GetBestClosure(const int query_id) {
     return closure;
 }
 
-std::vector<ClosureCandidate> MapClosures::GetTopKClosures(const int query_id, const int k) {
+std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
+    const int query_id, const std::vector<Eigen::Vector3d> &local_map, const int k) {
+    MatchAndAdd(query_id, local_map);
     auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
         return a.number_of_inliers >= b.number_of_inliers;
     };

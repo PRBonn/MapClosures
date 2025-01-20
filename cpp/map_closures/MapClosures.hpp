@@ -60,20 +60,23 @@ public:
     explicit MapClosures(const Config &config);
     ~MapClosures() = default;
 
-    void MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
-    ClosureCandidate GetBestClosure(const int query_id);
-    std::vector<ClosureCandidate> GetTopKClosures(const int query_id, const int k);
-    std::vector<ClosureCandidate> GetClosures(const int query_id) {
-        return GetTopKClosures(query_id, -1);
+    ClosureCandidate GetBestClosure(const int query_id,
+                                    const std::vector<Eigen::Vector3d> &local_map);
+    std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
+                                                  const std::vector<Eigen::Vector3d> &local_map,
+                                                  const int k);
+    std::vector<ClosureCandidate> GetClosures(const int query_id,
+                                              const std::vector<Eigen::Vector3d> &local_map) {
+        return GetTopKClosures(query_id, local_map, -1);
     }
     const DensityMap &getDensityMapFromId(const int &map_id) const {
         return density_maps_.at(map_id);
     }
 
-private:
+protected:
     ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
+    void MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
 
-private:
     Config config_;
     Tree::MatchVectorMap descriptor_matches_;
     std::unordered_map<int, DensityMap> density_maps_;
