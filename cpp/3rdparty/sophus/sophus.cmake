@@ -1,7 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2024 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
-# Stachniss.
+# # Copyright (c) 2023 Saurabh Gupta, Ignacio Vizzo, Cyrill Stachniss, University of Bonn
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +19,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-option(BUILD_SHARED_LIBS OFF)
-option(TBBMALLOC_BUILD OFF)
-option(TBB_EXAMPLES OFF)
-option(TBB_STRICT OFF)
-option(TBB_TEST OFF)
-
 include(FetchContent)
-FetchContent_Declare(tbb
-                     URL https://github.com/oneapi-src/oneTBB/archive/refs/tags/v2021.8.0.tar.gz)
-FetchContent_GetProperties(tbb)
-if(NOT tbb_POPULATED)
-  FetchContent_Populate(tbb)
-  if(${CMAKE_VERSION} GREATER_EQUAL 3.25)
-    add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR} SYSTEM EXCLUDE_FROM_ALL)
-  else()
-    # Emulate the SYSTEM flag introduced in CMake 3.25. Withouth this flag the compiler will
-    # consider this 3rdparty headers as source code and fail due the -Werror flag.
-    add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR} EXCLUDE_FROM_ALL)
-    get_target_property(tbb_include_dirs tbb INTERFACE_INCLUDE_DIRECTORIES)
-    set_target_properties(tbb PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${tbb_include_dirs}")
-  endif()
-endif()
+
+set(SOPHUS_USE_BASIC_LOGGING ON CACHE BOOL "Don't use fmt for Sophus libraru")
+set(BUILD_SOPHUS_TESTS OFF CACHE BOOL "Don't build Sophus tests")
+set(BUILD_SOPHUS_EXAMPLES OFF CACHE BOOL "Don't build Sophus Examples")
+
+FetchContent_Declare(
+  sophus SYSTEM URL https://github.com/strasdat/Sophus/archive/refs/tags/1.22.10.tar.gz
+  PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/sophus.patch UPDATE_DISCONNECTED 1)
+
+FetchContent_MakeAvailable(sophus)

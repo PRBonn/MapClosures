@@ -10,7 +10,7 @@
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/README.md#Install">Install</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>Paper</a>
+    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>ICRA24 Paper</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://github.com/PRBonn/MapClosures/issues>Contact Us</a>
   <br />
@@ -30,7 +30,6 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 1. Include the following snippet in your project's `CMakeLists.txt`:
 ```cmake
 set(USE_SYSTEM_EIGEN3 ON CACHE BOOL "use system eigen3")
-set(USE_SYSTEM_TBB ON CACHE BOOL "use system tbb")
 set(USE_SYSTEM_OPENCV ON CACHE BOOL "use system opencv")
 
 include(FetchContent)
@@ -101,11 +100,6 @@ As we decided to continue the development of **MapClosures** beyond the scope of
 git checkout ICRA2024
 ```
 Our development aims to push the performances of **MapClosures** above the original results of the paper.
-
-**Note**: You can download the ground-truth loop closure candidates for the datasets used in the paper from [here](https://www.ipb.uni-bonn.de/html/projects/gupta2024icra/MapClosuresGroundtruth.zip). When run with `-e` flag, our pipeline will search for groundtruth data under the folder at path `<data>/loop_closure/`. If not found, it will first generate the groundtruth closures which might consume some time. You can also generate the groundtruth closures following the approach mentioned in our paper using the following command:
-```sh
-gt_closure_pipeline <dataloader> <path-to-data>
-```
 
 
 ## Acknowledgement

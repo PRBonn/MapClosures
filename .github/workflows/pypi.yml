@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: artifact-*
+          pattern: artifact*
           path: dist
           merge-multiple: true
 

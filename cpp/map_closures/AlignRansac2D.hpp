@@ -37,5 +37,6 @@ struct PointPair {
     Eigen::Vector2d query = Eigen::Vector2d::Zero();
 };
 
-std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs);
+std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
+    const std::vector<PointPair> &keypoint_pairs);
 }  // namespace map_closures

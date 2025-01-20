@@ -76,7 +76,8 @@ namespace map_closures {
 
 PointPair::PointPair(const Eigen::Vector2d &r, const Eigen::Vector2d &q) : ref(r), query(q) {}
 
-std::pair<Eigen::Isometry2d, int> RansacAlignment2D(const std::vector<PointPair> &keypoint_pairs) {
+std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
+    const std::vector<PointPair> &keypoint_pairs) {
     const size_t max_inliers = keypoint_pairs.size();
 
     std::vector<PointPair> sample_keypoint_pairs(2);
