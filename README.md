@@ -10,7 +10,7 @@
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/README.md#Install">Install</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>Paper</a>
+    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>ICRA24 Paper</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://github.com/PRBonn/MapClosures/issues>Contact Us</a>
   <br />
