@@ -28,8 +28,7 @@ from typing import Optional
 import numpy as np
 from kiss_icp.config import KISSConfig
 from kiss_icp.kiss_icp import KissICP
-from kiss_icp.mapping import get_voxel_hash_map
-from kiss_icp.voxelization import voxel_down_sample
+from kiss_icp.mapping import VoxelHashMap
 from tqdm.auto import trange
 
 from map_closures.config import load_config, write_config
@@ -65,14 +64,20 @@ class MapClosurePipeline:
         self._eval = eval
         self._vis = vis
 
+        self.closure_config = load_config(config_path)
+        self.map_closures = MapClosures(self.closure_config)
+
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
+        self.kiss_config.data.max_range = 100.0
         self.odometry = KissICP(self.kiss_config)
-        self.voxel_local_map = get_voxel_hash_map(self.kiss_config)
 
-        self.closure_config = load_config(config_path)
+        self.voxel_local_map = VoxelHashMap(
+            voxel_size=self.closure_config.density_map_resolution,
+            max_distance=self.kiss_config.data.max_range * self.closure_config.local_map_factor,
+            max_points_per_voxel=20,
+        )
         self._map_range = self.closure_config.local_map_factor * self.kiss_config.data.max_range
-        self.map_closures = MapClosures(self.closure_config)
 
         self.closures = []
         self.local_maps = []
@@ -132,13 +137,12 @@ class MapClosurePipeline:
                 frame = self._dataset[scan_idx]
                 timestamps = np.zeros(len(frame))
 
-            source, keypoints = self.odometry.register_frame(frame, timestamps)
+            frame, _ = self.odometry.register_frame(frame, timestamps)
             self.odom_poses[scan_idx] = self.odometry.last_pose
             current_frame_pose = self.odometry.last_pose
 
-            frame_downsample = voxel_down_sample(frame, self.kiss_config.mapping.voxel_size * 0.5)
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
-            self.voxel_local_map.add_points(transform_points(frame_downsample, frame_to_map_pose))
+            self.voxel_local_map.add_points(transform_points(frame, frame_to_map_pose))
             self.visualizer.update_registration(
                 frame,
                 self.odometry.local_map.point_cloud(),
@@ -149,12 +153,7 @@ class MapClosurePipeline:
                 scan_idx == self._n_scans - 1
             ):
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
-                T_ground = self.map_closures.align_to_local_ground(
-                    local_map_pointcloud, grid_resolution=5.0
-                )
-                reference_indices = self.map_closures.match_and_add(
-                    map_idx, transform_points(local_map_pointcloud, T_ground)
-                )
+                reference_indices = self.map_closures.match_and_add(map_idx, local_map_pointcloud)
 
                 scan_indices_in_local_map.append(scan_idx)
                 poses_in_local_map.append(current_frame_pose)
@@ -165,7 +164,6 @@ class MapClosurePipeline:
                         self.map_closures.get_density_map_from_id(map_idx),
                         np.copy(scan_indices_in_local_map),
                         np.copy(poses_in_local_map),
-                        T_ground,
                     )
                 )
                 self.visualizer.update_data(
@@ -178,11 +176,6 @@ class MapClosurePipeline:
                     if closure.number_of_inliers > self.closure_config.inliers_threshold:
                         reference_local_map = self.local_maps[closure.source_id]
                         query_local_map = self.local_maps[closure.target_id]
-                        closure.pose = (
-                            np.linalg.inv(T_ground)
-                            @ np.asarray(closure.pose)
-                            @ self.local_maps[closure.source_id].T_ground
-                        )
                         self.closures.append(
                             np.r_[
                                 closure.source_id,
@@ -208,7 +201,7 @@ class MapClosurePipeline:
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
                 pts_to_keep = self.voxel_local_map.point_cloud()
-                self.voxel_local_map = get_voxel_hash_map(self.kiss_config)
+                self.voxel_local_map.clear()
                 self.voxel_local_map.add_points(
                     transform_points(
                         pts_to_keep, np.linalg.inv(current_frame_pose) @ current_map_pose
