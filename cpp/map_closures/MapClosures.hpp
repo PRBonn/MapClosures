@@ -50,7 +50,7 @@ struct ClosureCandidate {
     int source_id = -1;
     int target_id = -1;
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-    size_t number_of_inliers = 0;
+    std::size_t number_of_inliers = 0;
 };
 
 class MapClosures {
@@ -70,6 +70,7 @@ private:
     Config config_;
     Tree::MatchVectorMap descriptor_matches_;
     std::unordered_map<int, DensityMap> density_maps_;
+    std::unordered_map<int, Eigen::Matrix4d> ground_alignments_;
     std::unique_ptr<Tree> hbst_binary_tree_ = std::make_unique<Tree>();
     cv::Ptr<cv::DescriptorExtractor> orb_extractor_;
 };

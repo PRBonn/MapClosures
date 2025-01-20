@@ -33,11 +33,17 @@
 
 #include "AlignRansac2D.hpp"
 #include "DensityMap.hpp"
+#include "GroundAlign.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
 namespace {
+static constexpr int min_no_of_matches = 2;
+static constexpr int no_of_local_maps_to_skip = 3;
+static constexpr double ground_alignment_resolution = 5.0;
+static constexpr double self_similarity_threshold = 35.0;
+
 // fixed parameters for OpenCV ORB Features
-static constexpr float scale_factor = 1.00;
+static constexpr float scale_factor = 1.00f;
 static constexpr int n_levels = 1;
 static constexpr int first_level = 0;
 static constexpr int WTA_K = 2;
@@ -63,8 +69,9 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 
 std::vector<int> MapClosures::MatchAndAdd(const int id,
                                           const std::vector<Eigen::Vector3d> &local_map) {
-    DensityMap density_map =
-        GenerateDensityMap(local_map, config_.density_map_resolution, config_.density_threshold);
+    Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
+    DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
+                                                config_.density_threshold);
     cv::Mat orb_descriptors;
     std::vector<cv::KeyPoint> orb_keypoints;
     orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
@@ -78,11 +85,13 @@ std::vector<int> MapClosures::MatchAndAdd(const int id,
         keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
         keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
     });
+    density_maps_.emplace(id, std::move(density_map));
+    ground_alignments_.emplace(id, T_ground);
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
     std::for_each(bf_matches.cbegin(), bf_matches.cend(), [&](const auto &bf_match) {
-        if (bf_match[1].distance > 35.0) {
+        if (bf_match[1].distance > self_similarity_threshold) {
             auto index_descriptor = bf_match[0].queryIdx;
             auto keypoint = orb_keypoints[index_descriptor];
             hbst_matchable.emplace_back(
@@ -94,16 +103,16 @@ std::vector<int> MapClosures::MatchAndAdd(const int id,
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
-    density_maps_.emplace(id, std::move(density_map));
-    std::vector<int> reference_indices;
-    reference_indices.reserve(descriptor_matches_.size());
+
+    std::vector<int> candidate_closure_indices;
+    candidate_closure_indices.reserve(descriptor_matches_.size());
     std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
                   [&](const auto &descriptor_match) {
-                      if ((id - descriptor_match.first) > 3) {
-                          reference_indices.emplace_back(descriptor_match.first);
+                      if ((id - descriptor_match.first) > no_of_local_maps_to_skip) {
+                          candidate_closure_indices.emplace_back(descriptor_match.first);
                       }
                   });
-    return reference_indices;
+    return candidate_closure_indices;
 }
 
 ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
@@ -111,7 +120,7 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
     const size_t num_matches = matches.size();
 
     ClosureCandidate closure;
-    if (num_matches > 2) {
+    if (num_matches > min_no_of_matches) {
         std::vector<PointPair> keypoint_pairs(num_matches);
         std::transform(matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
                        [&](const Tree::Match &match) {
@@ -127,6 +136,8 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
         closure.target_id = query_id;
         closure.pose.block<2, 2>(0, 0) = pose2d.linear();
         closure.pose.block<2, 1>(0, 3) = pose2d.translation() * config_.density_map_resolution;
+        closure.pose = ground_alignments_.at(query_id).inverse() * closure.pose *
+                       ground_alignments_.at(reference_id);
         closure.number_of_inliers = number_of_inliers;
     }
     return closure;

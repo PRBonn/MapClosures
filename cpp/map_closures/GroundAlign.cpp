@@ -78,8 +78,6 @@ static constexpr int max_iterations = 20;
 
 std::vector<Eigen::Vector3d> ComputeLowestPoints(const std::vector<Eigen::Vector3d> &pointcloud,
                                                  const double resolution) {
-    std::vector<Eigen::Vector3d> lowest_points;
-    lowest_points.reserve(pointcloud.size());
     std::unordered_map<Eigen::Vector2i, Eigen::Vector3d, PixelHash> lowest_point_hash_map;
     auto PointToPixel = [&resolution](const Eigen::Vector3d &pt) -> Eigen::Vector2i {
         return Eigen::Vector2i(static_cast<int>(std::floor(pt.x() / resolution)),
@@ -95,10 +93,11 @@ std::vector<Eigen::Vector3d> ComputeLowestPoints(const std::vector<Eigen::Vector
         }
     });
 
+    std::vector<Eigen::Vector3d> low_lying_points;
+    low_lying_points.reserve(lowest_point_hash_map.size());
     std::for_each(lowest_point_hash_map.cbegin(), lowest_point_hash_map.cend(),
-                  [&](const auto &entry) { lowest_points.emplace_back(entry.second); });
-    lowest_points.shrink_to_fit();
-    return lowest_points;
+                  [&](const auto &entry) { low_lying_points.emplace_back(entry.second); });
+    return low_lying_points;
 }
 }  // namespace
 
@@ -106,17 +105,16 @@ namespace map_closures {
 Eigen::Matrix4d AlignToLocalGround(const std::vector<Eigen::Vector3d> &pointcloud,
                                    const double resolution) {
     Sophus::SE3d T = Sophus::SE3d(Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
-    auto lowest_points = ComputeLowestPoints(pointcloud, resolution);
+    auto low_lying_points = ComputeLowestPoints(pointcloud, resolution);
 
     for (int iters = 0; iters < max_iterations; iters++) {
-        const auto &[H, b] = BuildLinearSystem(lowest_points, resolution);
+        const auto &[H, b] = BuildLinearSystem(low_lying_points, resolution);
         const Eigen::Vector3d dx = H.ldlt().solve(-b);
         Eigen::Matrix<double, 6, 1> se3 = Eigen::Matrix<double, 6, 1>::Zero();
         se3.block<3, 1>(2, 0) = dx;
         Sophus::SE3d estimation(Sophus::SE3d::exp(se3));
-        TransformPoints(estimation, lowest_points);
+        TransformPoints(estimation, low_lying_points);
         T = estimation * T;
-
         if (dx.norm() < convergence_threshold) break;
     }
     return T.matrix();
