@@ -34,7 +34,6 @@ from tqdm.auto import trange
 from map_closures.config import load_config, write_config
 from map_closures.map_closures import MapClosures
 from map_closures.tools.evaluation import EvaluationPipeline, LocalMap, StubEvaluation
-from map_closures.tools.gt_closures import generate_gt_closures
 from map_closures.visualizer.visualizer import StubVisualizer, Visualizer
 
 
@@ -84,14 +83,12 @@ class MapClosurePipeline:
         self.density_maps = []
         self.odom_poses = np.zeros((self._n_scans, 4, 4))
 
-        self.closure_overlap_threshold = 0.5
+        gt_closures_path = os.path.join(
+            self._dataset.sequence_dir, "loop_closure", "gt_closures.txt"
+        )
         self.gt_closures = (
-            generate_gt_closures(
-                self._dataset,
-                self.kiss_config.data.max_range,
-                self.closure_overlap_threshold,
-            )
-            if (self._eval and hasattr(self._dataset, "gt_poses"))
+            np.loadtxt(gt_closures_path, dtype=int)
+            if (self._eval and os.path.exists(gt_closures_path))
             else None
         )
 
@@ -102,7 +99,7 @@ class MapClosurePipeline:
                 self._dataset_name,
                 self.closure_distance_threshold,
             )
-            if self._eval
+            if self._eval and self.gt_closures is not None
             else StubEvaluation()
         )
 

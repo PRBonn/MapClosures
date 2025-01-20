@@ -30,7 +30,6 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 1. Include the following snippet in your project's `CMakeLists.txt`:
 ```cmake
 set(USE_SYSTEM_EIGEN3 ON CACHE BOOL "use system eigen3")
-set(USE_SYSTEM_TBB ON CACHE BOOL "use system tbb")
 set(USE_SYSTEM_OPENCV ON CACHE BOOL "use system opencv")
 
 include(FetchContent)

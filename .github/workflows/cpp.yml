@@ -49,7 +49,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake git libeigen3-dev libtbb-dev libopencv-dev
+          sudo apt-get install -y build-essential cmake git libeigen3-dev libopencv-dev
       - name: Configure CMake
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{github.workspace}}/cpp
       - name: Build
