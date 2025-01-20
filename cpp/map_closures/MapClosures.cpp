@@ -67,8 +67,7 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
-std::vector<int> MapClosures::MatchAndAdd(const int id,
-                                          const std::vector<Eigen::Vector3d> &local_map) {
+void MapClosures::MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map) {
     Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
@@ -103,16 +102,55 @@ std::vector<int> MapClosures::MatchAndAdd(const int id,
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
+}
 
-    std::vector<int> candidate_closure_indices;
-    candidate_closure_indices.reserve(descriptor_matches_.size());
+ClosureCandidate MapClosures::GetBestClosure(const int query_id) {
+    auto compare_closure_candidates = [](ClosureCandidate a,
+                                         const ClosureCandidate &b) -> ClosureCandidate {
+        return a.number_of_inliers > b.number_of_inliers ? a : b;
+    };
+    auto is_far_enough = [](const int ref_id, const int query_id) {
+        return std::abs(query_id - ref_id) > no_of_local_maps_to_skip;
+    };
+    const auto &closure = std::transform_reduce(
+        descriptor_matches_.cbegin(), descriptor_matches_.cend(), ClosureCandidate(),
+        compare_closure_candidates, [&](const auto &descriptor_match) {
+            const auto ref_id = static_cast<int>(descriptor_match.first);
+            return is_far_enough(ref_id, query_id) ? ValidateClosure(ref_id, query_id)
+                                                   : ClosureCandidate();
+        });
+    return closure;
+}
+
+std::vector<ClosureCandidate> MapClosures::GetTopKClosures(const int query_id, const int k) {
+    auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
+        return a.number_of_inliers >= b.number_of_inliers;
+    };
+    auto is_far_enough = [](const int ref_id, const int query_id) {
+        return std::abs(query_id - ref_id) > no_of_local_maps_to_skip;
+    };
+
+    std::vector<ClosureCandidate> closures;
+    closures.reserve(query_id);
     std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
                   [&](const auto &descriptor_match) {
-                      if ((id - descriptor_match.first) > no_of_local_maps_to_skip) {
-                          candidate_closure_indices.emplace_back(descriptor_match.first);
+                      const auto ref_id = static_cast<int>(descriptor_match.first);
+                      if (is_far_enough(ref_id, query_id)) {
+                          ClosureCandidate closure =
+                              ValidateClosure(descriptor_match.first, query_id);
+                          if (closure.number_of_inliers > min_no_of_matches) {
+                              closures.emplace_back(closure);
+                          }
                       }
                   });
-    return candidate_closure_indices;
+    if (k == -1) return closures;
+
+    std::vector<ClosureCandidate> top_k_closures;
+    top_k_closures.reserve(std::min(k, static_cast<int>(closures.size())));
+    std::sort(closures.begin(), closures.end(), compare_closure_candidates);
+    std::copy_n(closures.cbegin(), std::min(k, static_cast<int>(closures.size())),
+                std::back_inserter(top_k_closures));
+    return top_k_closures;
 }
 
 ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {

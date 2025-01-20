@@ -78,6 +78,8 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                  return density_map_eigen;
              })
         .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_id"_a, "local_map"_a)
-        .def("_ValidateClosure", &MapClosures::ValidateClosure, "reference_id"_a, "query_id"_a);
+        .def("_GetBestClosure", &MapClosures::GetBestClosure, "query_id"_a)
+        .def("_GetTopKClosures", &MapClosures::GetTopKClosures, "query_id"_a, "k"_a)
+        .def("_GetClosures", &MapClosures::GetClosures, "query_id"_a);
 }
 }  // namespace map_closures

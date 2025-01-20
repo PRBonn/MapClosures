@@ -47,6 +47,7 @@ struct Config {
 };
 
 struct ClosureCandidate {
+    ClosureCandidate() = default;
     int source_id = -1;
     int target_id = -1;
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
@@ -59,12 +60,18 @@ public:
     explicit MapClosures(const Config &config);
     ~MapClosures() = default;
 
-    std::vector<int> MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
-    ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
-
+    void MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
+    ClosureCandidate GetBestClosure(const int query_id);
+    std::vector<ClosureCandidate> GetTopKClosures(const int query_id, const int k);
+    std::vector<ClosureCandidate> GetClosures(const int query_id) {
+        return GetTopKClosures(query_id, -1);
+    }
     const DensityMap &getDensityMapFromId(const int &map_id) const {
         return density_maps_.at(map_id);
     }
+
+private:
+    ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
 
 private:
     Config config_;
