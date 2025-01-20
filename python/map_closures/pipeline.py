@@ -73,10 +73,10 @@ class MapClosurePipeline:
 
         self.voxel_local_map = VoxelHashMap(
             voxel_size=self.closure_config.density_map_resolution,
-            max_distance=self.kiss_config.data.max_range * self.closure_config.local_map_factor,
+            max_distance=self.kiss_config.data.max_range,
             max_points_per_voxel=20,
         )
-        self._map_range = self.closure_config.local_map_factor * self.kiss_config.data.max_range
+        self._map_range = self.kiss_config.data.max_range
 
         self.closures = []
         self.local_maps = []
