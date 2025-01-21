@@ -1,7 +1,7 @@
 // MIT License
 //
-// Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-// Ignacio Vizzo, Cyrill Stachniss.
+// Copyright (c) 2025 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
+// Niklas Trekel, Meher Malladi, and Cyrill Stachniss.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,32 +23,10 @@
 
 #pragma once
 
-#include <tsl/robin_set.h>
-
 #include <Eigen/Core>
 #include <vector>
 
-using Voxel = Eigen::Vector3i;
-
-template <>
-struct std::hash<Voxel> {
-    std::size_t operator()(const Voxel &voxel) const {
-        const uint32_t *vec = reinterpret_cast<const uint32_t *>(voxel.data());
-        return (vec[0] * 73856093 ^ vec[1] * 19349669 ^ vec[2] * 83492791);
-    }
-};
-
-struct VoxelHashSet {
-    VoxelHashSet(const double voxel_size) : voxel_size_(voxel_size) {}
-
-    void AddPoints(const std::vector<Eigen::Vector3d> &points,
-                   const Eigen::Matrix3d &R,
-                   const Eigen::Vector3d &t);
-    void AddVoxels(const VoxelHashSet &other_set);
-    double ComputeOverlap(const VoxelHashSet &other_set);
-    int size() const { return set_.size(); }
-    void clear() { set_.clear(); }
-
-    double voxel_size_;
-    tsl::robin_set<Voxel> set_;
-};
+namespace map_closures {
+Eigen::Matrix4d AlignToLocalGround(const std::vector<Eigen::Vector3d> &pointcloud,
+                                   const double resolution);
+}  // namespace map_closures

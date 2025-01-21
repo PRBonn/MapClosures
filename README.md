@@ -3,12 +3,14 @@
     <a href="https://github.com/PRBonn/MapClosures/releases"><img src="https://img.shields.io/github/v/release/PRBonn/MapClosures?label=version" /></a>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/LICENSE"><img src=https://img.shields.io/badge/license-MIT-green" /></a>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/"><img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" /></a>
+    <a href="https://github.com/PRBonn/MapClosures/blob/main/"><img src="https://img.shields.io/badge/Windows-0078D6?st&logo=windows&logoColor=white" /></a>
+    <a href="https://github.com/PRBonn/MapClosures/blob/main/"><img src="https://img.shields.io/badge/mac%20os-000000?&logo=apple&logoColor=white" /></a>
     <br />
     <br />
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://github.com/PRBonn/MapClosures/blob/main/README.md#Install">Install</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>Paper</a>
+    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>ICRA24 Paper</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://github.com/PRBonn/MapClosures/issues>Contact Us</a>
   <br />
@@ -28,7 +30,6 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 1. Include the following snippet in your project's `CMakeLists.txt`:
 ```cmake
 set(USE_SYSTEM_EIGEN3 ON CACHE BOOL "use system eigen3")
-set(USE_SYSTEM_TBB ON CACHE BOOL "use system tbb")
 set(USE_SYSTEM_OPENCV ON CACHE BOOL "use system opencv")
 
 include(FetchContent)
@@ -53,18 +54,8 @@ target_link_libraries(my_target PUBLIC map_closures)
 ```
 
 ## Install the Python API and CLI
-1. First, install the necessary system dependencies
-    ```sh
-    sudo apt-get install --no-install-recommends -y build-essential cmake pybind11-dev libeigen3-dev libopencv-dev libtbb-dev
-    ```
-2. To get an odometry estimate in our Python CLI we rely on [KISS-ICP](https://github.com/PRBonn/kiss-icp), you can install it using
-    ```sh
-    pip install kiss-icp
-    ```
-3. Then run:
-    ```sh
-    make
-    ```
+`pip install map-closures`
+
 ### Usage
 <details>
 <summary>
@@ -109,11 +100,6 @@ As we decided to continue the development of **MapClosures** beyond the scope of
 git checkout ICRA2024
 ```
 Our development aims to push the performances of **MapClosures** above the original results of the paper.
-
-**Note**: You can download the ground-truth loop closure candidates for the datasets used in the paper from [here](https://www.ipb.uni-bonn.de/html/projects/gupta2024icra/MapClosuresGroundtruth.zip). When run with `-e` flag, our pipeline will search for groundtruth data under the folder at path `<data>/loop_closure/`. If not found, it will first generate the groundtruth closures which might consume some time. You can also generate the groundtruth closures following the approach mentioned in our paper using the following command:
-```sh
-gt_closure_pipeline <dataloader> <path-to-data>
-```
 
 
 ## Acknowledgement

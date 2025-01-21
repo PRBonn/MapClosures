@@ -41,8 +41,8 @@ using Tree = srrg_hbst::BinaryTree<Node>;
 
 namespace map_closures {
 struct Config {
-    float density_map_resolution = 0.5;
-    float density_threshold = 0.05;
+    float density_map_resolution = 0.5f;
+    float density_threshold = 0.05f;
     int hamming_distance_threshold = 50;
 };
 
@@ -50,7 +50,7 @@ struct ClosureCandidate {
     int source_id = -1;
     int target_id = -1;
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-    size_t number_of_inliers = 0;
+    std::size_t number_of_inliers = 0;
 };
 
 class MapClosures {
@@ -59,17 +59,27 @@ public:
     explicit MapClosures(const Config &config);
     ~MapClosures() = default;
 
-    ClosureCandidate MatchAndAdd(const int id, const std::vector<Eigen::Vector3d> &local_map);
-    ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
-
+    ClosureCandidate GetBestClosure(const int query_id,
+                                    const std::vector<Eigen::Vector3d> &local_map);
+    std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
+                                                  const std::vector<Eigen::Vector3d> &local_map,
+                                                  const int k);
+    std::vector<ClosureCandidate> GetClosures(const int query_id,
+                                              const std::vector<Eigen::Vector3d> &local_map) {
+        return GetTopKClosures(query_id, local_map, -1);
+    }
     const DensityMap &getDensityMapFromId(const int &map_id) const {
         return density_maps_.at(map_id);
     }
 
-private:
+protected:
+    void MatchAndAddToDatabase(const int id, const std::vector<Eigen::Vector3d> &local_map);
+    ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
+
     Config config_;
     Tree::MatchVectorMap descriptor_matches_;
     std::unordered_map<int, DensityMap> density_maps_;
+    std::unordered_map<int, Eigen::Matrix4d> ground_alignments_;
     std::unique_ptr<Tree> hbst_binary_tree_ = std::make_unique<Tree>();
     cv::Ptr<cv::DescriptorExtractor> orb_extractor_;
 };

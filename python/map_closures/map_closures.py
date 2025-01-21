@@ -20,6 +20,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import List
+
 import numpy as np
 from typing_extensions import TypeAlias
 
@@ -34,12 +36,22 @@ class MapClosures:
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
-    def match_and_add(self, map_idx: int, local_map: np.ndarray) -> ClosureCandidate:
+    def get_best_closure(self, query_idx: int, local_map: np.ndarray) -> ClosureCandidate:
         pcd = map_closures_pybind._Vector3dVector(local_map)
-        return self._pipeline._MatchAndAdd(map_idx, pcd)
+        closure = self._pipeline._GetBestClosure(query_idx, pcd)
+        return closure
+
+    def get_top_k_closures(
+        self, query_idx: int, local_map: np.ndarray, k: int
+    ) -> List[ClosureCandidate]:
+        pcd = map_closures_pybind._Vector3dVector(local_map)
+        top_k_closures = self._pipeline._GetTopKClosures(query_idx, pcd, k)
+        return top_k_closures
+
+    def get_closures(self, query_idx: int, local_map: np.ndarray) -> List[ClosureCandidate]:
+        pcd = map_closures_pybind._Vector3dVector(local_map)
+        closures = self._pipeline._GetClosures(query_idx, pcd)
+        return closures
 
     def get_density_map_from_id(self, map_id: int) -> np.ndarray:
         return self._pipeline._getDensityMapFromId(map_id)
-
-    def validate_closure(self, ref_idx: int, query_idx: int) -> ClosureCandidate:
-        return self._pipeline._ValidateClosure(ref_idx, query_idx)

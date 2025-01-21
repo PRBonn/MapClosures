@@ -24,14 +24,16 @@
 #pragma once
 
 #include <Eigen/Core>
-#include <map>
 #include <opencv2/core.hpp>
 #include <vector>
 
 namespace map_closures {
 
 struct DensityMap {
-    DensityMap(const int num_rows, const int num_cols, const double resolution);
+    DensityMap(const int num_rows,
+               const int num_cols,
+               const double resolution,
+               const Eigen::Vector2i &lower_bound);
     DensityMap(const DensityMap &other) = delete;
     DensityMap(DensityMap &&other) = default;
     DensityMap &operator=(DensityMap &&other) = default;
@@ -43,6 +45,7 @@ struct DensityMap {
 };
 
 DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pointcloud_map,
+                              const Eigen::Matrix4d &T_ground,
                               const float density_map_resolution,
                               const float density_threshold);
 }  // namespace map_closures
