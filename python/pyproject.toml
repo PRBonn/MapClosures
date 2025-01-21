@@ -11,7 +11,7 @@ authors = [{ name = "Saurabh Gupta" }, { name = "Tiziano Guadagnino" }]
 requires-python = ">=3.7"
 keywords = ["Loop Closures", "Localization", "SLAM", "LiDAR"]
 dependencies = [
-    "kiss-icp==1.0.0",
+    "kiss-icp>=1.2.0",
     "numpy<2.0.0",
     "pyquaternion",
     "pydantic>=2",
