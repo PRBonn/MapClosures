@@ -55,3 +55,10 @@ class MapClosures:
 
     def get_density_map_from_id(self, map_id: int) -> np.ndarray:
         return self._pipeline._getDensityMapFromId(map_id)
+
+
+def align_map_to_local_ground(pointcloud, resolution):
+    return map_closures_pybind._align_map_to_local_ground(
+        map_closures_pybind._Vector3dVector(pointcloud),
+        resolution,
+    )
