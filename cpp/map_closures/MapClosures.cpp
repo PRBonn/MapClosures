@@ -79,9 +79,10 @@ void MapClosures::MatchAndAddToDatabase(const int id,
                                      orb_descriptors);
     orb_keypoints.shrink_to_fit();
 
-    auto matcher = cv::BFMatcher(cv::NORM_HAMMING);
-    std::vector<std::vector<cv::DMatch>> bf_matches;
-    matcher.knnMatch(orb_descriptors, orb_descriptors, bf_matches, 2);
+    auto self_matcher = cv::BFMatcher(cv::NORM_HAMMING);
+    std::vector<std::vector<cv::DMatch>> self_matches;
+    self_matches.reserve(orb_keypoints.size());
+    self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
 
     std::for_each(orb_keypoints.begin(), orb_keypoints.end(), [&](cv::KeyPoint &keypoint) {
         keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
@@ -92,9 +93,9 @@ void MapClosures::MatchAndAddToDatabase(const int id,
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    std::for_each(bf_matches.cbegin(), bf_matches.cend(), [&](const auto &bf_match) {
-        if (bf_match[1].distance > self_similarity_threshold) {
-            auto index_descriptor = bf_match[0].queryIdx;
+    std::for_each(self_matches.cbegin(), self_matches.cend(), [&](const auto &self_match) {
+        if (self_match[1].distance > self_similarity_threshold) {
+            auto index_descriptor = self_match[0].queryIdx;
             auto keypoint = orb_keypoints[index_descriptor];
             hbst_matchable.emplace_back(
                 new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
