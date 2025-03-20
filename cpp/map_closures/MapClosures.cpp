@@ -74,8 +74,10 @@ void MapClosures::MatchAndAddToDatabase(const int id,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
     std::vector<cv::KeyPoint> orb_keypoints;
+    orb_keypoints.reserve(nfeatures);
     orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
                                      orb_descriptors);
+    orb_keypoints.shrink_to_fit();
 
     auto matcher = cv::BFMatcher(cv::NORM_HAMMING);
     std::vector<std::vector<cv::DMatch>> bf_matches;
