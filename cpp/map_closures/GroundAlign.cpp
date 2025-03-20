@@ -98,8 +98,7 @@ std::vector<Eigen::Vector3d> ComputeLowestPoints(const std::vector<Eigen::Vector
 
     std::vector<Eigen::Vector3d> low_lying_points(lowest_point_hash_map.size());
     std::transform(lowest_point_hash_map.cbegin(), lowest_point_hash_map.cend(),
-                   low_lying_points.begin(),
-                   [](const auto &entry) { low_lying_points.emplace_back(entry.second); });
+                   low_lying_points.begin(), [](const auto &entry) { return entry.second; });
     return low_lying_points;
 }
 }  // namespace
