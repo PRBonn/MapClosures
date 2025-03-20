@@ -69,7 +69,7 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 
 void MapClosures::MatchAndAddToDatabase(const int id,
                                         const std::vector<Eigen::Vector3d> &local_map) {
-    Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
+    const Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
@@ -79,7 +79,7 @@ void MapClosures::MatchAndAddToDatabase(const int id,
                                      orb_descriptors);
     orb_keypoints.shrink_to_fit();
 
-    auto self_matcher = cv::BFMatcher(cv::NORM_HAMMING);
+    const auto self_matcher = cv::BFMatcher(cv::NORM_HAMMING);
     std::vector<std::vector<cv::DMatch>> self_matches;
     self_matches.reserve(orb_keypoints.size());
     self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);

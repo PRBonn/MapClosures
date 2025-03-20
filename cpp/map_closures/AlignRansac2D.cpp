@@ -93,7 +93,7 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
 
         std::sample(keypoint_pairs.begin(), keypoint_pairs.end(), sample_keypoint_pairs.begin(), 2,
                     std::mt19937{std::random_device{}()});
-        auto T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
+        const auto T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
 
         int index = 0;
         std::for_each(keypoint_pairs.cbegin(), keypoint_pairs.cend(),

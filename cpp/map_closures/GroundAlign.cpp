@@ -86,7 +86,7 @@ std::vector<Eigen::Vector3d> ComputeLowestPoints(const std::vector<Eigen::Vector
     };
 
     std::for_each(pointcloud.cbegin(), pointcloud.cend(), [&](const Eigen::Vector3d &point) {
-        auto pixel = PointToPixel(point);
+        const auto pixel = PointToPixel(point);
         if (lowest_point_hash_map.find(pixel) == lowest_point_hash_map.cend()) {
             if (point.z() < 0) {
                 lowest_point_hash_map.emplace(pixel, point);
