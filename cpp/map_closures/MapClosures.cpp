@@ -172,8 +172,7 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
                   [&](const auto &descriptor_match) {
                       const auto ref_id = static_cast<int>(descriptor_match.first);
                       if (is_far_enough(ref_id, query_id)) {
-                          ClosureCandidate closure =
-                              ValidateClosure(descriptor_match.first, query_id);
+                          ClosureCandidate closure = ValidateClosure(ref_id, query_id);
                           if (closure.number_of_inliers > min_no_of_matches) {
                               closures.emplace_back(closure);
                           }
