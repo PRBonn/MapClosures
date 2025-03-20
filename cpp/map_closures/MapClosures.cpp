@@ -179,13 +179,12 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
                           }
                       }
                   });
-    if (k == -1) return closures;
+    closures.shrink_to_fit();
 
-    std::vector<ClosureCandidate> top_k_closures;
-    top_k_closures.reserve(std::min(k, static_cast<int>(closures.size())));
-    std::sort(closures.begin(), closures.end(), compare_closure_candidates);
-    std::copy_n(closures.cbegin(), std::min(k, static_cast<int>(closures.size())),
-                std::back_inserter(top_k_closures));
-    return top_k_closures;
+    if (k != -1) {
+        std::sort(closures.begin(), closures.end(), compare_closure_candidates);
+        closures.resize(std::min(k, static_cast<int>(closures.size())));
+    }
+    return closures;
 }
 }  // namespace map_closures
