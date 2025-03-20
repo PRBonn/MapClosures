@@ -108,7 +108,7 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
             optimal_inlier_indices = inlier_indices;
         }
     }
-
+    optimal_inlier_indices.shrink_to_fit();
     const std::size_t num_inliers = optimal_inlier_indices.size();
     std::vector<PointPair> inlier_keypoint_pairs(num_inliers);
     std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),
