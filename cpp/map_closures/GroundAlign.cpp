@@ -89,17 +89,17 @@ std::vector<Eigen::Vector3d> ComputeLowestPoints(const std::vector<Eigen::Vector
         auto pixel = PointToPixel(point);
         if (lowest_point_hash_map.find(pixel) == lowest_point_hash_map.cend()) {
             if (point.z() < 0) {
-                lowest_point_hash_map.insert({pixel, point});
+                lowest_point_hash_map.emplace(pixel, point);
             }
         } else if (point.z() < lowest_point_hash_map[pixel].z()) {
             lowest_point_hash_map[pixel] = point;
         }
     });
 
-    std::vector<Eigen::Vector3d> low_lying_points;
-    low_lying_points.reserve(lowest_point_hash_map.size());
-    std::for_each(lowest_point_hash_map.cbegin(), lowest_point_hash_map.cend(),
-                  [&](const auto &entry) { low_lying_points.emplace_back(entry.second); });
+    std::vector<Eigen::Vector3d> low_lying_points(lowest_point_hash_map.size());
+    std::transform(lowest_point_hash_map.cbegin(), lowest_point_hash_map.cend(),
+                   low_lying_points.begin(),
+                   [](const auto &entry) { low_lying_points.emplace_back(entry.second); });
     return low_lying_points;
 }
 }  // namespace
