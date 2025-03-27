@@ -54,8 +54,7 @@ set(CMAKE_BUILD_TYPE "Release" CACHE STRING "CMake build type")
 
 message(STATUS "Fetching OpenCV from Github")
 include(FetchContent)
-FetchContent_Declare(opencv GIT_REPOSITORY https://github.com/opencv/opencv.git GIT_TAG 4.x
-                     GIT_SHALLOW TRUE GIT_PROGRESS TRUE)
+FetchContent_Declare(opencv URL https://github.com/opencv/opencv/archive/refs/tags/4.11.0.tar.gz)
 FetchContent_MakeAvailable(opencv)
 # OpenCV_INCLUDE_DIRS is set by OpenCVConfig.cmake and is unavailable after simply building
 set(OpenCV_INCLUDE_DIRS "${opencv_SOURCE_DIR}/include")
