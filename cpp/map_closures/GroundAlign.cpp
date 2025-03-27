@@ -86,7 +86,7 @@ std::vector<Eigen::Vector3d> ComputeLowestPoints(const std::vector<Eigen::Vector
     };
 
     std::for_each(pointcloud.cbegin(), pointcloud.cend(), [&](const Eigen::Vector3d &point) {
-        const auto pixel = PointToPixel(point);
+        const auto &pixel = PointToPixel(point);
         if (lowest_point_hash_map.find(pixel) == lowest_point_hash_map.cend()) {
             if (point.z() < 0) {
                 lowest_point_hash_map.emplace(pixel, point);
@@ -107,11 +107,11 @@ namespace map_closures {
 Eigen::Matrix4d AlignToLocalGround(const std::vector<Eigen::Vector3d> &pointcloud,
                                    const double resolution) {
     Sophus::SE3d T = Sophus::SE3d(Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
-    auto low_lying_points = ComputeLowestPoints(pointcloud, resolution);
+    auto &low_lying_points = ComputeLowestPoints(pointcloud, resolution);
 
     for (int iters = 0; iters < max_iterations; iters++) {
         const auto &[H, b] = BuildLinearSystem(low_lying_points, resolution);
-        const Eigen::Vector3d dx = H.ldlt().solve(-b);
+        const Eigen::Vector3d &dx = H.ldlt().solve(-b);
         Eigen::Matrix<double, 6, 1> se3 = Eigen::Matrix<double, 6, 1>::Zero();
         se3.block<3, 1>(2, 0) = dx;
         Sophus::SE3d estimation(Sophus::SE3d::exp(se3));

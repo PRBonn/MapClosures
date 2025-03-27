@@ -69,7 +69,7 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 
 void MapClosures::MatchAndAddToDatabase(const int id,
                                         const std::vector<Eigen::Vector3d> &local_map) {
-    const Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
+    const Eigen::Matrix4d &T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
@@ -95,8 +95,8 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     hbst_matchable.reserve(orb_descriptors.rows);
     std::for_each(self_matches.cbegin(), self_matches.cend(), [&](const auto &self_match) {
         if (self_match[1].distance > self_similarity_threshold) {
-            auto index_descriptor = self_match[0].queryIdx;
-            auto keypoint = orb_keypoints[index_descriptor];
+            const auto index_descriptor = self_match[0].queryIdx;
+            const auto &keypoint = orb_keypoints[index_descriptor];
             hbst_matchable.emplace_back(
                 new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
         }
@@ -172,7 +172,7 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
                   [&](const auto &descriptor_match) {
                       const auto ref_id = static_cast<int>(descriptor_match.first);
                       if (is_far_enough(ref_id, query_id)) {
-                          ClosureCandidate closure = ValidateClosure(ref_id, query_id);
+                          const ClosureCandidate &closure = ValidateClosure(ref_id, query_id);
                           if (closure.number_of_inliers > min_no_of_matches) {
                               closures.emplace_back(closure);
                           }
