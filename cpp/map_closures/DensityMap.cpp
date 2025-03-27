@@ -65,7 +65,7 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     };
     std::vector<Eigen::Array2i> pixels(pcd.size());
     std::transform(pcd.cbegin(), pcd.cend(), pixels.begin(), [&](const Eigen::Vector3d &point) {
-        const auto pixel = Discretize2D(point);
+        const auto &pixel = Discretize2D(point);
         lower_bound_coordinates = lower_bound_coordinates.min(pixel);
         upper_bound_coordinates = upper_bound_coordinates.max(pixel);
         return pixel;

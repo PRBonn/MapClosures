@@ -55,7 +55,7 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
     Eigen::JacobiSVD<Eigen::Matrix2d> svd(covariance_matrix,
                                           Eigen::ComputeFullU | Eigen::ComputeFullV);
     Eigen::Isometry2d T = Eigen::Isometry2d::Identity();
-    const Eigen::Matrix2d &&R = svd.matrixV() * svd.matrixU().transpose();
+    const Eigen::Matrix2d &R = svd.matrixV() * svd.matrixU().transpose();
     T.linear() = R.determinant() > 0 ? R : -R;
     T.translation() = mean.query - R * mean.ref;
 
@@ -93,7 +93,7 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
 
         std::sample(keypoint_pairs.begin(), keypoint_pairs.end(), sample_keypoint_pairs.begin(), 2,
                     std::mt19937{std::random_device{}()});
-        auto T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
+        const auto &T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
 
         int index = 0;
         std::for_each(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
@@ -108,13 +108,13 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
             optimal_inlier_indices = inlier_indices;
         }
     }
-
+    optimal_inlier_indices.shrink_to_fit();
     const std::size_t num_inliers = optimal_inlier_indices.size();
     std::vector<PointPair> inlier_keypoint_pairs(num_inliers);
     std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),
                    inlier_keypoint_pairs.begin(),
                    [&](const auto index) { return keypoint_pairs[index]; });
-    Eigen::Isometry2d T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
+    const Eigen::Isometry2d &T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
     return {T, num_inliers};
 }
 }  // namespace map_closures

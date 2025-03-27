@@ -69,17 +69,20 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 
 void MapClosures::MatchAndAddToDatabase(const int id,
                                         const std::vector<Eigen::Vector3d> &local_map) {
-    Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
+    const Eigen::Matrix4d &T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
     std::vector<cv::KeyPoint> orb_keypoints;
+    orb_keypoints.reserve(nfeatures);
     orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
                                      orb_descriptors);
+    orb_keypoints.shrink_to_fit();
 
-    auto matcher = cv::BFMatcher(cv::NORM_HAMMING);
-    std::vector<std::vector<cv::DMatch>> bf_matches;
-    matcher.knnMatch(orb_descriptors, orb_descriptors, bf_matches, 2);
+    const auto self_matcher = cv::BFMatcher(cv::NORM_HAMMING);
+    std::vector<std::vector<cv::DMatch>> self_matches;
+    self_matches.reserve(orb_keypoints.size());
+    self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
 
     std::for_each(orb_keypoints.begin(), orb_keypoints.end(), [&](cv::KeyPoint &keypoint) {
         keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
@@ -90,10 +93,10 @@ void MapClosures::MatchAndAddToDatabase(const int id,
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    std::for_each(bf_matches.cbegin(), bf_matches.cend(), [&](const auto &bf_match) {
-        if (bf_match[1].distance > self_similarity_threshold) {
-            auto index_descriptor = bf_match[0].queryIdx;
-            auto keypoint = orb_keypoints[index_descriptor];
+    std::for_each(self_matches.cbegin(), self_matches.cend(), [&](const auto &self_match) {
+        if (self_match[1].distance > self_similarity_threshold) {
+            const auto index_descriptor = self_match[0].queryIdx;
+            const auto &keypoint = orb_keypoints[index_descriptor];
             hbst_matchable.emplace_back(
                 new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
         }
@@ -169,20 +172,18 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
                   [&](const auto &descriptor_match) {
                       const auto ref_id = static_cast<int>(descriptor_match.first);
                       if (is_far_enough(ref_id, query_id)) {
-                          ClosureCandidate closure =
-                              ValidateClosure(descriptor_match.first, query_id);
+                          const ClosureCandidate &closure = ValidateClosure(ref_id, query_id);
                           if (closure.number_of_inliers > min_no_of_matches) {
                               closures.emplace_back(closure);
                           }
                       }
                   });
-    if (k == -1) return closures;
+    closures.shrink_to_fit();
 
-    std::vector<ClosureCandidate> top_k_closures;
-    top_k_closures.reserve(std::min(k, static_cast<int>(closures.size())));
-    std::sort(closures.begin(), closures.end(), compare_closure_candidates);
-    std::copy_n(closures.cbegin(), std::min(k, static_cast<int>(closures.size())),
-                std::back_inserter(top_k_closures));
-    return top_k_closures;
+    if (k != -1) {
+        std::sort(closures.begin(), closures.end(), compare_closure_candidates);
+        closures.resize(std::min(k, static_cast<int>(closures.size())));
+    }
+    return closures;
 }
 }  // namespace map_closures
