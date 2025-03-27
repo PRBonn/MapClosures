@@ -107,7 +107,7 @@ namespace map_closures {
 Eigen::Matrix4d AlignToLocalGround(const std::vector<Eigen::Vector3d> &pointcloud,
                                    const double resolution) {
     Sophus::SE3d T = Sophus::SE3d(Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
-    auto &low_lying_points = ComputeLowestPoints(pointcloud, resolution);
+    auto low_lying_points = ComputeLowestPoints(pointcloud, resolution);
 
     for (int iters = 0; iters < max_iterations; iters++) {
         const auto &[H, b] = BuildLinearSystem(low_lying_points, resolution);
