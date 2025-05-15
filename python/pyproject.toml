@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "map_closures"
-version = "2.0.1"
+version = "2.0.2"
 description = "Effectively Detecting Loop Closures using Point Cloud Density Maps"
 readme = "README.md"
 authors = [{ name = "Saurabh Gupta" }, { name = "Tiziano Guadagnino" }]
