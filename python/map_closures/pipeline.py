@@ -83,25 +83,19 @@ class MapClosurePipeline:
         self.density_maps = []
         self.odom_poses = np.zeros((self._n_scans, 4, 4))
 
-        gt_closures_path = os.path.join(
-            self._dataset.sequence_dir, "loop_closure", "gt_closures.txt"
-        )
-        self.gt_closures = (
-            np.loadtxt(gt_closures_path, dtype=int)
-            if (self._eval and os.path.exists(gt_closures_path))
-            else None
-        )
-
         self.closure_distance_threshold = 6.0
-        self.results = (
-            EvaluationPipeline(
-                self.gt_closures,
-                self._dataset_name,
-                self.closure_distance_threshold,
+        self.results = StubEvaluation()
+        if self._eval:
+            gt_closures_path = (
+                os.path.join(self._dataset.sequence_dir, "loop_closure", "gt_closures.txt")
+                if hasattr(self._dataset, "sequence_dir")
+                else None
             )
-            if self._eval and self.gt_closures is not None
-            else StubEvaluation()
-        )
+            if gt_closures_path is not None and os.path.exists(gt_closures_path):
+                self.gt_closures = np.loadtxt(gt_closures_path, dtype=int)
+                self.results = EvaluationPipeline(
+                    self.gt_closures, self._dataset_name, self.closure_distance_threshold
+                )
 
         self.visualizer = Visualizer() if self._vis else StubVisualizer()
 
