@@ -122,20 +122,15 @@ class MapClosurePipeline:
             dynamic_ncols=True,
             desc="Processing for Loop Closures",
         ):
-            try:
-                frame, timestamps = self._dataset[scan_idx]
-            except ValueError:
-                frame = self._dataset[scan_idx]
-                timestamps = np.zeros(len(frame))
-
-            frame, _ = self.odometry.register_frame(frame, timestamps)
+            raw_frame, timestamps = self._dataset[scan_idx]
+            source, keypoints = self.odometry.register_frame(raw_frame, timestamps)
             self.odom_poses[scan_idx] = self.odometry.last_pose
             current_frame_pose = self.odometry.last_pose
 
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
-            self.voxel_local_map.add_points(transform_points(frame, frame_to_map_pose))
+            self.voxel_local_map.add_points(transform_points(source, frame_to_map_pose))
             self.visualizer.update_registration(
-                frame,
+                source,
                 self.odometry.local_map.point_cloud(),
                 current_frame_pose,
             )
