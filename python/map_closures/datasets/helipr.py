@@ -48,16 +48,20 @@ class HeLiPRDataset:
         if self.sequence_id == "Avia":
             self.format_string = "fffBBBL"
             self.intensity_channel = None
+            self.time_channel = 6
         elif self.sequence_id == "Aeva":
             self.format_string = "ffffflBf"
             self.format_string_no_intensity = "ffffflB"
             self.intensity_channel = 7
+            self.time_channel = 5
         elif self.sequence_id == "Ouster":
             self.format_string = "ffffIHHH"
             self.intensity_channel = 3
+            self.time_channel = 4
         elif self.sequence_id == "Velodyne":
             self.format_string = "ffffHf"
             self.intensity_channel = 3
+            self.time_channel = 5
         else:
             print("[ERROR] Unsupported LiDAR Type")
             sys.exit(1)
@@ -66,7 +70,10 @@ class HeLiPRDataset:
         return len(self.scan_files)
 
     def __getitem__(self, idx):
-        return self.read_point_cloud(idx)
+        data = self.get_data(idx)
+        points = self.read_point_cloud(data)
+        timestamps = self.read_timestamps(data)
+        return points, timestamps
 
     def get_data(self, idx: int):
         file_path = self.scan_files[idx]
@@ -89,16 +96,17 @@ class HeLiPRDataset:
         data = np.stack(list_lines)
         return data
 
-    def read_point_cloud(self, idx: int):
-        data = self.get_data(idx)
-        points = data[:, :3]
-        return points.astype(np.float64)
+    def read_timestamps(self, data: np.ndarray) -> np.ndarray:
+        time = data[:, self.time_channel]
+        return (time - time.min()) / (time.max() - time.min())
+
+    def read_point_cloud(self, data: np.ndarray) -> np.ndarray:
+        return data[:, :3]
 
     def load_poses(self, poses_file):
         from pyquaternion import Quaternion
 
         poses = np.loadtxt(poses_file, delimiter=" ")
-        n = poses.shape[0]
 
         xyz = poses[:, 1:4]
         rotations = np.array(
