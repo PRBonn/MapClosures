@@ -123,7 +123,6 @@ class MapClosurePipeline:
             desc="Processing for Loop Closures",
         ):
             raw_frame, timestamps = self._dataset[scan_idx]
-
             source, keypoints = self.odometry.register_frame(raw_frame, timestamps)
             self.odom_poses[scan_idx] = self.odometry.last_pose
             current_frame_pose = self.odometry.last_pose
