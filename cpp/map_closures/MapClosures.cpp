@@ -84,10 +84,6 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     self_matches.reserve(orb_keypoints.size());
     self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
 
-    std::for_each(orb_keypoints.begin(), orb_keypoints.end(), [&](cv::KeyPoint &keypoint) {
-        keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
-        keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
-    });
     density_maps_.emplace(id, std::move(density_map));
     ground_alignments_.emplace(id, T_ground);
 
@@ -96,7 +92,9 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     std::for_each(self_matches.cbegin(), self_matches.cend(), [&](const auto &self_match) {
         if (self_match[1].distance > self_similarity_threshold) {
             const auto index_descriptor = self_match[0].queryIdx;
-            const auto &keypoint = orb_keypoints[index_descriptor];
+            cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
+            keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+            keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
             hbst_matchable.emplace_back(
                 new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
         }
