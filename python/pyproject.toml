@@ -12,7 +12,7 @@ requires-python = ">=3.8"
 keywords = ["Loop Closures", "Localization", "SLAM", "LiDAR"]
 dependencies = [
     "kiss-icp>=1.2.3",
-    "numpy<2.0.0",
+    "numpy",
     "pyquaternion",
     "pydantic>=2",
     "pydantic-settings",
@@ -24,7 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 all = [
-    "open3d>0.13",
+    "open3d>=0.19.0",
     "PyYAML",
     "mcap-ros2-support",
     "rosbags",
