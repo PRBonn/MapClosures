@@ -80,15 +80,20 @@ class ClosuresVisualizer:
         self.localmap_data = localmap_data
         self.data = LoopClosureData()
 
-    def update_closures(self, alignment_pose, closure_edge):
+    def update_closures(self, alignment_pose, closure_edge, latest_odom_pose):
         self.data.closure_edges.append(closure_edge)
         self.data.alignment_pose.append(alignment_pose)
         self.data.size += 1
         self.data.current_id = self.data.size - 1
-        if self.states.global_view:
-            self._register_trajectory()
+        self.latest_odom_pose = latest_odom_pose
+        self._register_trajectory()
         if self.states.toggle_view:
             self._render_closure()
+
+    def update_current_frame(self, frame_pose):
+        self.latest_odom_pose = frame_pose
+        if len(self.data.closure_edges) > 0:
+            self._register_trajectory()
 
     def matplotlib_eventloop(self):
         plt.gcf().canvas.draw()
@@ -215,13 +220,25 @@ class ClosuresVisualizer:
             self.matplotlib_eventloop()
 
     def _register_trajectory(self):
-        closure_lines = self._ps.register_curve_network(
-            "loop closures",
-            np.array(self.localmap_data.local_map_poses)[:, :3, -1],
-            np.array(self.data.closure_edges),
-            color=TRAJECTORY_COLOR,
-        )
-        closure_lines.set_radius(0.1, relative=False)
+        latest_odom_pose_inv = np.linalg.inv(self.latest_odom_pose)
+        localmap_poses = np.array(self.localmap_data.local_map_poses)
+        local_map_poses_inv = latest_odom_pose_inv @ localmap_poses
+        if self.states.global_view:
+            closure_lines = self._ps.register_curve_network(
+                "loop closures",
+                localmap_poses[:, :3, -1],
+                np.array(self.data.closure_edges),
+                color=TRAJECTORY_COLOR,
+            )
+            closure_lines.set_radius(1.0, relative=False)
+        elif not self.states.toggle_view:
+            closure_lines = self._ps.register_curve_network(
+                "loop closures",
+                local_map_poses_inv[:, :3, -1],
+                np.array(self.data.closure_edges),
+                color=TRAJECTORY_COLOR,
+            )
+            closure_lines.set_radius(1.0, relative=False)
 
     def _unregister_trajectory(self):
         self._ps.remove_curve_network("loop closures")

@@ -41,7 +41,7 @@ CLOSURES_VIEW = "Switch to MapClosures View [M]"
 REGISTRATION_VIEW_2 = "Switch to Registration View [M]"
 QUIT = "Quit [Q]"
 
-BACKGROUND_COLOR = [1.0, 1.0, 1.0]
+BACKGROUND_COLOR = [0.0, 0.0, 0.0]
 I = np.eye(4)
 
 
@@ -78,7 +78,7 @@ class Visualizer(StubVisualizer):
             exit(1)
 
         self.localmap_data = LocalMapData()
-        self.registration = RegistrationVisualizer(self._ps, self._gui)
+        self.registration = RegistrationVisualizer(self._ps, self._gui, self.localmap_data)
         self.closures = ClosuresVisualizer(self._ps, self._gui, self.localmap_data)
         self.local_maps = LocalMapVisualizer(self._ps, self._gui, self.localmap_data)
         self.background_color = BACKGROUND_COLOR
@@ -88,6 +88,7 @@ class Visualizer(StubVisualizer):
 
     def update_registration(self, source, local_map, frame_pose):
         self.registration.update(source, local_map, frame_pose)
+        self.closures.update_current_frame(frame_pose)
 
     def update_data(self, local_map, density_map, local_map_pose):
         self.localmap_data.size += 1
@@ -95,8 +96,8 @@ class Visualizer(StubVisualizer):
         self.localmap_data.density_maps.append(density_map)
         self.localmap_data.local_map_poses.append(local_map_pose)
 
-    def update_closures(self, alignment_pose, closure_edge):
-        self.closures.update_closures(alignment_pose, closure_edge)
+    def update_closures(self, alignment_pose, closure_edge, latest_frame_pose):
+        self.closures.update_closures(alignment_pose, closure_edge, latest_frame_pose)
 
     def _initialize_visualizers(self):
         self._ps.set_program_name("MapClosures Visualizer")
@@ -254,7 +255,8 @@ class Visualizer(StubVisualizer):
             self.closures._register_trajectory()
 
     def _unregister_trajectory(self):
-        self.registration._unregister_trajectory()
+        if self.closures.states.toggle_view or self.local_maps.toggle_view:
+            self.registration._unregister_trajectory()
         if self.closures.data.size:
             self.closures._unregister_trajectory()
 

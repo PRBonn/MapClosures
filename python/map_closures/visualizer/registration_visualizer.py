@@ -33,10 +33,11 @@ NEXT_FRAME = "Step Frame [N]"
 SOURCE_COLOR = [0.8470, 0.1058, 0.3764]
 TARGET_COLOR = [0.0, 0.3019, 0.2509]
 TRAJECTORY_COLOR = [0.1176, 0.5333, 0.8980]
+KEYPOSES_COLOR = [1.0, 0.0, 0.0]
 
 # Size constants
 SOURCE_PTS_SIZE = 0.06
-TARGET_PTS_SIZE = 0.08
+TARGET_PTS_SIZE = 0.06
 I = np.eye(4)
 
 
@@ -53,7 +54,7 @@ class RegsitrationStateMachine:
 
 
 class RegistrationVisualizer:
-    def __init__(self, ps, gui):
+    def __init__(self, ps, gui, localmap_data):
         self._ps = ps
         self._gui = gui
 
@@ -61,6 +62,7 @@ class RegistrationVisualizer:
         self.states = RegsitrationStateMachine()
 
         # Create data
+        self.localmap_data = localmap_data
         self.trajectory = []
         self.last_frame_pose = I
 
@@ -135,16 +137,43 @@ class RegistrationVisualizer:
         map_cloud.set_enabled(self.states.view_local_map)
 
         self.trajectory.append(frame_pose)
-        if self.states.global_view:
-            self._register_trajectory()
+        self._register_trajectory()
 
     def _register_trajectory(self):
-        trajectory_cloud = self._ps.register_point_cloud(
-            "trajectory",
-            np.asarray(self.trajectory)[:, :3, -1],
-            color=TRAJECTORY_COLOR,
-        )
-        trajectory_cloud.set_radius(0.3, relative=False)
+        plot_traj = np.asarray(self.trajectory)
+        localmap_poses = np.array(self.localmap_data.local_map_poses)
+        if len(localmap_poses) > 0:
+            local_map_poses_inv = np.linalg.inv(plot_traj[-1]) @ localmap_poses
+
+        if self.states.global_view:
+            if len(localmap_poses) > 0:
+                keypose_cloud = self._ps.register_point_cloud(
+                    "keypose_cloud",
+                    localmap_poses[:, :3, -1],
+                    color=KEYPOSES_COLOR,
+                )
+                keypose_cloud.set_radius(2.0, relative=False)
+            trajectory_cloud = self._ps.register_point_cloud(
+                "trajectory",
+                plot_traj[:, :3, -1],
+                color=TRAJECTORY_COLOR,
+            )
+            trajectory_cloud.set_radius(1.0, relative=False)
+        else:
+            if len(localmap_poses) > 0:
+                keypose_cloud = self._ps.register_point_cloud(
+                    "keypose_cloud",
+                    local_map_poses_inv[:, :3, -1],
+                    color=KEYPOSES_COLOR,
+                )
+                keypose_cloud.set_radius(2.0, relative=False)
+            trajectory_cloud = self._ps.register_point_cloud(
+                "trajectory",
+                (np.linalg.inv(plot_traj[-1]) @ plot_traj)[:, :3, -1],
+                color=TRAJECTORY_COLOR,
+            )
+            trajectory_cloud.set_radius(1.0, relative=False)
 
     def _unregister_trajectory(self):
         self._ps.remove_point_cloud("trajectory")
+        self._ps.remove_point_cloud("keypose_cloud")

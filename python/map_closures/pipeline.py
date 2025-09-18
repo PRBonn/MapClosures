@@ -181,7 +181,9 @@ class MapClosurePipeline:
                             )
 
                         self.visualizer.update_closures(
-                            np.asarray(closure.pose), [closure.source_id, closure.target_id]
+                            np.asarray(closure.pose),
+                            [closure.source_id, closure.target_id],
+                            current_frame_pose,
                         )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
