@@ -109,9 +109,8 @@ Vector3dVector VoxelMap::Pointcloud() const {
     points.reserve(map_.size() * max_points_per_normal_computation);
     std::for_each(map_.cbegin(), map_.cend(), [&](const auto &map_element) {
         const VoxelBlock &voxel_block = map_element.second;
-        std::for_each(voxel_block.cbegin(), voxel_block.cend(), [&](const Eigen::Vector3d &p) {
-            points.emplace_back(p.template cast<double>());
-        });
+        std::for_each(voxel_block.cbegin(), voxel_block.cend(),
+                      [&](const Eigen::Vector3d &p) { points.emplace_back(p); });
     });
     points.shrink_to_fit();
     return points;
