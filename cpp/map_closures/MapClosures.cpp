@@ -28,6 +28,7 @@
 #include <cmath>
 #include <numeric>
 #include <opencv2/core.hpp>
+#include <opencv2/features2d.hpp>
 #include <utility>
 #include <vector>
 
@@ -39,8 +40,7 @@
 namespace {
 static constexpr int min_no_of_matches = 2;
 static constexpr int no_of_local_maps_to_skip = 3;
-static constexpr double ground_alignment_resolution = 5.0;
-static constexpr double self_similarity_threshold = 35.0;
+static constexpr int self_similarity_threshold = 35;
 
 // fixed parameters for OpenCV ORB Features
 static constexpr float scale_factor = 1.00f;
@@ -68,8 +68,10 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 }
 
 void MapClosures::MatchAndAddToDatabase(const int id,
-                                        const std::vector<Eigen::Vector3d> &local_map) {
-    const Eigen::Matrix4d &T_ground = AlignToLocalGround(local_map, ground_alignment_resolution);
+                                        const std::vector<Eigen::Vector3d> &local_map,
+                                        const std::vector<Eigen::Vector3d> &voxel_means,
+                                        const std::vector<Eigen::Vector3d> &voxel_normals) {
+    const Eigen::Matrix4d T_ground = AlignToLocalGround(voxel_means, voxel_normals);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
@@ -84,15 +86,12 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     self_matches.reserve(orb_keypoints.size());
     self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
 
-    density_maps_.emplace(id, std::move(density_map));
-    ground_alignments_.emplace(id, T_ground);
-
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
     std::for_each(self_matches.cbegin(), self_matches.cend(), [&](const auto &self_match) {
         if (self_match[1].distance > self_similarity_threshold) {
             const auto index_descriptor = self_match[0].queryIdx;
-            cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
+            auto &keypoint = orb_keypoints[index_descriptor];
             keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
             keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
             hbst_matchable.emplace_back(
@@ -104,6 +103,9 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
                                    srrg_hbst::SplittingStrategy::SplitEven);
+
+    density_maps_.emplace(id, std::move(density_map));
+    ground_alignments_.emplace(id, T_ground);
 }
 
 ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
@@ -115,10 +117,10 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
         std::vector<PointPair> keypoint_pairs(num_matches);
         std::transform(matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
                        [&](const Tree::Match &match) {
-                           auto query_point =
+                           const auto query_point =
                                Eigen::Vector2d(match.object_query.pt.y, match.object_query.pt.x);
-                           auto ref_point = Eigen::Vector2d(match.object_references[0].pt.y,
-                                                            match.object_references[0].pt.x);
+                           const auto ref_point = Eigen::Vector2d(match.object_references[0].pt.y,
+                                                                  match.object_references[0].pt.x);
                            return PointPair(ref_point, query_point);
                        });
 
@@ -134,54 +136,35 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
     return closure;
 }
 
-ClosureCandidate MapClosures::GetBestClosure(const int query_id,
-                                             const std::vector<Eigen::Vector3d> &local_map) {
-    MatchAndAddToDatabase(query_id, local_map);
-    auto compare_closure_candidates = [](ClosureCandidate a,
-                                         const ClosureCandidate &b) -> ClosureCandidate {
-        return a.number_of_inliers > b.number_of_inliers ? a : b;
-    };
-    auto is_far_enough = [](const int ref_id, const int query_id) {
-        return std::abs(query_id - ref_id) > no_of_local_maps_to_skip;
-    };
-    const auto &closure = std::transform_reduce(
-        descriptor_matches_.cbegin(), descriptor_matches_.cend(), ClosureCandidate(),
-        compare_closure_candidates, [&](const auto &descriptor_match) {
-            const auto ref_id = static_cast<int>(descriptor_match.first);
-            return is_far_enough(ref_id, query_id) ? ValidateClosure(ref_id, query_id)
-                                                   : ClosureCandidate();
-        });
-    return closure;
-}
-
 std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
-    const int query_id, const std::vector<Eigen::Vector3d> &local_map, const int k) {
-    MatchAndAddToDatabase(query_id, local_map);
+    const int query_id,
+    const std::vector<Eigen::Vector3d> &local_map,
+    const std::vector<Eigen::Vector3d> &voxel_means,
+    const std::vector<Eigen::Vector3d> &voxel_normals,
+    const int k) {
+    MatchAndAddToDatabase(query_id, local_map, voxel_means, voxel_normals);
     auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
         return a.number_of_inliers >= b.number_of_inliers;
     };
-    auto is_far_enough = [](const int ref_id, const int query_id) {
-        return std::abs(query_id - ref_id) > no_of_local_maps_to_skip;
-    };
 
     std::vector<ClosureCandidate> closures;
-    closures.reserve(query_id);
-    std::for_each(descriptor_matches_.cbegin(), descriptor_matches_.cend(),
-                  [&](const auto &descriptor_match) {
-                      const auto ref_id = static_cast<int>(descriptor_match.first);
-                      if (is_far_enough(ref_id, query_id)) {
-                          const ClosureCandidate &closure = ValidateClosure(ref_id, query_id);
-                          if (closure.number_of_inliers > min_no_of_matches) {
-                              closures.emplace_back(closure);
-                          }
-                      }
-                  });
-    closures.shrink_to_fit();
+    const int num_of_potential_closures = query_id - no_of_local_maps_to_skip;
+    if (num_of_potential_closures > 0) {
+        closures.reserve(num_of_potential_closures);
+        for (int ref_id = 0; ref_id < num_of_potential_closures; ++ref_id) {
+            const ClosureCandidate &closure = ValidateClosure(ref_id, query_id);
+            if (closure.number_of_inliers > 2) {
+                closures.emplace_back(closure);
+            }
+        }
+        closures.shrink_to_fit();
 
-    if (k != -1) {
-        std::sort(closures.begin(), closures.end(), compare_closure_candidates);
-        closures.resize(std::min(k, static_cast<int>(closures.size())));
+        if (k != -1) {
+            std::sort(closures.begin(), closures.end(), compare_closure_candidates);
+            closures.resize(std::min(k, static_cast<int>(closures.size())));
+        }
     }
     return closures;
 }
+
 }  // namespace map_closures

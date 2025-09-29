@@ -26,7 +26,9 @@
 #include <Eigen/Core>
 #include <vector>
 
+using Vector3dVector = std::vector<Eigen::Vector3d>;
+
 namespace map_closures {
-Eigen::Matrix4d AlignToLocalGround(const std::vector<Eigen::Vector3d> &pointcloud,
-                                   const double resolution);
+Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &voxel_means,
+                                   const Vector3dVector &voxel_normals);
 }  // namespace map_closures
