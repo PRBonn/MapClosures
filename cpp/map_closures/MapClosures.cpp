@@ -88,16 +88,17 @@ void MapClosures::MatchAndAddToDatabase(const int id,
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    std::for_each(self_matches.cbegin(), self_matches.cend(), [&](const auto &self_match) {
-        if (self_match[1].distance > self_similarity_threshold) {
-            const auto index_descriptor = self_match[0].queryIdx;
-            auto &keypoint = orb_keypoints[index_descriptor];
-            keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
-            keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
-            hbst_matchable.emplace_back(
-                new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
-        }
-    });
+    std::for_each(
+        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
+            if (self_match[1].distance > self_similarity_threshold) {
+                const auto index_descriptor = self_match[0].queryIdx;
+                cv::KeyPoint &keypoint = orb_keypoints[index_descriptor];
+                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+                hbst_matchable.emplace_back(
+                    new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
+            }
+        });
     hbst_matchable.shrink_to_fit();
 
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
@@ -117,10 +118,10 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
         std::vector<PointPair> keypoint_pairs(num_matches);
         std::transform(matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
                        [&](const Tree::Match &match) {
-                           const auto query_point =
+                           const Eigen::Vector2d query_point =
                                Eigen::Vector2d(match.object_query.pt.y, match.object_query.pt.x);
-                           const auto ref_point = Eigen::Vector2d(match.object_references[0].pt.y,
-                                                                  match.object_references[0].pt.x);
+                           const Eigen::Vector2d ref_point = Eigen::Vector2d(
+                               match.object_references[0].pt.y, match.object_references[0].pt.x);
                            return PointPair(ref_point, query_point);
                        });
 

@@ -34,6 +34,9 @@
 #include <vector>
 
 namespace {
+using Vector3dVector = std::vector<Eigen::Vector3d>;
+using LinearSystem = std::pair<Eigen::Matrix3d, Eigen::Vector3d>;
+
 struct PixelHash {
     size_t operator()(const Eigen::Vector2i &pixel) const {
         const uint32_t *vec = reinterpret_cast<const uint32_t *>(pixel.data());
@@ -43,7 +46,7 @@ struct PixelHash {
 
 void TransformPoints(const Sophus::SE3d &T, Vector3dVector &pointcloud) {
     std::transform(pointcloud.cbegin(), pointcloud.cend(), pointcloud.begin(),
-                   [&](const auto &point) { return T * point; });
+                   [&](const Eigen::Vector3d &point) { return T * point; });
 }
 
 struct VoxelMeanAndNormal {
@@ -78,10 +81,11 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
                    low_lying_voxels.begin(), [](const auto &entry) { return entry.second; });
 
     const Eigen::Matrix3d covariance_matrix =
-        std::transform_reduce(
-            low_lying_voxels.cbegin(), low_lying_voxels.cend(), Eigen::Matrix3d().setZero(),
-            std::plus<Eigen::Matrix3d>(),
-            [&](const auto &voxel) { return voxel.normal * voxel.normal.transpose(); }) /
+        std::transform_reduce(low_lying_voxels.cbegin(), low_lying_voxels.cend(),
+                              Eigen::Matrix3d().setZero(), std::plus<Eigen::Matrix3d>(),
+                              [&](const VoxelMeanAndNormal &voxel) {
+                                  return voxel.normal * voxel.normal.transpose();
+                              }) /
         static_cast<double>(low_lying_voxels.size() - 1);
 
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(covariance_matrix);
@@ -99,12 +103,13 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
     Eigen::Vector3d ground_centroid(0.0, 0.0, 0.0);
     Vector3dVector ground_samples;
     ground_samples.reserve(low_lying_voxels.size());
-    std::for_each(low_lying_voxels.cbegin(), low_lying_voxels.cend(), [&](const auto &voxel) {
-        if (std::abs(voxel.normal.dot(largest_eigenvector)) > 0.95) {
-            ground_centroid += voxel.mean;
-            ground_samples.emplace_back(voxel.mean);
-        }
-    });
+    std::for_each(low_lying_voxels.cbegin(), low_lying_voxels.cend(),
+                  [&](const VoxelMeanAndNormal &voxel) {
+                      if (std::abs(voxel.normal.dot(largest_eigenvector)) > 0.95) {
+                          ground_centroid += voxel.mean;
+                          ground_samples.emplace_back(voxel.mean);
+                      }
+                  });
     ground_samples.shrink_to_fit();
     ground_centroid /= static_cast<double>(ground_samples.size());
 
@@ -113,9 +118,8 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
     return std::make_pair(ground_samples, T_init);
 }
 
-using LinearSystem = std::pair<Eigen::Matrix3d, Eigen::Vector3d>;
 LinearSystem BuildLinearSystem(const Vector3dVector &points) {
-    auto compute_jacobian_and_residual = [](const auto &point) {
+    auto compute_jacobian_and_residual = [](const Eigen::Vector3d &point) {
         const double residual = point.z();
         Eigen::Matrix<double, 1, 3> J;
         J(0, 0) = 1.0;
@@ -133,7 +137,7 @@ LinearSystem BuildLinearSystem(const Vector3dVector &points) {
     const auto &[H, b] =
         std::transform_reduce(points.cbegin(), points.cend(),
                               LinearSystem(Eigen::Matrix3d::Zero(), Eigen::Vector3d::Zero()),
-                              sum_linear_systems, [&](const auto &point) {
+                              sum_linear_systems, [&](const Eigen::Vector3d &point) {
                                   const auto &[J, residual] = compute_jacobian_and_residual(point);
                                   const double w = std::exp(-1.0 * residual * residual);
                                   return LinearSystem(J.transpose() * w * J,          // JTJ

@@ -65,18 +65,18 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     };
     std::vector<Eigen::Array2i> pixels(pcd.size());
     std::transform(pcd.cbegin(), pcd.cend(), pixels.begin(), [&](const Eigen::Vector3d &point) {
-        const auto &pixel = Discretize2D(point);
+        const Eigen::Array2i &pixel = Discretize2D(point);
         lower_bound_coordinates = lower_bound_coordinates.min(pixel);
         upper_bound_coordinates = upper_bound_coordinates.max(pixel);
         return pixel;
     });
-    const auto rows_and_columns = upper_bound_coordinates - lower_bound_coordinates;
-    const auto n_rows = rows_and_columns.x() + 1;
-    const auto n_cols = rows_and_columns.y() + 1;
+    const Eigen::Array2i rows_and_columns = upper_bound_coordinates - lower_bound_coordinates;
+    const int n_rows = rows_and_columns.x() + 1;
+    const int n_cols = rows_and_columns.y() + 1;
 
     cv::Mat counting_grid(n_rows, n_cols, CV_64FC1, 0.0);
-    std::for_each(pixels.cbegin(), pixels.cend(), [&](const auto &pixel) {
-        const auto px = pixel - lower_bound_coordinates;
+    std::for_each(pixels.cbegin(), pixels.cend(), [&](const Eigen::Array2i &pixel) {
+        const Eigen::Array2i px = pixel - lower_bound_coordinates;
         counting_grid.at<double>(px.x(), px.y()) += 1;
         max_points = std::max(max_points, counting_grid.at<double>(px.x(), px.y()));
         min_points = std::min(min_points, counting_grid.at<double>(px.x(), px.y()));
@@ -84,7 +84,7 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
 
     DensityMap density_map(n_rows, n_cols, density_map_resolution, lower_bound_coordinates);
     counting_grid.forEach<double>([&](const double count, const int pos[]) {
-        auto density = (count - min_points) / (max_points - min_points);
+        double density = (count - min_points) / (max_points - min_points);
         density = density > density_threshold ? density : 0.0;
         density_map(pos[0], pos[1]) = static_cast<uint8_t>(255 * density);
     });

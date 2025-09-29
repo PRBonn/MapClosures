@@ -29,12 +29,9 @@
 #include <unordered_map>
 #include <vector>
 
-using Vector3dVector = std::vector<Eigen::Vector3d>;
-
-using Voxel = Eigen::Vector3i;
 template <>
-struct std::hash<Voxel> {
-    std::size_t operator()(const Voxel &voxel) const {
+struct std::hash<Eigen::Vector3i> {
+    std::size_t operator()(const Eigen::Vector3i &voxel) const {
         const uint32_t *vec = reinterpret_cast<const uint32_t *>(voxel.data());
         return (vec[0] * 73856093 ^ vec[1] * 19349669 ^ vec[2] * 83492791);
     }
@@ -44,13 +41,15 @@ struct std::hash<Voxel> {
 static constexpr unsigned int max_points_per_normal_computation = 20;
 
 namespace map_closures {
+using Voxel = Eigen::Vector3i;
+using Vector3dVector = std::vector<Eigen::Vector3d>;
 
 struct VoxelBlock {
     void emplace_back(const Eigen::Vector3d &point);
     inline constexpr size_t size() const { return num_points; }
     auto cbegin() const { return points.cbegin(); }
     auto cend() const { return std::next(points.cbegin(), num_points); }
-    auto front() const { return points.front(); }
+    Eigen::Vector3d front() const { return points.front(); }
     std::array<Eigen::Vector3d, max_points_per_normal_computation> points;
     size_t num_points = 0;
 };
