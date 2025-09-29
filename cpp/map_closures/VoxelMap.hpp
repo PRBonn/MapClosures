@@ -46,7 +46,7 @@ using Vector3dVector = std::vector<Eigen::Vector3d>;
 
 struct VoxelBlock {
     void emplace_back(const Eigen::Vector3d &point);
-    inline constexpr size_t size() const { return num_points; }
+    size_t size() const { return num_points; }
     auto cbegin() const { return points.cbegin(); }
     auto cend() const { return std::next(points.cbegin(), num_points); }
     Eigen::Vector3d front() const { return points.front(); }
@@ -57,9 +57,9 @@ struct VoxelBlock {
 struct VoxelMap {
     explicit VoxelMap(const double voxel_size, const double max_distance);
 
-    inline void Clear() { map_.clear(); }
-    inline bool Empty() const { return map_.empty(); }
-    inline size_t NumVoxels() const { return map_.size(); }
+    void Clear() { map_.clear(); }
+    bool Empty() const { return map_.empty(); }
+    size_t NumVoxels() const { return map_.size(); }
 
     void IntegrateFrame(const Vector3dVector &points, const Eigen::Matrix4d &pose);
     void AddPoints(const Vector3dVector &points);
