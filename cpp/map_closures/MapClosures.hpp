@@ -27,6 +27,7 @@
 #include <memory>
 #include <opencv2/core.hpp>
 #include <opencv2/features2d.hpp>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -60,20 +61,44 @@ public:
     ~MapClosures() = default;
 
     ClosureCandidate GetBestClosure(const int query_id,
-                                    const std::vector<Eigen::Vector3d> &local_map);
+                                    const std::vector<Eigen::Vector3d> &local_map,
+                                    const std::vector<Eigen::Vector3d> &voxel_means,
+                                    const std::vector<Eigen::Vector3d> &voxel_normals) {
+        const auto &closures = GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, 1);
+        if (closures.empty()) {
+            return ClosureCandidate();
+        }
+        return closures.front();
+    }
     std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
                                                   const std::vector<Eigen::Vector3d> &local_map,
+                                                  const std::vector<Eigen::Vector3d> &voxel_means,
+                                                  const std::vector<Eigen::Vector3d> &voxel_normals,
                                                   const int k);
     std::vector<ClosureCandidate> GetClosures(const int query_id,
-                                              const std::vector<Eigen::Vector3d> &local_map) {
-        return GetTopKClosures(query_id, local_map, -1);
+                                              const std::vector<Eigen::Vector3d> &local_map,
+                                              const std::vector<Eigen::Vector3d> &voxel_means,
+                                              const std::vector<Eigen::Vector3d> &voxel_normals) {
+        return GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, -1);
     }
-    const DensityMap &getDensityMapFromId(const int &map_id) const {
+
+    const DensityMap &getDensityMapFromId(const int map_id) const {
         return density_maps_.at(map_id);
     }
 
+    const Eigen::Matrix4d &getGroundAlignmentFromId(const int map_id) const {
+        return ground_alignments_.at(map_id);
+    }
+
+    void SaveHbstDatabase(const std::string &database_path) const {
+        hbst_binary_tree_->write(database_path);
+    }
+
 protected:
-    void MatchAndAddToDatabase(const int id, const std::vector<Eigen::Vector3d> &local_map);
+    void MatchAndAddToDatabase(const int id,
+                               const std::vector<Eigen::Vector3d> &local_map,
+                               const std::vector<Eigen::Vector3d> &voxel_means,
+                               const std::vector<Eigen::Vector3d> &voxel_normals);
     ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
 
     Config config_;

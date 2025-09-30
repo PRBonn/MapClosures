@@ -31,11 +31,10 @@
 #include <memory>
 #include <opencv2/core.hpp>
 #include <opencv2/core/eigen.hpp>
-#include <tuple>
 #include <vector>
 
-#include "map_closures/GroundAlign.hpp"
 #include "map_closures/MapClosures.hpp"
+#include "map_closures/VoxelMap.hpp"
 #include "stl_vector_eigen.h"
 
 PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
@@ -78,10 +77,23 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                  cv::cv2eigen(density_map.grid, density_map_eigen);
                  return density_map_eigen;
              })
-        .def("_GetBestClosure", &MapClosures::GetBestClosure, "query_id"_a, "local_map"_a)
-        .def("_GetTopKClosures", &MapClosures::GetTopKClosures, "query_id"_a, "local_map"_a, "k"_a)
-        .def("_GetClosures", &MapClosures::GetClosures, "query_id"_a, "local_map"_a);
+        .def("_getGroundAlignmentFromId", &MapClosures::getGroundAlignmentFromId, "map_id"_a)
+        .def("_GetBestClosure", &MapClosures::GetBestClosure, "query_id"_a, "local_map"_a,
+             "voxel_means"_a, "voxel_normals"_a)
+        .def("_GetTopKClosures", &MapClosures::GetTopKClosures, "query_id"_a, "local_map"_a,
+             "voxel_means"_a, "voxel_normals"_a, "k"_a)
+        .def("_GetClosures", &MapClosures::GetClosures, "query_id"_a, "local_map"_a,
+             "voxel_means"_a, "voxel_normals"_a)
+        .def("_SaveHbstDatabase", &MapClosures::SaveHbstDatabase, "database_path"_a);
 
-    m.def("_align_map_to_local_ground", &AlignToLocalGround, "pointcloud"_a, "resolution"_a);
+    py::class_<VoxelMap> internal_map(m, "_VoxelMap", "Don't use this");
+    internal_map.def(py::init<double, double>(), "voxel_size"_a, "max_distance"_a)
+        .def("_clear", &VoxelMap::Clear)
+        .def("_num_voxels", &VoxelMap::NumVoxels)
+        .def("_add_points", &VoxelMap::AddPoints, "points"_a)
+        .def("_integrate_frame", &VoxelMap::IntegrateFrame, "points"_a, "pose"_a)
+        .def("_point_cloud", &VoxelMap::Pointcloud)
+        .def("_per_voxel_mean_and_normal", &VoxelMap::PerVoxelMeanAndNormal)
+        .def("_remove_far_away_points", &VoxelMap::RemovePointsFarFromLocation, "origin"_a);
 }
 }  // namespace map_closures

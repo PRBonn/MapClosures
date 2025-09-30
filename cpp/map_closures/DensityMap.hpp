@@ -38,7 +38,7 @@ struct DensityMap {
     DensityMap(DensityMap &&other) = default;
     DensityMap &operator=(DensityMap &&other) = default;
     DensityMap &operator=(const DensityMap &other) = delete;
-    inline auto &operator()(const int x, const int y) { return grid.at<uint8_t>(x, y); }
+    uint8_t &operator()(const int x, const int y) { return grid.at<uint8_t>(x, y); }
     Eigen::Vector2i lower_bound;
     double resolution;
     cv::Mat grid;

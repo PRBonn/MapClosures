@@ -22,49 +22,12 @@
 # SOFTWARE.
 import os
 from abc import ABC
-from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple
+from typing import List, Set, Tuple
 
 import numpy as np
-from numpy.linalg import inv, norm
 from rich import box
 from rich.console import Console
 from rich.table import Table
-
-
-@dataclass
-class LocalMap:
-    pointcloud: np.ndarray
-    density_map: np.ndarray
-    scan_indices: np.ndarray
-    scan_poses: np.ndarray
-
-
-def compute_closure_indices(
-    ref_indices: np.ndarray,
-    query_indices: np.ndarray,
-    ref_scan_poses: np.ndarray,
-    query_scan_poses: np.ndarray,
-    relative_tf: np.ndarray,
-    distance_threshold: float,
-):
-    T_query_world = inv(query_scan_poses[0])
-    T_ref_world = inv(ref_scan_poses[0])
-
-    # bring all poses to a common frame at the query map
-    query_locs = (T_query_world @ query_scan_poses)[:, :3, -1].squeeze()
-    ref_locs = (relative_tf @ T_ref_world @ ref_scan_poses)[:, :3, -1].squeeze()
-
-    closure_indices = []
-    query_id_start = query_indices[0]
-    ref_id_start = ref_indices[0]
-    qq, rr = np.meshgrid(query_indices, ref_indices)
-    distances = norm(query_locs[qq - query_id_start] - ref_locs[rr - ref_id_start], axis=2)
-    ids = np.where(distances < distance_threshold)
-    for r_id, q_id in zip(ids[0] + ref_id_start, ids[1] + query_id_start):
-        closure_indices.append((r_id, q_id))
-    closure_indices = set(map(lambda x: tuple(sorted(x)), closure_indices))
-    return closure_indices
 
 
 class EvaluationMetrics:
@@ -99,7 +62,7 @@ class StubEvaluation(ABC):
     def append(self, *kwargs):
         pass
 
-    def compute_closures_and_metrics(self):
+    def compute_metrics(self):
         pass
 
     def log_to_file(self, *kwargs):
@@ -111,16 +74,13 @@ class EvaluationPipeline(StubEvaluation):
         self,
         gt_closures: np.ndarray,
         dataset_name: str,
-        closure_distance_threshold: float,
     ):
         self._dataset_name = dataset_name
-        self._closure_distance_threshold = closure_distance_threshold
 
-        self.closure_indices_list: List[Set[Tuple]] = []
-        self.inliers_count_list: List = []
+        self.closure_list: List[Tuple[int]] = []
+        self.inliers_count_list: List[int] = []
 
-        self.predicted_closures: Dict[int, Set[Tuple[int]]] = {}
-        self.metrics: Dict[int, EvaluationMetrics] = {}
+        self.metrics = []
 
         gt_closures = gt_closures if gt_closures.shape[1] == 2 else gt_closures.T
         self.gt_closures: Set[Tuple[int]] = set(map(lambda x: tuple(sorted(x)), gt_closures))
@@ -128,42 +88,22 @@ class EvaluationPipeline(StubEvaluation):
     def print(self):
         self._log_to_console()
 
-    def append(
-        self,
-        ref_local_map: LocalMap,
-        query_local_map: LocalMap,
-        relative_pose: np.ndarray,
-        distance_threshold: float,
-        inliers_count: int,
-    ):
-        closure_indices = compute_closure_indices(
-            ref_local_map.scan_indices,
-            query_local_map.scan_indices,
-            ref_local_map.scan_poses,
-            query_local_map.scan_poses,
-            relative_pose,
-            distance_threshold,
-        )
-        self.closure_indices_list.append(closure_indices)
+    def append(self, source_id: int, target_id: int, inliers_count: int):
+        self.closure_list.append((source_id, target_id))
         self.inliers_count_list.append(inliers_count)
 
-    def compute_closures_and_metrics(
-        self,
-    ):
+    def compute_metrics(self):
         print("[INFO] Computing Loop Closure Evaluation Metrics")
-        for inliers_threshold in range(5, 15):
+        for inliers_threshold in range(3, np.max(self.inliers_count_list)):
             closures = set()
-            for closure_indices, inliers_count in zip(
-                self.closure_indices_list, self.inliers_count_list
-            ):
+            for closure_indices, inliers_count in zip(self.closure_list, self.inliers_count_list):
                 if inliers_count >= inliers_threshold:
-                    closures = closures.union(closure_indices)
+                    closures.add(closure_indices)
 
             tp = len(self.gt_closures.intersection(closures))
             fp = len(closures) - tp
             fn = len(self.gt_closures) - tp
-            self.metrics[inliers_threshold] = EvaluationMetrics(tp, fp, fn)
-            self.predicted_closures[inliers_threshold] = closures
+            self.metrics.append(EvaluationMetrics(tp, fp, fn))
 
     def _rich_table_pr(self, table_format: box.Box = box.HORIZONTALS) -> Table:
         table = Table(box=table_format)
@@ -175,15 +115,9 @@ class EvaluationPipeline(StubEvaluation):
         table.add_column("Precision", justify="left", style="green")
         table.add_column("Recall", justify="left", style="green")
         table.add_column("F1 score", justify="left", style="green")
-        for [inliers, metric] in self.metrics.items():
+        for i, metric in enumerate(self.metrics):
             table.add_row(
-                f"{inliers}",
-                f"{metric.tp}",
-                f"{metric.fp}",
-                f"{metric.fn}",
-                f"{metric.precision:.4f}",
-                f"{metric.recall:.4f}",
-                f"{metric.F1:.4f}",
+                f"{i + 3} {metric.tp} {metric.fp} {metric.fn} {metric.precision:.4f} {metric.recall:.4f} {metric.F1:.4f}"
             )
         return table
 
@@ -196,4 +130,6 @@ class EvaluationPipeline(StubEvaluation):
             console = Console(file=logfile, width=100, force_jupyter=False)
             table = self._rich_table_pr(table_format=box.ASCII_DOUBLE_HEAD)
             console.print(table)
-        np.save(os.path.join(results_dir, "scan_level_closures.npy"), self.predicted_closures)
+        np.savetxt(
+            os.path.join(results_dir, "closure_indices.txt"), np.concatenate(self.closure_list)
+        )

@@ -38,7 +38,7 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const std::vector<map_closures::PointPair> &keypoint_pairs) {
     map_closures::PointPair mean =
         std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(), map_closures::PointPair(),
-                    [](auto lhs, const auto &rhs) {
+                    [](map_closures::PointPair lhs, const map_closures::PointPair &rhs) {
                         lhs.ref += rhs.ref;
                         lhs.query += rhs.query;
                         return lhs;
@@ -47,7 +47,7 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
     mean.ref /= static_cast<double>(keypoint_pairs.size());
     Eigen::Matrix2d covariance_matrix = std::transform_reduce(
         keypoint_pairs.cbegin(), keypoint_pairs.cend(), Eigen::Matrix2d().setZero(),
-        std::plus<Eigen::Matrix2d>(), [&](const auto &keypoint_pair) {
+        std::plus<Eigen::Matrix2d>(), [&](const map_closures::PointPair &keypoint_pair) {
             return (keypoint_pair.ref - mean.ref) *
                    ((keypoint_pair.query - mean.query).transpose());
         });
@@ -93,11 +93,11 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
 
         std::sample(keypoint_pairs.begin(), keypoint_pairs.end(), sample_keypoint_pairs.begin(), 2,
                     std::mt19937{std::random_device{}()});
-        const auto &T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
+        const Eigen::Isometry2d &T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
 
         int index = 0;
         std::for_each(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
-                      [&](const auto &keypoint_pair) {
+                      [&](const PointPair &keypoint_pair) {
                           if ((T * keypoint_pair.ref - keypoint_pair.query).norm() <
                               inliers_distance_threshold)
                               inlier_indices.emplace_back(index);
