@@ -3,8 +3,8 @@ requires = ["scikit_build_core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "map_closures"
-version = "2.0.2"
+name = "perceptual-map-closures"
+version = "2.0.3"
 description = "Effectively Detecting Loop Closures using Point Cloud Density Maps"
 readme = "README.md"
 authors = [{ name = "Saurabh Gupta" }, { name = "Tiziano Guadagnino" }]
@@ -39,7 +39,7 @@ map_closure_pipeline = "map_closures.tools.cmd:run"
 gt_closure_pipeline = "map_closures.tools.gt_closures:run"
 
 [project.urls]
-Homepage = "https://github.com/PRBonn/MapClosures"
+Homepage = "https://github.com/perceptual-ai/MapClosures"
 
 [tool.scikit-build]
 build-dir = "build/{wheel_tag}"
