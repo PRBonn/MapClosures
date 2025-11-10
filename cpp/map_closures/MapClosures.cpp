@@ -110,7 +110,12 @@ void MapClosures::MatchAndAddToDatabase(const int id,
 }
 
 ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
-    const Tree::MatchVector &matches = descriptor_matches_.at(reference_id);
+    auto it = descriptor_matches_.find(reference_id);
+    if (it == descriptor_matches_.end()) {
+        return ClosureCandidate();
+    }
+    
+    const Tree::MatchVector &matches = it->second;
     const size_t num_matches = matches.size();
 
     ClosureCandidate closure;
@@ -167,5 +172,4 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
     }
     return closures;
 }
-
 }  // namespace map_closures
