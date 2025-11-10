@@ -172,4 +172,5 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
     }
     return closures;
 }
+
 }  // namespace map_closures
