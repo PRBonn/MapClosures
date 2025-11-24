@@ -110,7 +110,7 @@ void MapClosures::MatchAndAddToDatabase(const int id,
 }
 
 ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
-    auto it = descriptor_matches_.find(reference_id);
+    const auto it = descriptor_matches_.find(reference_id);
     if (it == descriptor_matches_.end()) {
         return ClosureCandidate();
     }
