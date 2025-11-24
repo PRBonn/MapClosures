@@ -114,7 +114,7 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
     if (it == descriptor_matches_.end()) {
         return ClosureCandidate();
     }
-    
+
     const Tree::MatchVector &matches = it->second;
     const size_t num_matches = matches.size();
 
