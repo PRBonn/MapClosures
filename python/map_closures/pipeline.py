@@ -127,10 +127,7 @@ class MapClosurePipeline:
                 scan_idx == self._n_scans - 1
             ):
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
-                points, normals = self.voxel_local_map.per_voxel_mean_and_normal()
-                closures = self.map_closures.get_closures(
-                    map_idx, local_map_pointcloud, points, normals
-                )
+                closures = self.map_closures.get_closures(map_idx, local_map_pointcloud)
 
                 density_map = self.map_closures.get_density_map_from_id(map_idx)
                 self.data.append_localmap(

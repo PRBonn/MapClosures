@@ -61,10 +61,8 @@ public:
     ~MapClosures() = default;
 
     ClosureCandidate GetBestClosure(const int query_id,
-                                    const std::vector<Eigen::Vector3d> &local_map,
-                                    const std::vector<Eigen::Vector3d> &voxel_means,
-                                    const std::vector<Eigen::Vector3d> &voxel_normals) {
-        const auto &closures = GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, 1);
+                                    const std::vector<Eigen::Vector3d> &local_map) {
+        const auto &closures = GetTopKClosures(query_id, local_map, 1);
         if (closures.empty()) {
             return ClosureCandidate();
         }
@@ -72,14 +70,10 @@ public:
     }
     std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
                                                   const std::vector<Eigen::Vector3d> &local_map,
-                                                  const std::vector<Eigen::Vector3d> &voxel_means,
-                                                  const std::vector<Eigen::Vector3d> &voxel_normals,
                                                   const int k);
     std::vector<ClosureCandidate> GetClosures(const int query_id,
-                                              const std::vector<Eigen::Vector3d> &local_map,
-                                              const std::vector<Eigen::Vector3d> &voxel_means,
-                                              const std::vector<Eigen::Vector3d> &voxel_normals) {
-        return GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, -1);
+                                              const std::vector<Eigen::Vector3d> &local_map) {
+        return GetTopKClosures(query_id, local_map, -1);
     }
 
     const DensityMap &getDensityMapFromId(const int map_id) const {
@@ -95,10 +89,7 @@ public:
     }
 
 protected:
-    void MatchAndAddToDatabase(const int id,
-                               const std::vector<Eigen::Vector3d> &local_map,
-                               const std::vector<Eigen::Vector3d> &voxel_means,
-                               const std::vector<Eigen::Vector3d> &voxel_normals);
+    void MatchAndAddToDatabase(const int id, const std::vector<Eigen::Vector3d> &local_map);
     ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
 
     Config config_;
