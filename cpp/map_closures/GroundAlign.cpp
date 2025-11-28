@@ -33,6 +33,8 @@
 #include <utility>
 #include <vector>
 
+#include "VoxelMap.hpp"
+
 namespace {
 using Vector3dVector = std::vector<Eigen::Vector3d>;
 using LinearSystem = std::pair<Eigen::Matrix3d, Eigen::Vector3d>;
@@ -151,8 +153,11 @@ static constexpr int max_iterations = 10;
 }  // namespace
 
 namespace map_closures {
-Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &voxel_means,
-                                   const Vector3dVector &voxel_normals) {
+Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &pointcloud, const double resolution) {
+    VoxelMap voxel_map(resolution, 100.0);
+    voxel_map.AddPoints(pointcloud);
+    const auto &[voxel_means, voxel_normals] = voxel_map.PerVoxelMeanAndNormal();
+
     auto [ground_samples, T] = SampleGroundPoints(voxel_means, voxel_normals);
     TransformPoints(T, ground_samples);
     for (int iters = 0; iters < max_iterations; iters++) {
