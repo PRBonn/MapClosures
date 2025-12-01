@@ -37,51 +37,18 @@ class MapClosures:
         self._config = config
         self._pipeline = map_closures_pybind._MapClosures(self._config.model_dump())
 
-    def get_best_closure(
-        self,
-        query_idx: int,
-        local_map: np.ndarray,
-        voxel_means: np.ndarray,
-        voxel_normals: np.ndarray,
-    ) -> ClosureCandidate:
-        closure = self._pipeline._GetBestClosure(
-            query_idx,
-            Vector3dVector(local_map),
-            Vector3dVector(voxel_means),
-            Vector3dVector(voxel_normals),
-        )
+    def get_best_closure(self, query_idx: int, local_map: np.ndarray) -> ClosureCandidate:
+        closure = self._pipeline._GetBestClosure(query_idx, Vector3dVector(local_map))
         return closure
 
     def get_top_k_closures(
-        self,
-        query_idx: int,
-        local_map: np.ndarray,
-        voxel_means: np.ndarray,
-        voxel_normals: np.ndarray,
-        k: int,
+        self, query_idx: int, local_map: np.ndarray, k: int
     ) -> List[ClosureCandidate]:
-        top_k_closures = self._pipeline._GetTopKClosures(
-            query_idx,
-            Vector3dVector(local_map),
-            Vector3dVector(voxel_means),
-            Vector3dVector(voxel_normals),
-            k,
-        )
+        top_k_closures = self._pipeline._GetTopKClosures(query_idx, Vector3dVector(local_map), k)
         return top_k_closures
 
-    def get_closures(
-        self,
-        query_idx: int,
-        local_map: np.ndarray,
-        voxel_means: np.ndarray,
-        voxel_normals: np.ndarray,
-    ) -> List[ClosureCandidate]:
-        closures = self._pipeline._GetClosures(
-            query_idx,
-            Vector3dVector(local_map),
-            Vector3dVector(voxel_means),
-            Vector3dVector(voxel_normals),
-        )
+    def get_closures(self, query_idx: int, local_map: np.ndarray) -> List[ClosureCandidate]:
+        closures = self._pipeline._GetClosures(query_idx, Vector3dVector(local_map))
         return closures
 
     def get_density_map_from_id(self, map_id: int) -> np.ndarray:

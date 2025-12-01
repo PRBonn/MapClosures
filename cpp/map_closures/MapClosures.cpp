@@ -68,10 +68,8 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 }
 
 void MapClosures::MatchAndAddToDatabase(const int id,
-                                        const std::vector<Eigen::Vector3d> &local_map,
-                                        const std::vector<Eigen::Vector3d> &voxel_means,
-                                        const std::vector<Eigen::Vector3d> &voxel_normals) {
-    const Eigen::Matrix4d T_ground = AlignToLocalGround(voxel_means, voxel_normals);
+                                        const std::vector<Eigen::Vector3d> &local_map) {
+    const Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, config_.density_map_resolution);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
@@ -143,12 +141,8 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
 }
 
 std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
-    const int query_id,
-    const std::vector<Eigen::Vector3d> &local_map,
-    const std::vector<Eigen::Vector3d> &voxel_means,
-    const std::vector<Eigen::Vector3d> &voxel_normals,
-    const int k) {
-    MatchAndAddToDatabase(query_id, local_map, voxel_means, voxel_normals);
+    const int query_id, const std::vector<Eigen::Vector3d> &local_map, const int k) {
+    MatchAndAddToDatabase(query_id, local_map);
     auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
         return a.number_of_inliers >= b.number_of_inliers;
     };

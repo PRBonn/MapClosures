@@ -78,12 +78,9 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                  return density_map_eigen;
              })
         .def("_getGroundAlignmentFromId", &MapClosures::getGroundAlignmentFromId, "map_id"_a)
-        .def("_GetBestClosure", &MapClosures::GetBestClosure, "query_id"_a, "local_map"_a,
-             "voxel_means"_a, "voxel_normals"_a)
-        .def("_GetTopKClosures", &MapClosures::GetTopKClosures, "query_id"_a, "local_map"_a,
-             "voxel_means"_a, "voxel_normals"_a, "k"_a)
-        .def("_GetClosures", &MapClosures::GetClosures, "query_id"_a, "local_map"_a,
-             "voxel_means"_a, "voxel_normals"_a)
+        .def("_GetBestClosure", &MapClosures::GetBestClosure, "query_id"_a, "local_map"_a)
+        .def("_GetTopKClosures", &MapClosures::GetTopKClosures, "query_id"_a, "local_map"_a, "k"_a)
+        .def("_GetClosures", &MapClosures::GetClosures, "query_id"_a, "local_map"_a)
         .def("_SaveHbstDatabase", &MapClosures::SaveHbstDatabase, "database_path"_a);
 
     py::class_<VoxelMap> internal_map(m, "_VoxelMap", "Don't use this");
