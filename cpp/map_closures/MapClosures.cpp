@@ -107,6 +107,41 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     ground_alignments_.emplace(id, T_ground);
 }
 
+void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map) {
+    const Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, config_.density_map_resolution);
+    DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
+                                                config_.density_threshold);
+    cv::Mat orb_descriptors;
+    std::vector<cv::KeyPoint> orb_keypoints;
+    orb_keypoints.reserve(nfeatures);
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+                                     orb_descriptors);
+    orb_keypoints.shrink_to_fit();
+
+    const auto self_matcher = cv::BFMatcher(cv::NORM_HAMMING);
+    std::vector<std::vector<cv::DMatch>> self_matches;
+    self_matches.reserve(orb_keypoints.size());
+    self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+
+    std::vector<Matchable *> hbst_matchable;
+    hbst_matchable.reserve(orb_descriptors.rows);
+    std::for_each(
+        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
+            if (self_match[1].distance > self_similarity_threshold) {
+                const auto index_descriptor = self_match[0].queryIdx;
+                cv::KeyPoint &keypoint = orb_keypoints[index_descriptor];
+                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+                hbst_matchable.emplace_back(
+                    new Matchable(keypoint, orb_descriptors.row(index_descriptor)));
+            }
+        });
+    hbst_matchable.shrink_to_fit();
+
+    hbst_binary_tree_->match(hbst_matchable, descriptor_matches_,
+                             config_.hamming_distance_threshold);
+}
+
 ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int query_id) const {
     const auto it = descriptor_matches_.find(reference_id);
     if (it == descriptor_matches_.end()) {
