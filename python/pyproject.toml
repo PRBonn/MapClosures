@@ -36,7 +36,6 @@ visualizer = ["polyscope", "matplotlib>3.9.2"]
 
 [project.scripts]
 map_closure_pipeline = "map_closures.tools.cmd:run"
-gt_closure_pipeline = "map_closures.tools.gt_closures:run"
 
 [project.urls]
 Homepage = "https://github.com/PRBonn/MapClosures"
