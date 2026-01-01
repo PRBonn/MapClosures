@@ -19,7 +19,7 @@ jobs:
       - name: Move sdist to dist
         run: mkdir -p dist && mv ${{github.workspace}}/python/dist/*.tar.gz dist/
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           path: dist/*.tar.gz
 
@@ -47,7 +47,7 @@ jobs:
         with:
           package-dir: ${{github.workspace}}/python/
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: artifact-${{ matrix.os }}
           path: ./wheelhouse/*.whl
