@@ -179,7 +179,7 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
     const int query_id, const std::vector<Eigen::Vector3d> &local_map, const int k) {
     MatchAndAddToDatabase(query_id, local_map);
     auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
-        return a.number_of_inliers >= b.number_of_inliers;
+        return a.number_of_inliers > b.number_of_inliers;
     };
 
     std::vector<ClosureCandidate> closures;
