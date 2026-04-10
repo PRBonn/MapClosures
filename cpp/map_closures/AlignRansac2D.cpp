@@ -65,7 +65,7 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
 static constexpr double inliers_distance_threshold = 3.0;
 
 // RANSAC Parameters
-static constexpr double inliers_ratio = 0.3;
+static constexpr double inliers_ratio = 0.1;
 static constexpr double probability_success = 0.999;
 static constexpr int min_points = 2;
 static int __RANSAC_TRIALS__ = std::ceil(std::log(1.0 - probability_success) /
