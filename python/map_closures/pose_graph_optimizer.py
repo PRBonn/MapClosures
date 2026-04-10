@@ -1,7 +1,7 @@
 # MIT License
 #
-# Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-# Ignacio Vizzo, Cyrill Stachniss.
+# Copyright (c) 2025 Tiziano Guadagnino, Benedikt Mersch, Saurabh Gupta, Cyrill
+# Stachniss.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,28 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-pybind11_add_module(map_closures_pybind MODULE map_closures_pybind.cpp)
-target_link_libraries(map_closures_pybind PUBLIC map_closures pgo)
-install(TARGETS map_closures_pybind DESTINATION .)
+import numpy as np
+
+from map_closures.pybind import map_closures_pybind
+
+
+class PoseGraphOptimizer:
+    def __init__(self, max_iterations: int):
+        self.pgo = map_closures_pybind._PoseGraphOptimizer(max_iterations)
+
+    def add_variable(self, id_: int, pose: np.ndarray):
+        self.pgo._add_variable(id_, pose)
+
+    def fix_variable(self, id_: int):
+        self.pgo._fix_variable(id_)
+
+    def add_factor(
+        self, id_source, id_target, relative_pose, information_matrix, robust_kernel=False
+    ):
+        self.pgo._add_factor(id_source, id_target, relative_pose, information_matrix, robust_kernel)
+
+    def optimize(self):
+        self.pgo._optimize()
+
+    def estimates(self):
+        return self.pgo._estimates()

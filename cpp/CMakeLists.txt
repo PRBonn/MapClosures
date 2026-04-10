@@ -35,3 +35,4 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(3rdparty/find_dependencies.cmake)
 
 add_subdirectory(map_closures)
+add_subdirectory(pgo)

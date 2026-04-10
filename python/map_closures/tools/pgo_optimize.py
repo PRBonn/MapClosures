@@ -27,9 +27,9 @@ from abc import ABC
 from typing import List
 
 import numpy as np
-from pgo.pose_graph_optimizer import PoseGraphOptimizer
 from tqdm.auto import trange
 
+from map_closures.pose_graph_optimizer import PoseGraphOptimizer
 from map_closures.tools.evaluation import LocalMap
 
 
@@ -63,7 +63,7 @@ class Optimizer(StubOptimizer):
         )
 
         self.voxel_size = 1.0
-        self.optimizer = PoseGraphOptimizer()
+        self.optimizer = PoseGraphOptimizer(max_iterations=100)
 
     def _gicp(self, source: np.ndarray, target: np.ndarray, initial_guess: np.ndarray):
         distance_threshold = self.voxel_size * 0.4
@@ -127,7 +127,6 @@ class Optimizer(StubOptimizer):
         )
 
     def _log_to_file(self, output_dir: str):
-        self.optimizer.write_graph(os.path.join(output_dir, "out.g2o"))
         np.savetxt(
             os.path.join(output_dir, "g2o_poses_kitti.txt"), self.g2o_poses[:, :3].reshape(-1, 12)
         )

@@ -28,7 +28,7 @@ import numpy as np
 
 class KITTIOdometryDataset:
     def __init__(self, data_dir, sequence: str, *_, **__):
-        self.sequence_id = sequence
+        self.sequence_id = str(sequence).zfill(2)
         self.sequence_dir = os.path.join(data_dir, "sequences", self.sequence_id)
         self.velodyne_dir = os.path.join(self.sequence_dir, "velodyne/")
 
@@ -36,7 +36,7 @@ class KITTIOdometryDataset:
         self.calibration = self.read_calib_file(os.path.join(self.sequence_dir, "calib.txt"))
 
         # Load GT Poses (if available)
-        if sequence < 11:
+        if int(sequence) < 11:
             self.poses_fn = os.path.join(data_dir, f"poses/{self.sequence_id}.txt")
             self.gt_poses = self.load_poses(self.poses_fn)
 
@@ -54,7 +54,7 @@ class KITTIOdometryDataset:
         return len(self.scan_files)
 
     def scans(self, idx):
-        return self.read_point_cloud(self.scan_files[idx])
+        return self.read_point_cloud(self.scan_files[idx]), np.array([])
 
     def apply_calibration(self, poses: np.ndarray) -> np.ndarray:
         """Converts from Velodyne to Camera Frame"""

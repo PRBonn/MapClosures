@@ -35,14 +35,18 @@
 #include <vector>
 
 #include "map_closures/MapClosures.hpp"
+#include "pgo/pose_graph_optimizer.hpp"
 #include "stl_vector_eigen.h"
 
+PYBIND11_MAKE_OPAQUE(pgo::PoseGraphOptimizer::PoseIDMap);
 PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
 
 namespace py = pybind11;
 using namespace py::literals;
 
-namespace map_closures {
+using namespace map_closures;
+using namespace pgo;
+
 Config GetConfigFromYAML(const py::dict &yaml_cfg) {
     Config cpp_config;
     cpp_config.density_threshold = yaml_cfg["density_threshold"].cast<float>();
@@ -79,5 +83,14 @@ PYBIND11_MODULE(map_closures_pybind, m) {
              })
         .def("_MatchAndAdd", &MapClosures::MatchAndAdd, "map_id"_a, "local_map"_a)
         .def("_ValidateClosure", &MapClosures::ValidateClosure, "reference_id"_a, "query_id"_a);
+
+    py::bind_map<pgo::PoseGraphOptimizer::PoseIDMap>(m, "PoseIDMap");
+    py::class_<PoseGraphOptimizer> pgo(m, "_PoseGraphOptimizer", "Don't use this");
+    pgo.def(py::init<int>(), "max_iterations"_a)
+        .def("_add_variable", &PoseGraphOptimizer::addVariable, "id"_a, "T"_a)
+        .def("_fix_variable", &PoseGraphOptimizer::fixVariable, "id"_a)
+        .def("_add_factor", &PoseGraphOptimizer::addFactor, "id_source"_a, "id_target"_a, "T"_a,
+             "omega"_a, "robust_kernel"_a)
+        .def("_optimize", &PoseGraphOptimizer::optimize)
+        .def("_estimates", &PoseGraphOptimizer::estimates);
 }
-}  // namespace map_closures

@@ -43,5 +43,6 @@ endmacro()
 find_dependency("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake")
 find_dependency("TBB" "TBB::tbb" "${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake")
 find_dependency("OpenCV" "opencv_features2d" "${CMAKE_CURRENT_LIST_DIR}/opencv/opencv.cmake")
-
+include(${CMAKE_CURRENT_LIST_DIR}/suitesparse/suitesparse.cmake)
+find_dependency("g2o" "g2o::core" "${CMAKE_CURRENT_LIST_DIR}/g2o/g2o.cmake")
 include(${CMAKE_CURRENT_LIST_DIR}/hbst/hbst.cmake)
