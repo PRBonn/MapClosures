@@ -68,8 +68,8 @@ static constexpr double inliers_distance_threshold = 3.0;
 static constexpr double inliers_ratio = 0.1;
 static constexpr double probability_success = 0.999;
 static constexpr int min_points = 2;
-static int __RANSAC_TRIALS__ = std::ceil(std::log(1.0 - probability_success) /
-                                         std::log(1.0 - std::pow(inliers_ratio, min_points)));
+static int kRansacTrials = std::ceil(std::log(1.0 - probability_success) /
+                                     std::log(1.0 - std::pow(inliers_ratio, min_points)));
 }  // namespace
 
 namespace map_closures {
@@ -88,7 +88,7 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
     optimal_inlier_indices.reserve(max_inliers);
 
     int iter = 0;
-    while (iter++ < __RANSAC_TRIALS__) {
+    while (iter++ < kRansacTrials) {
         inlier_indices.clear();
 
         std::sample(keypoint_pairs.begin(), keypoint_pairs.end(), sample_keypoint_pairs.begin(), 2,
