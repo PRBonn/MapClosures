@@ -57,7 +57,7 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     Eigen::Array2i upper_bound_coordinates = Eigen::Array2i::Constant(min_int);
 
     auto Discretize2D = [&](const Eigen::Vector3d &p) -> Eigen::Array2i {
-        return ((T_ground.block<3, 3>(0, 0) * p + T_ground.block<3, 1>(0, 3)).head<2>() /
+        return ((T_ground.block<2, 3>(0, 0) * p + T_ground.block<2, 1>(0, 3)) /
                 density_map_resolution)
             .array()
             .floor()
@@ -77,9 +77,10 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     cv::Mat counting_grid(n_rows, n_cols, CV_64FC1, 0.0);
     std::for_each(pixels.cbegin(), pixels.cend(), [&](const Eigen::Array2i &pixel) {
         const Eigen::Array2i px = pixel - lower_bound_coordinates;
-        counting_grid.at<double>(px.x(), px.y()) += 1;
-        max_points = std::max(max_points, counting_grid.at<double>(px.x(), px.y()));
-        min_points = std::min(min_points, counting_grid.at<double>(px.x(), px.y()));
+        double &count = counting_grid.at<double>(px.x(), px.y());
+        count += 1.0;
+        max_points = std::max(max_points, count);
+        min_points = std::min(min_points, count);
     });
 
     DensityMap density_map(n_rows, n_cols, density_map_resolution, lower_bound_coordinates);
