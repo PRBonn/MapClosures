@@ -35,6 +35,14 @@ struct PointPair {
     PointPair(const Eigen::Vector2d &r, const Eigen::Vector2d &q);
     Eigen::Vector2d ref = Eigen::Vector2d::Zero();
     Eigen::Vector2d query = Eigen::Vector2d::Zero();
+
+    PointPair operator+(const PointPair &other) const {
+        return PointPair(ref + other.ref, query + other.query);
+    }
+
+    PointPair operator/(const double scalar) const {
+        return PointPair(ref / scalar, query / scalar);
+    }
 };
 
 std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
