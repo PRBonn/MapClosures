@@ -57,6 +57,8 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
 }
 
 constexpr double inliers_distance_threshold = 3.0;
+constexpr double sq_inliers_distance_threshold =
+    inliers_distance_threshold * inliers_distance_threshold;
 
 // RANSAC Parameters
 constexpr double inliers_ratio = 0.1;
@@ -92,8 +94,8 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
         int index = 0;
         std::for_each(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
                       [&](const PointPair &keypoint_pair) {
-                          if ((T * keypoint_pair.ref - keypoint_pair.query).norm() <
-                              inliers_distance_threshold)
+                          if ((T * keypoint_pair.ref - keypoint_pair.query).squaredNorm() <
+                              sq_inliers_distance_threshold)
                               inlier_indices.emplace_back(index);
                           index++;
                       });
@@ -102,7 +104,6 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
             optimal_inlier_indices = inlier_indices;
         }
     }
-    optimal_inlier_indices.shrink_to_fit();
     const std::size_t num_inliers = optimal_inlier_indices.size();
     std::vector<PointPair> inlier_keypoint_pairs(num_inliers);
     std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),

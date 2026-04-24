@@ -99,5 +99,6 @@ protected:
     std::unordered_map<int, Eigen::Matrix4d> ground_alignments_;
     std::unique_ptr<Tree> hbst_binary_tree_ = std::make_unique<Tree>();
     cv::Ptr<cv::DescriptorExtractor> orb_extractor_;
+    cv::BFMatcher self_matcher_ = cv::BFMatcher(cv::NORM_HAMMING);
 };
 }  // namespace map_closures

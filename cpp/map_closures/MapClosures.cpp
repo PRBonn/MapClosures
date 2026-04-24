@@ -77,12 +77,10 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     orb_keypoints.reserve(nfeatures);
     orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
                                      orb_descriptors);
-    orb_keypoints.shrink_to_fit();
 
-    const auto self_matcher = cv::BFMatcher(cv::NORM_HAMMING);
     std::vector<std::vector<cv::DMatch>> self_matches;
     self_matches.reserve(orb_keypoints.size());
-    self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
@@ -97,7 +95,6 @@ void MapClosures::MatchAndAddToDatabase(const int id,
                     new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
             }
         });
-    hbst_matchable.shrink_to_fit();
 
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
@@ -116,12 +113,10 @@ void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map) {
     orb_keypoints.reserve(nfeatures);
     orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
                                      orb_descriptors);
-    orb_keypoints.shrink_to_fit();
 
-    const auto self_matcher = cv::BFMatcher(cv::NORM_HAMMING);
     std::vector<std::vector<cv::DMatch>> self_matches;
     self_matches.reserve(orb_keypoints.size());
-    self_matcher.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
@@ -136,8 +131,6 @@ void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map) {
                     new Matchable(keypoint, orb_descriptors.row(index_descriptor)));
             }
         });
-    hbst_matchable.shrink_to_fit();
-
     hbst_binary_tree_->match(hbst_matchable, descriptor_matches_,
                              config_.hamming_distance_threshold);
 }
@@ -192,11 +185,12 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
                 closures.emplace_back(std::move(closure));
             }
         }
-        closures.shrink_to_fit();
-
-        if (k != -1) {
+        if (k != -1 && !closures.empty()) {
+            const int top_k = std::min(k, static_cast<int>(closures.size()));
+            const auto kth = closures.begin() + top_k;
+            std::nth_element(closures.begin(), kth, closures.end(), compare_closure_candidates);
+            closures.resize(top_k);
             std::sort(closures.begin(), closures.end(), compare_closure_candidates);
-            closures.resize(std::min(k, static_cast<int>(closures.size())));
         }
     }
     return closures;

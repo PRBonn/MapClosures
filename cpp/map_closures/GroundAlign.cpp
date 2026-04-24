@@ -68,7 +68,7 @@ auto PointToPixel = [](const Eigen::Vector3d &pt) -> Eigen::Vector2i {
 std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector &voxel_means,
                                                            const Vector3dVector &voxel_normals) {
     std::unordered_map<Eigen::Vector2i, VoxelMeanAndNormal, PixelHash> lowest_voxel_hash_map;
-
+    lowest_voxel_hash_map.reserve(voxel_means.size());
     for (size_t index = 0; index < voxel_means.size(); ++index) {
         const Eigen::Vector3d mean = voxel_means[index];
         const Eigen::Vector3d normal = voxel_normals[index];
@@ -116,7 +116,6 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
                 ground_samples.emplace_back(voxel.mean);
             }
         });
-    ground_samples.shrink_to_fit();
     ground_centroid /= static_cast<double>(ground_samples.size());
 
     const double z_shift = R.row(2) * ground_centroid;

@@ -90,7 +90,7 @@ void VoxelMap::AddPoints(const Vector3dVector &points) {
         const Voxel voxel = ToVoxelCoordinates(point, voxel_size_);
         const auto [it, inserted] = map_.try_emplace(voxel, VoxelBlock());
         if (!inserted) {
-            const VoxelBlock voxel_block = it->second;
+            const VoxelBlock &voxel_block = it->second;
             if (voxel_block.size() == max_points_per_normal_computation ||
                 std::any_of(voxel_block.cbegin(), voxel_block.cend(),
                             [&](const Eigen::Vector3d &voxel_point) {
@@ -107,11 +107,10 @@ Vector3dVector VoxelMap::Pointcloud() const {
     Vector3dVector points;
     points.reserve(map_.size() * max_points_per_normal_computation);
     std::for_each(map_.cbegin(), map_.cend(), [&](const auto &map_element) {
-        const VoxelBlock voxel_block = map_element.second;
+        const VoxelBlock &voxel_block = map_element.second;
         std::for_each(voxel_block.cbegin(), voxel_block.cend(),
                       [&](const Eigen::Vector3d &p) { points.emplace_back(p); });
     });
-    points.shrink_to_fit();
     return points;
 }
 
@@ -121,15 +120,13 @@ std::tuple<Vector3dVector, Vector3dVector> VoxelMap::PerVoxelMeanAndNormal() con
     Vector3dVector voxel_normals;
     voxel_normals.reserve(map_.size());
     std::for_each(map_.cbegin(), map_.cend(), [&](const auto &map_element) {
-        const VoxelBlock voxel_block = map_element.second;
+        const VoxelBlock &voxel_block = map_element.second;
         if (voxel_block.size() >= min_points_for_covariance_computation) {
             auto [mean, normal] = ComputeMeanAndNormal(voxel_block);
             voxel_means.emplace_back(mean);
             voxel_normals.emplace_back(normal);
         }
     });
-    voxel_means.shrink_to_fit();
-    voxel_normals.shrink_to_fit();
     return {std::move(voxel_means), std::move(voxel_normals)};
 }
 
