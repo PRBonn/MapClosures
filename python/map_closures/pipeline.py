@@ -113,14 +113,14 @@ class MapClosurePipeline:
             desc="Processing Scans for Loop Closures",
         ):
             raw_frame, timestamps = self._dataset[scan_idx]
-            source, _ = self.odometry.register_frame(raw_frame, timestamps)
+            deskewed_frame, _ = self.odometry.register_frame(raw_frame, timestamps)
             self.odom_poses[scan_idx] = self.odometry.last_pose
             current_frame_pose = self.odometry.last_pose
 
             frame_to_map_pose = pose_inv(current_map_pose) @ current_frame_pose
-            self.voxel_local_map.integrate_frame(source, frame_to_map_pose)
+            self.voxel_local_map.integrate_frame(deskewed_frame, frame_to_map_pose)
             self.visualizer.update_registration(
-                source, self.odometry.local_map.point_cloud(), current_frame_pose
+                deskewed_frame, self.odometry.local_map.point_cloud(), current_frame_pose
             )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
@@ -168,22 +168,35 @@ class MapClosurePipeline:
             os.path.join(self._results_dir, "kiss_poses_kitti.txt"),
             self.odom_poses[:, :3].reshape(-1, 12),
         )
-        self.results.log_to_file(self._results_dir)
+        np.save(
+            os.path.join(self._results_dir, "ground_alignment_transforms.npy"),
+            self.data.ground_alignment_transforms,
+        )
+        self.map_closures.save_hbst_database(os.path.join(self._results_dir, "database.bin"))
 
     def _log_to_console(self):
         from rich import box
         from rich.console import Console
         from rich.table import Table
+        from scipy.spatial.transform import Rotation
 
         console = Console()
         table = Table(box=box.HORIZONTALS)
-        table.caption = f"Loop Closures Detected Between Local Maps\n"
+        table.caption = f"Loop Closures"
         table.add_column("# MapClosure", justify="left", style="cyan")
         table.add_column("Ref Map Index", justify="left", style="magenta")
         table.add_column("Query Map Index", justify="left", style="magenta")
-
+        table.add_column("Relative Translation", justify="right", style="green")
+        table.add_column("Relative Rotation", justify="right", style="green")
         for i, closure in enumerate(self.data.closures):
-            table.add_row(f"{i+1}", f"{int(closure[0])}", f"{int(closure[1])}")
+            rpy = Rotation.from_matrix(closure[2:].reshape(4, 4)[:3, :3]).as_euler("xyz", True)
+            table.add_row(
+                f"{i+1}",
+                f"{int(closure[0])}",
+                f"{int(closure[1])}",
+                f"[{closure[5]:.4f}, {closure[9]:.4f}, {closure[13]:.4f}] m",
+                f"[{rpy[0]:.2f}, {rpy[1]:.2f}, {rpy[2]:.2f}] deg",
+            )
         console.print(table)
 
     def _save_config(self):
