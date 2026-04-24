@@ -70,9 +70,9 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
     std::unordered_map<Eigen::Vector2i, VoxelMeanAndNormal, PixelHash> lowest_voxel_hash_map;
 
     for (size_t index = 0; index < voxel_means.size(); ++index) {
-        const Eigen::Vector3d &mean = voxel_means[index];
-        const Eigen::Vector3d &normal = voxel_normals[index];
-        const Eigen::Vector2i &pixel = PointToPixel(mean);
+        const Eigen::Vector3d mean = voxel_means[index];
+        const Eigen::Vector3d normal = voxel_normals[index];
+        const Eigen::Vector2i pixel = PointToPixel(mean);
 
         const auto it = lowest_voxel_hash_map.find(pixel);
         if (it == lowest_voxel_hash_map.end()) {
@@ -120,16 +120,13 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
     ground_centroid /= static_cast<double>(ground_samples.size());
 
     const double z_shift = R.row(2) * ground_centroid;
-    const Sophus::SE3d T_init(R, Eigen::Vector3d(0.0, 0.0, -1.0 * z_shift));
-    return {ground_samples, T_init};
+    return {ground_samples, Sophus::SE3d(R, Eigen::Vector3d(0.0, 0.0, -1.0 * z_shift))};
 }
 
 LinearSystem BuildLinearSystem(const Vector3dVector &points) {
     auto compute_jacobian_and_residual =
         [](const Eigen::Vector3d &point) -> std::pair<Eigen::Matrix<double, 1, 3>, double> {
-        const double residual = point.z();
-        const Eigen::Matrix<double, 1, 3> J(1.0, point.y(), -point.x());
-        return {J, residual};
+        return {Eigen::Matrix<double, 1, 3>(1.0, point.y(), -point.x()), point.z()};
     };
 
     auto sum_linear_systems = [](LinearSystem a, const LinearSystem &b) -> LinearSystem {
@@ -138,16 +135,16 @@ LinearSystem BuildLinearSystem(const Vector3dVector &points) {
         return a;
     };
 
-    const auto &[H, b] =
+    const auto linear_system =
         std::transform_reduce(points.cbegin(), points.cend(),
                               LinearSystem(Eigen::Matrix3d::Zero(), Eigen::Vector3d::Zero()),
                               sum_linear_systems, [&](const Eigen::Vector3d &point) {
-                                  const auto &[J, residual] = compute_jacobian_and_residual(point);
+                                  const auto [J, residual] = compute_jacobian_and_residual(point);
                                   const double w = std::exp(-1.0 * residual * residual);
                                   return LinearSystem(J.transpose() * w * J,          // JTJ
                                                       J.transpose() * w * residual);  // JTr
                               });
-    return {H, b};
+    return linear_system;
 }
 }  // namespace
 
@@ -155,13 +152,13 @@ namespace map_closures {
 Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &pointcloud, const double resolution) {
     VoxelMap voxel_map(resolution, 100.0);
     voxel_map.AddPoints(pointcloud);
-    const auto &[voxel_means, voxel_normals] = voxel_map.PerVoxelMeanAndNormal();
+    const auto [voxel_means, voxel_normals] = voxel_map.PerVoxelMeanAndNormal();
 
     auto [ground_samples, T] = SampleGroundPoints(voxel_means, voxel_normals);
     TransformPoints(T, ground_samples);
     for (int iters = 0; iters < max_iterations; iters++) {
-        const auto &[H, b] = BuildLinearSystem(ground_samples);
-        const Eigen::Vector3d &dx = H.ldlt().solve(-b);
+        const auto [H, b] = BuildLinearSystem(ground_samples);
+        const Eigen::Vector3d dx = H.ldlt().solve(-b);
         const Eigen::Matrix<double, 6, 1> se3(0.0, 0.0, dx.x(), dx.y(), dx.z(), 0.0);
         const Sophus::SE3d estimation(Sophus::SE3d::exp(se3));
         TransformPoints(estimation, ground_samples);

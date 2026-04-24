@@ -38,20 +38,20 @@
 #include "srrg_hbst/types/binary_tree.hpp"
 
 namespace {
-static constexpr int min_no_of_matches = 2;
-static constexpr int no_of_local_maps_to_skip = 3;
-static constexpr int self_similarity_threshold = 35;
+constexpr int min_no_of_matches = 2;
+constexpr int no_of_local_maps_to_skip = 3;
+constexpr int self_similarity_threshold = 35;
 
 // fixed parameters for OpenCV ORB Features
-static constexpr float scale_factor = 1.00f;
-static constexpr int n_levels = 1;
-static constexpr int first_level = 0;
-static constexpr int WTA_K = 2;
-static constexpr int nfeatures = 500;
-static constexpr int edge_threshold = 31;
-static constexpr int score_type = 0;
-static constexpr int patch_size = 31;
-static constexpr int fast_threshold = 35;
+constexpr float scale_factor = 1.00f;
+constexpr int n_levels = 1;
+constexpr int first_level = 0;
+constexpr int WTA_K = 2;
+constexpr int nfeatures = 500;
+constexpr int edge_threshold = 31;
+constexpr int score_type = 0;
+constexpr int patch_size = 31;
+constexpr int fast_threshold = 35;
 }  // namespace
 
 namespace map_closures {
@@ -69,7 +69,7 @@ MapClosures::MapClosures(const Config &config) : config_(config) {
 
 void MapClosures::MatchAndAddToDatabase(const int id,
                                         const std::vector<Eigen::Vector3d> &local_map) {
-    const Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, config_.density_map_resolution);
+    Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, config_.density_map_resolution);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
@@ -89,8 +89,8 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     std::for_each(
         self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
             if (self_match[1].distance > self_similarity_threshold) {
-                const auto index_descriptor = self_match[0].queryIdx;
-                cv::KeyPoint &keypoint = orb_keypoints[index_descriptor];
+                const int index_descriptor = self_match[0].queryIdx;
+                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
                 keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
                 keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
                 hbst_matchable.emplace_back(
@@ -104,7 +104,7 @@ void MapClosures::MatchAndAddToDatabase(const int id,
                                    srrg_hbst::SplittingStrategy::SplitEven);
 
     density_maps_.emplace(id, std::move(density_map));
-    ground_alignments_.emplace(id, T_ground);
+    ground_alignments_.emplace(id, std::move(T_ground));
 }
 
 void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map) {
@@ -128,8 +128,8 @@ void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map) {
     std::for_each(
         self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
             if (self_match[1].distance > self_similarity_threshold) {
-                const auto index_descriptor = self_match[0].queryIdx;
-                cv::KeyPoint &keypoint = orb_keypoints[index_descriptor];
+                const int index_descriptor = self_match[0].queryIdx;
+                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
                 keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
                 keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
                 hbst_matchable.emplace_back(
@@ -148,7 +148,7 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
         return ClosureCandidate();
     }
 
-    const Tree::MatchVector &matches = it->second;
+    const Tree::MatchVector matches = it->second;
     const size_t num_matches = matches.size();
 
     ClosureCandidate closure;
@@ -163,7 +163,7 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
                            return PointPair(ref_point, query_point);
                        });
 
-        const auto &[pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
+        const auto [pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
         closure.source_id = reference_id;
         closure.target_id = query_id;
         closure.pose.block<2, 2>(0, 0) = pose2d.linear();
@@ -187,9 +187,9 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
     if (num_of_potential_closures > 0) {
         closures.reserve(num_of_potential_closures);
         for (int ref_id = 0; ref_id < num_of_potential_closures; ++ref_id) {
-            const ClosureCandidate &closure = ValidateClosure(ref_id, query_id);
-            if (closure.number_of_inliers > 2) {
-                closures.emplace_back(closure);
+            ClosureCandidate closure = ValidateClosure(ref_id, query_id);
+            if (closure.number_of_inliers > min_no_of_matches) {
+                closures.emplace_back(std::move(closure));
             }
         }
         closures.shrink_to_fit();

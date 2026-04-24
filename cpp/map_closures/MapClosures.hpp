@@ -35,7 +35,7 @@
 #include "DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
-static constexpr int descriptor_size_bits = 256;
+constexpr int descriptor_size_bits = 256;
 using Matchable = srrg_hbst::BinaryMatchable<cv::KeyPoint, descriptor_size_bits>;
 using Node = srrg_hbst::BinaryNode<Matchable>;
 using Tree = srrg_hbst::BinaryTree<Node>;
@@ -62,11 +62,11 @@ public:
 
     ClosureCandidate GetBestClosure(const int query_id,
                                     const std::vector<Eigen::Vector3d> &local_map) {
-        const auto &closures = GetTopKClosures(query_id, local_map, 1);
+        std::vector<ClosureCandidate> closures = GetTopKClosures(query_id, local_map, 1);
         if (closures.empty()) {
             return ClosureCandidate();
         }
-        return closures.front();
+        return std::move(closures.front());
     }
     std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
                                                   const std::vector<Eigen::Vector3d> &local_map,
