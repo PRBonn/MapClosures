@@ -86,6 +86,10 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
     std::transform(lowest_voxel_hash_map.cbegin(), lowest_voxel_hash_map.cend(),
                    low_lying_voxels.begin(), [](const auto &entry) { return entry.second; });
 
+    if (low_lying_voxels.size() < 2) {
+        return {Vector3dVector(), Sophus::SE3d()};
+    }
+
     const Eigen::Matrix3d normals_covariance_matrix =
         std::transform_reduce(low_lying_voxels.cbegin(), low_lying_voxels.cend(),
                               Eigen::Matrix3d().setZero(), std::plus<Eigen::Matrix3d>(),
@@ -116,10 +120,13 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
                 ground_samples.emplace_back(voxel.mean);
             }
         });
+    if (ground_samples.empty()) {
+        return {Vector3dVector(), Sophus::SE3d()};
+    }
     ground_centroid /= static_cast<double>(ground_samples.size());
 
     const double z_shift = R.row(2) * ground_centroid;
-    return {ground_samples, Sophus::SE3d(R, Eigen::Vector3d(0.0, 0.0, -1.0 * z_shift))};
+    return {std::move(ground_samples), Sophus::SE3d(R, Eigen::Vector3d(0.0, 0.0, -1.0 * z_shift))};
 }
 
 LinearSystem BuildLinearSystem(const Vector3dVector &points) {
