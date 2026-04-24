@@ -77,12 +77,24 @@ VoxelMap::VoxelMap(const double voxel_size, const double max_distance)
       max_distance_(max_distance) {}
 
 void VoxelMap::IntegrateFrame(const Vector3dVector &points, const Eigen::Matrix4d &pose) {
-    Vector3dVector points_transformed(points.size());
     const Eigen::Matrix3d R = pose.block<3, 3>(0, 0);
     const Eigen::Vector3d t = pose.block<3, 1>(0, 3);
-    std::transform(points.cbegin(), points.cend(), points_transformed.begin(),
-                   [&](const auto &point) { return R * point + t; });
-    AddPoints(points_transformed);
+    std::for_each(points.cbegin(), points.cend(), [&](const Eigen::Vector3d &point) {
+        const Eigen::Vector3d transformed_point = R * point + t;
+        const Voxel voxel = ToVoxelCoordinates(transformed_point, voxel_size_);
+        const auto [it, inserted] = map_.try_emplace(voxel, VoxelBlock());
+        if (!inserted) {
+            const VoxelBlock &voxel_block = it->second;
+            if (voxel_block.size() == max_points_per_normal_computation ||
+                std::any_of(voxel_block.cbegin(), voxel_block.cend(),
+                            [&](const Eigen::Vector3d &voxel_point) {
+                                return (voxel_point - transformed_point).norm() < map_resolution_;
+                            })) {
+                return;
+            }
+        }
+        it->second.emplace_back(transformed_point);
+    });
 }
 
 void VoxelMap::AddPoints(const Vector3dVector &points) {
