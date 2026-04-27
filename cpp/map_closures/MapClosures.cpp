@@ -140,7 +140,7 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
         return ClosureCandidate();
     }
 
-    const Tree::MatchVector matches = it->second;
+    const Tree::MatchVector &matches = it->second;
     const size_t num_matches = matches.size();
 
     ClosureCandidate closure;
@@ -188,8 +188,7 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
             const int top_k = std::min(k, static_cast<int>(closures.size()));
             if (top_k < static_cast<int>(closures.size())) {
                 const auto kth = closures.begin() + top_k;
-                std::nth_element(
-                    closures.begin(), kth, closures.end(), compare_closure_candidates);
+                std::nth_element(closures.begin(), kth, closures.end(), compare_closure_candidates);
                 closures.resize(top_k);
             }
             std::sort(closures.begin(), closures.end(), compare_closure_candidates);

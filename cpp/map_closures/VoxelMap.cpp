@@ -133,7 +133,7 @@ std::tuple<Vector3dVector, Vector3dVector> VoxelMap::PerVoxelMeanAndNormal() con
 void VoxelMap::RemovePointsFarFromLocation(const Eigen::Vector3d &origin) {
     const double max_distance2 = max_distance_ * max_distance_;
     for (auto it = map_.begin(); it != map_.end();) {
-        const auto [voxel, voxel_points] = *it;
+        const auto &[voxel, voxel_points] = *it;
         if ((voxel_points.front() - origin).squaredNorm() >= (max_distance2)) {
             it = map_.erase(it);
         } else {
