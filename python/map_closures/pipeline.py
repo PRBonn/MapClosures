@@ -172,6 +172,7 @@ class MapClosurePipeline:
             self.data.ground_alignment_transforms,
         )
         self.map_closures.save_hbst_database(os.path.join(self._results_dir, "database.bin"))
+        self.results.log_to_file(self._results_dir)
 
     def _log_to_console(self):
         from rich import box
