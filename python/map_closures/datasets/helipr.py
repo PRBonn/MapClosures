@@ -123,14 +123,12 @@ class HeLiPRDataset:
         return data[:, :3]
 
     def load_poses(self, poses_file):
-        from pyquaternion import Quaternion
+        from scipy.spatial.transform import Rotation as R
 
         poses = np.loadtxt(poses_file, delimiter=" ")
 
         xyz = poses[:, 1:4]
-        rotations = np.array(
-            [Quaternion(x=x, y=y, z=z, w=w).rotation_matrix for x, y, z, w in poses[:, 4:]]
-        )
+        rotations = np.array([R.from_quat(q).as_matrix() for q in poses[:, 4:]])
         poses = np.eye(4, dtype=np.float64).reshape(1, 4, 4).repeat(self.__len__(), axis=0)
         poses[:, :3, :3] = rotations
         poses[:, :3, 3] = xyz

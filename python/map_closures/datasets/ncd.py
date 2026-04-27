@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from pyquaternion import Quaternion
+from scipy.spatial.transform import Rotation as R
 
 
 class NewerCollegeDataset:
@@ -89,12 +89,7 @@ class NewerCollegeDataset:
         """Taken from pyLiDAR-SLAM/blob/master/slam/dataset/nhcd_dataset.py"""
         ground_truth_df = np.genfromtxt(str(file_path), delimiter=",", dtype=np.float64)
         xyz = ground_truth_df[:, 2:5]
-        rotations = np.array(
-            [
-                Quaternion(x=x, y=y, z=z, w=w).rotation_matrix
-                for x, y, z, w in ground_truth_df[:, 5:]
-            ]
-        )
+        rotations = np.array([R.from_quat(q).as_matrix() for q in ground_truth_df[:, 5:]])
 
         num_poses = rotations.shape[0]
         poses = np.eye(4, dtype=np.float64).reshape(1, 4, 4).repeat(num_poses, axis=0)
@@ -102,7 +97,7 @@ class NewerCollegeDataset:
         poses[:, :3, 3] = xyz
 
         T_CL = np.eye(4, dtype=np.float32)
-        T_CL[:3, :3] = Quaternion(x=0, y=0, z=0.924, w=0.383).rotation_matrix
+        T_CL[:3, :3] = R.from_quat([0, 0, 0.924, 0.383]).as_matrix()
         T_CL[:3, 3] = np.array([-0.084, -0.025, 0.050], dtype=np.float32)
         poses = np.einsum("nij,jk->nik", poses, T_CL)
         poses = np.einsum("ij,njk->nik", np.linalg.inv(poses[0]), poses)
