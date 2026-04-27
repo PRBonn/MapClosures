@@ -1,7 +1,6 @@
 // MIT License
 
-// Copyright (c) 2025 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-// Niklas Trekel, Meher Malladi, and Cyrill Stachniss.
+// Copyright (c) 2026 Saurabh Gupta
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +37,7 @@ struct std::hash<Eigen::Vector3i> {
 };
 
 // Same default as Open3d
-static constexpr unsigned int max_points_per_normal_computation = 20;
+constexpr unsigned int max_points_per_normal_computation = 20;
 
 namespace map_closures {
 using Voxel = Eigen::Vector3i;

@@ -1,7 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-// Ignacio Vizzo, Cyrill Stachniss.
+// Copyright (c) 2026 Saurabh Gupta.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +27,7 @@
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <algorithm>
+#include <functional>
 #include <numeric>
 #include <random>
 #include <utility>
@@ -36,40 +36,37 @@
 namespace {
 Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const std::vector<map_closures::PointPair> &keypoint_pairs) {
-    map_closures::PointPair mean =
+    const map_closures::PointPair mean =
         std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(), map_closures::PointPair(),
-                    [](map_closures::PointPair lhs, const map_closures::PointPair &rhs) {
-                        lhs.ref += rhs.ref;
-                        lhs.query += rhs.query;
-                        return lhs;
-                    });
-    mean.query /= static_cast<double>(keypoint_pairs.size());
-    mean.ref /= static_cast<double>(keypoint_pairs.size());
-    Eigen::Matrix2d covariance_matrix = std::transform_reduce(
+                    std::plus<map_closures::PointPair>()) /
+        static_cast<double>(keypoint_pairs.size());
+    const Eigen::Matrix2d covariance_matrix = std::transform_reduce(
         keypoint_pairs.cbegin(), keypoint_pairs.cend(), Eigen::Matrix2d().setZero(),
         std::plus<Eigen::Matrix2d>(), [&](const map_closures::PointPair &keypoint_pair) {
             return (keypoint_pair.ref - mean.ref) *
                    ((keypoint_pair.query - mean.query).transpose());
         });
 
-    Eigen::JacobiSVD<Eigen::Matrix2d> svd(covariance_matrix,
-                                          Eigen::ComputeFullU | Eigen::ComputeFullV);
+    const Eigen::JacobiSVD<Eigen::Matrix2d> svd(covariance_matrix,
+                                                Eigen::ComputeFullU | Eigen::ComputeFullV);
     Eigen::Isometry2d T = Eigen::Isometry2d::Identity();
-    const Eigen::Matrix2d &R = svd.matrixV() * svd.matrixU().transpose();
+    const Eigen::Matrix2d R = svd.matrixV() * svd.matrixU().transpose();
     T.linear() = R.determinant() > 0 ? R : -R;
     T.translation() = mean.query - R * mean.ref;
 
     return T;
 }
 
-static constexpr double inliers_distance_threshold = 3.0;
+constexpr double inliers_distance_threshold = 3.0;
+constexpr double sq_inliers_distance_threshold =
+    inliers_distance_threshold * inliers_distance_threshold;
 
 // RANSAC Parameters
-static constexpr double inliers_ratio = 0.1;
-static constexpr double probability_success = 0.999;
-static constexpr int min_points = 2;
-static int kRansacTrials = std::ceil(std::log(1.0 - probability_success) /
-                                     std::log(1.0 - std::pow(inliers_ratio, min_points)));
+constexpr double inliers_ratio = 0.1;
+constexpr double probability_success = 0.999;
+constexpr int min_points = 2;
+const int kRansacTrials = std::ceil(std::log(1.0 - probability_success) /
+                                    std::log(1.0 - std::pow(inliers_ratio, min_points)));
 }  // namespace
 
 namespace map_closures {
@@ -80,7 +77,7 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
     const std::vector<PointPair> &keypoint_pairs) {
     const size_t max_inliers = keypoint_pairs.size();
 
-    std::vector<PointPair> sample_keypoint_pairs(2);
+    std::vector<PointPair> sample_keypoint_pairs(min_points);
     std::vector<int> inlier_indices;
     inlier_indices.reserve(max_inliers);
 
@@ -91,15 +88,15 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
     while (iter++ < kRansacTrials) {
         inlier_indices.clear();
 
-        std::sample(keypoint_pairs.begin(), keypoint_pairs.end(), sample_keypoint_pairs.begin(), 2,
-                    std::mt19937{std::random_device{}()});
-        const Eigen::Isometry2d &T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
+        std::sample(keypoint_pairs.begin(), keypoint_pairs.end(), sample_keypoint_pairs.begin(),
+                    min_points, std::mt19937{std::random_device{}()});
+        const Eigen::Isometry2d T = KabschUmeyamaAlignment2D(sample_keypoint_pairs);
 
         int index = 0;
         std::for_each(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
                       [&](const PointPair &keypoint_pair) {
-                          if ((T * keypoint_pair.ref - keypoint_pair.query).norm() <
-                              inliers_distance_threshold)
+                          if ((T * keypoint_pair.ref - keypoint_pair.query).squaredNorm() <
+                              sq_inliers_distance_threshold)
                               inlier_indices.emplace_back(index);
                           index++;
                       });
@@ -108,13 +105,12 @@ std::pair<Eigen::Isometry2d, std::size_t> RansacAlignment2D(
             optimal_inlier_indices = inlier_indices;
         }
     }
-    optimal_inlier_indices.shrink_to_fit();
     const std::size_t num_inliers = optimal_inlier_indices.size();
     std::vector<PointPair> inlier_keypoint_pairs(num_inliers);
     std::transform(optimal_inlier_indices.cbegin(), optimal_inlier_indices.cend(),
                    inlier_keypoint_pairs.begin(),
-                   [&](const auto index) { return keypoint_pairs[index]; });
-    const Eigen::Isometry2d &T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
+                   [&](const int index) { return keypoint_pairs[index]; });
+    const Eigen::Isometry2d T = KabschUmeyamaAlignment2D(inlier_keypoint_pairs);
     return {T, num_inliers};
 }
 }  // namespace map_closures

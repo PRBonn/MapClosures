@@ -1,7 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2025 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-// Niklas Trekel, Meher Malladi, and Cyrill Stachniss.
+// Copyright (c) 2026 Saurabh Gupta
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +35,10 @@
 #include "VoxelMap.hpp"
 
 namespace {
+constexpr double normal_filter_threshold = 0.95;
+constexpr double convergence_threshold = 1e-3;
+constexpr int max_iterations = 10;
+
 using Vector3dVector = std::vector<Eigen::Vector3d>;
 using LinearSystem = std::pair<Eigen::Matrix3d, Eigen::Vector3d>;
 
@@ -64,13 +67,13 @@ auto PointToPixel = [](const Eigen::Vector3d &pt) -> Eigen::Vector2i {
 std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector &voxel_means,
                                                            const Vector3dVector &voxel_normals) {
     std::unordered_map<Eigen::Vector2i, VoxelMeanAndNormal, PixelHash> lowest_voxel_hash_map;
-
+    lowest_voxel_hash_map.reserve(voxel_means.size());
     for (size_t index = 0; index < voxel_means.size(); ++index) {
-        const Eigen::Vector3d &mean = voxel_means[index];
-        const Eigen::Vector3d &normal = voxel_normals[index];
+        const Eigen::Vector3d mean = voxel_means[index];
+        const Eigen::Vector3d normal = voxel_normals[index];
         const Eigen::Vector2i pixel = PointToPixel(mean);
 
-        auto it = lowest_voxel_hash_map.find(pixel);
+        const auto it = lowest_voxel_hash_map.find(pixel);
         if (it == lowest_voxel_hash_map.end()) {
             lowest_voxel_hash_map.emplace(pixel, VoxelMeanAndNormal{mean, normal});
         } else if (mean.z() < it->second.mean.z()) {
@@ -82,7 +85,11 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
     std::transform(lowest_voxel_hash_map.cbegin(), lowest_voxel_hash_map.cend(),
                    low_lying_voxels.begin(), [](const auto &entry) { return entry.second; });
 
-    const Eigen::Matrix3d covariance_matrix =
+    if (low_lying_voxels.size() < 2) {
+        return {Vector3dVector(), Sophus::SE3d()};
+    }
+
+    const Eigen::Matrix3d normals_covariance_matrix =
         std::transform_reduce(low_lying_voxels.cbegin(), low_lying_voxels.cend(),
                               Eigen::Matrix3d().setZero(), std::plus<Eigen::Matrix3d>(),
                               [&](const VoxelMeanAndNormal &voxel) {
@@ -90,7 +97,7 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
                               }) /
         static_cast<double>(low_lying_voxels.size() - 1);
 
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(covariance_matrix);
+    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(normals_covariance_matrix);
     Eigen::Vector3d largest_eigenvector = eigensolver.eigenvectors().col(2);
     largest_eigenvector =
         (largest_eigenvector.z() < 0) ? -1.0 * largest_eigenvector : largest_eigenvector;
@@ -105,67 +112,62 @@ std::pair<Vector3dVector, Sophus::SE3d> SampleGroundPoints(const Vector3dVector 
     Eigen::Vector3d ground_centroid(0.0, 0.0, 0.0);
     Vector3dVector ground_samples;
     ground_samples.reserve(low_lying_voxels.size());
-    std::for_each(low_lying_voxels.cbegin(), low_lying_voxels.cend(),
-                  [&](const VoxelMeanAndNormal &voxel) {
-                      if (std::abs(voxel.normal.dot(largest_eigenvector)) > 0.95) {
-                          ground_centroid += voxel.mean;
-                          ground_samples.emplace_back(voxel.mean);
-                      }
-                  });
-    ground_samples.shrink_to_fit();
+    std::for_each(
+        low_lying_voxels.cbegin(), low_lying_voxels.cend(), [&](const VoxelMeanAndNormal &voxel) {
+            if (std::abs(voxel.normal.dot(largest_eigenvector)) > normal_filter_threshold) {
+                ground_centroid += voxel.mean;
+                ground_samples.emplace_back(voxel.mean);
+            }
+        });
+    if (ground_samples.empty()) {
+        return {Vector3dVector(), Sophus::SE3d()};
+    }
     ground_centroid /= static_cast<double>(ground_samples.size());
 
     const double z_shift = R.row(2) * ground_centroid;
-    const Sophus::SE3d T_init(R, Eigen::Vector3d(0.0, 0.0, -1.0 * z_shift));
-    return std::make_pair(ground_samples, T_init);
+    return {std::move(ground_samples), Sophus::SE3d(R, Eigen::Vector3d(0.0, 0.0, -1.0 * z_shift))};
 }
 
 LinearSystem BuildLinearSystem(const Vector3dVector &points) {
-    auto compute_jacobian_and_residual = [](const Eigen::Vector3d &point) {
-        const double residual = point.z();
-        Eigen::Matrix<double, 1, 3> J;
-        J(0, 0) = 1.0;
-        J(0, 1) = point.y();
-        J(0, 2) = -point.x();
-        return std::make_pair(J, residual);
+    auto compute_jacobian_and_residual =
+        [](const Eigen::Vector3d &point) -> std::pair<Eigen::Matrix<double, 1, 3>, double> {
+        return {Eigen::Matrix<double, 1, 3>(1.0, point.y(), -point.x()), point.z()};
     };
 
-    auto sum_linear_systems = [](LinearSystem a, const LinearSystem &b) {
+    auto sum_linear_systems = [](LinearSystem a, const LinearSystem &b) -> LinearSystem {
         a.first += b.first;
         a.second += b.second;
         return a;
     };
 
-    const auto &[H, b] =
+    const auto linear_system =
         std::transform_reduce(points.cbegin(), points.cend(),
                               LinearSystem(Eigen::Matrix3d::Zero(), Eigen::Vector3d::Zero()),
                               sum_linear_systems, [&](const Eigen::Vector3d &point) {
-                                  const auto &[J, residual] = compute_jacobian_and_residual(point);
+                                  const auto [J, residual] = compute_jacobian_and_residual(point);
                                   const double w = std::exp(-1.0 * residual * residual);
                                   return LinearSystem(J.transpose() * w * J,          // JTJ
                                                       J.transpose() * w * residual);  // JTr
                               });
-    return {H, b};
+    return linear_system;
 }
-
-static constexpr double convergence_threshold = 1e-3;
-static constexpr int max_iterations = 10;
 }  // namespace
 
 namespace map_closures {
 Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &pointcloud, const double resolution) {
     VoxelMap voxel_map(resolution, 100.0);
     voxel_map.AddPoints(pointcloud);
-    const auto &[voxel_means, voxel_normals] = voxel_map.PerVoxelMeanAndNormal();
+    const auto [voxel_means, voxel_normals] = voxel_map.PerVoxelMeanAndNormal();
 
     auto [ground_samples, T] = SampleGroundPoints(voxel_means, voxel_normals);
+    if (ground_samples.empty()) return Eigen::Matrix4d::Identity();
     TransformPoints(T, ground_samples);
     for (int iters = 0; iters < max_iterations; iters++) {
-        const auto &[H, b] = BuildLinearSystem(ground_samples);
-        const Eigen::Vector3d &dx = H.ldlt().solve(-b);
+        const auto [H, b] = BuildLinearSystem(ground_samples);
+        const Eigen::Vector3d dx = H.ldlt().solve(-b);
         Eigen::Matrix<double, 6, 1> se3 = Eigen::Matrix<double, 6, 1>::Zero();
-        se3.block<3, 1>(2, 0) = dx;
-        Sophus::SE3d estimation(Sophus::SE3d::exp(se3));
+        se3 << 0.0, 0.0, dx.x(), dx.y(), dx.z(), 0.0;
+        const Sophus::SE3d estimation(Sophus::SE3d::exp(se3));
         TransformPoints(estimation, ground_samples);
         T = estimation * T;
         if (dx.norm() < convergence_threshold) break;
