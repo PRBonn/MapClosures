@@ -164,7 +164,8 @@ Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &pointcloud, const doubl
     for (int iters = 0; iters < max_iterations; iters++) {
         const auto [H, b] = BuildLinearSystem(ground_samples);
         const Eigen::Vector3d dx = H.ldlt().solve(-b);
-        const Eigen::Matrix<double, 6, 1> se3(0.0, 0.0, dx.x(), dx.y(), dx.z(), 0.0);
+        Eigen::Matrix<double, 6, 1> se3 = Eigen::Matrix<double, 6, 1>::Zero();
+        se3 << 0.0, 0.0, dx.x(), dx.y(), dx.z(), 0.0;
         const Sophus::SE3d estimation(Sophus::SE3d::exp(se3));
         TransformPoints(estimation, ground_samples);
         T = estimation * T;
