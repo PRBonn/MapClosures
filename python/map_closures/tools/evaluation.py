@@ -88,7 +88,7 @@ class EvaluationPipeline(StubEvaluation):
     def print(self):
         self._log_to_console()
 
-    def append(self, source_id: int, target_id: int, inliers_count: int):
+    def append(self, source_id, target_id, inliers_count):
         self.closure_list.append((source_id, target_id))
         self.inliers_count_list.append(inliers_count)
 
@@ -107,14 +107,6 @@ class EvaluationPipeline(StubEvaluation):
 
     def _rich_table_pr(self, table_format: box.Box = box.HORIZONTALS) -> Table:
         table = Table(box=table_format)
-        table.caption = f"Loop Closure Evaluation Metrics\n"
-        table.add_column("RANSAC #Inliers", justify="center", style="cyan")
-        table.add_column("True Positives", justify="center", style="magenta")
-        table.add_column("False Positives", justify="center", style="magenta")
-        table.add_column("False Negatives", justify="center", style="magenta")
-        table.add_column("Precision", justify="left", style="green")
-        table.add_column("Recall", justify="left", style="green")
-        table.add_column("F1 score", justify="left", style="green")
         for i, metric in enumerate(self.metrics):
             table.add_row(
                 f"{i + 3} {metric.tp} {metric.fp} {metric.fn} {metric.precision:.4f} {metric.recall:.4f} {metric.F1:.4f}"
