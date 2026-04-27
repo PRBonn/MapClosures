@@ -64,8 +64,8 @@ constexpr double sq_inliers_distance_threshold =
 constexpr double inliers_ratio = 0.1;
 constexpr double probability_success = 0.999;
 constexpr int min_points = 2;
-constexpr int kRansacTrials = std::ceil(std::log(1.0 - probability_success) /
-                                        std::log(1.0 - std::pow(inliers_ratio, min_points)));
+const int kRansacTrials = std::ceil(std::log(1.0 - probability_success) /
+                                    std::log(1.0 - std::pow(inliers_ratio, min_points)));
 }  // namespace
 
 namespace map_closures {

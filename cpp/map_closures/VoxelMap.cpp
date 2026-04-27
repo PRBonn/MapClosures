@@ -72,7 +72,8 @@ void VoxelBlock::emplace_back(const Eigen::Vector3d &p) {
 
 VoxelMap::VoxelMap(const double voxel_size, const double max_distance)
     : voxel_size_(voxel_size),
-      map_resolution_(voxel_size / max_points_per_normal_computation_sqrt),
+      map_resolution_(voxel_size /
+                      (std::sqrt(static_cast<double>(max_points_per_normal_computation)))),
       max_distance_(max_distance) {}
 
 void VoxelMap::IntegrateFrame(const Vector3dVector &points, const Eigen::Matrix4d &pose) {

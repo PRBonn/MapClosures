@@ -38,8 +38,6 @@ struct std::hash<Eigen::Vector3i> {
 
 // Same default as Open3d
 constexpr unsigned int max_points_per_normal_computation = 20;
-constexpr double max_points_per_normal_computation_sqrt =
-    static_cast<double>(std::sqrt(max_points_per_normal_computation));
 
 namespace map_closures {
 using Voxel = Eigen::Vector3i;
