@@ -160,6 +160,7 @@ Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &pointcloud, const doubl
     const auto [voxel_means, voxel_normals] = voxel_map.PerVoxelMeanAndNormal();
 
     auto [ground_samples, T] = SampleGroundPoints(voxel_means, voxel_normals);
+    if (ground_samples.empty()) return Eigen::Matrix4d::Identity();
     TransformPoints(T, ground_samples);
     for (int iters = 0; iters < max_iterations; iters++) {
         const auto [H, b] = BuildLinearSystem(ground_samples);
