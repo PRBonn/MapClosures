@@ -27,6 +27,7 @@
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <algorithm>
+#include <functional>
 #include <numeric>
 #include <random>
 #include <utility>
