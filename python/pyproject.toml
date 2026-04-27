@@ -8,7 +8,7 @@ version = "2.0.2"
 description = "Effectively Detecting Loop Closures using Point Cloud Density Maps"
 readme = "README.md"
 authors = [{ name = "Saurabh Gupta" }, { name = "Tiziano Guadagnino" }]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 keywords = ["Loop Closures", "Localization", "SLAM", "LiDAR"]
 dependencies = [
     "kiss-icp>=1.2.3",
