@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 cmake_minimum_required(VERSION 3.16...3.26)
-project(map_closures_cpp VERSION 2.0.2 LANGUAGES CXX)
+project(map_closures_cpp VERSION 2.1.0 LANGUAGES CXX)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 option(USE_SYSTEM_OPENCV "Use system pre-installed OpenCV" ON)
