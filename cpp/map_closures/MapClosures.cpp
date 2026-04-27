@@ -186,9 +186,12 @@ std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
         }
         if (k != -1 && !closures.empty()) {
             const int top_k = std::min(k, static_cast<int>(closures.size()));
-            const auto kth = closures.begin() + top_k;
-            std::nth_element(closures.begin(), kth, closures.end(), compare_closure_candidates);
-            closures.resize(top_k);
+            if (top_k < static_cast<int>(closures.size())) {
+                const auto kth = closures.begin() + top_k;
+                std::nth_element(
+                    closures.begin(), kth, closures.end(), compare_closure_candidates);
+                closures.resize(top_k);
+            }
             std::sort(closures.begin(), closures.end(), compare_closure_candidates);
         }
     }
