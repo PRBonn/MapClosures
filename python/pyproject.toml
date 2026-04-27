@@ -6,28 +6,44 @@ build-backend = "scikit_build_core.build"
 name = "map_closures"
 version = "2.0.2"
 description = "Effectively Detecting Loop Closures using Point Cloud Density Maps"
-readme = "README.md"
 authors = [{ name = "Saurabh Gupta" }, { name = "Tiziano Guadagnino" }]
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+
+classifiers = [
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: Other Audience",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+
 keywords = ["Loop Closures", "Localization", "SLAM", "LiDAR"]
+
 dependencies = [
-    "kiss-icp>=1.2.3",
-    "numpy",
-    "pyquaternion",
-    "pydantic>=2",
-    "pydantic-settings",
-    "tqdm",
-    "typer[all]>=0.6.0",
-    "rich",
+    "kiss-icp>=1.2.3, <=1.3.0",
+    "numpy>=2.1.0, <2.3.0",
+    "scipy>=1.14.0, <1.18.0",
+    "pydantic>=2.11,<2.14",
+    "pydantic-settings>=2.12,<2.15",
+    "typer[all]>=0.24.0, <0.26.0",
     "typing_extensions",
+    "tqdm~=4.67"
 ]
 
 [project.optional-dependencies]
 all = [
-    "open3d>=0.19.0",
-    "PyYAML",
+    "open3d>=0.19,<0.20",
+    "pyyaml~=6.0",
     "mcap-ros2-support",
-    "rosbags",
+    "rosbags>=0.10,<0.12",
     "trimesh",
     "ouster-sdk",
     "pyntcloud",
@@ -61,7 +77,7 @@ max-line-length = "100"
 
 [tool.cibuildwheel]
 archs = ["auto64"]
-skip = ["*-musllinux*", "pp*", "cp36-*"]
+skip = ["*-musllinux*", "pp*", "cp36-*", "cp37-*", "cp38-*", "cp39-*"]
 
 [tool.cibuildwheel.macos]
 environment = "MACOSX_DEPLOYMENT_TARGET=11.00"
