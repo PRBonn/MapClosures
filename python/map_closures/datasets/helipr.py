@@ -27,7 +27,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import open3d as o3d
 
 
 class HeLiPRDataset:
@@ -85,6 +84,8 @@ class HeLiPRDataset:
             return self.get_ply_data(idx)
 
     def get_ply_data(self, idx: int):
+        import open3d as o3d
+
         file_path = self.scan_files[idx]
         pcd = o3d.t.io.read_point_cloud(file_path)
         points = pcd.point.positions.numpy()
