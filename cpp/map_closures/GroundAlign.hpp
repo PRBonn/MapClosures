@@ -28,4 +28,6 @@
 namespace map_closures {
 Eigen::Matrix4d AlignToLocalGround(const std::vector<Eigen::Vector3d> &pointcloud,
                                    const double resolution);
+Eigen::Matrix4d AlignToLocalGround(const std::vector<Eigen::Vector3d> &voxel_means,
+                                   const std::vector<Eigen::Vector3d> &voxel_normals);
 }  // namespace map_closures

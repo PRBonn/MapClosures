@@ -103,8 +103,80 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     ground_alignments_.emplace(id, std::move(T_ground));
 }
 
+void MapClosures::MatchAndAddToDatabase(const int id,
+                                        const std::vector<Eigen::Vector3d> &local_map,
+                                        const std::vector<Eigen::Vector3d> &voxel_means,
+                                        const std::vector<Eigen::Vector3d> &voxel_normals) {
+    Eigen::Matrix4d T_ground = AlignToLocalGround(voxel_means, voxel_normals);
+    DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
+                                                config_.density_threshold);
+    cv::Mat orb_descriptors;
+    std::vector<cv::KeyPoint> orb_keypoints;
+    orb_keypoints.reserve(nfeatures);
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+                                     orb_descriptors);
+
+    std::vector<std::vector<cv::DMatch>> self_matches;
+    self_matches.reserve(orb_keypoints.size());
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+
+    std::vector<Matchable *> hbst_matchable;
+    hbst_matchable.reserve(orb_descriptors.rows);
+    std::for_each(
+        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
+            if (self_match[1].distance > self_similarity_threshold) {
+                const int index_descriptor = self_match[0].queryIdx;
+                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
+                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+                hbst_matchable.emplace_back(
+                    new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
+            }
+        });
+
+    hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
+                                   config_.hamming_distance_threshold,
+                                   srrg_hbst::SplittingStrategy::SplitEven);
+
+    density_maps_.emplace(id, std::move(density_map));
+    ground_alignments_.emplace(id, std::move(T_ground));
+}
+
 void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map) {
     const Eigen::Matrix4d T_ground = AlignToLocalGround(local_map, config_.density_map_resolution);
+    DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
+                                                config_.density_threshold);
+    cv::Mat orb_descriptors;
+    std::vector<cv::KeyPoint> orb_keypoints;
+    orb_keypoints.reserve(nfeatures);
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+                                     orb_descriptors);
+
+    std::vector<std::vector<cv::DMatch>> self_matches;
+    self_matches.reserve(orb_keypoints.size());
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+
+    std::vector<Matchable *> hbst_matchable;
+    hbst_matchable.reserve(orb_descriptors.rows);
+    std::for_each(
+        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
+            if (self_match[1].distance > self_similarity_threshold) {
+                const int index_descriptor = self_match[0].queryIdx;
+                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
+                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+                hbst_matchable.emplace_back(
+                    new Matchable(keypoint, orb_descriptors.row(index_descriptor)));
+            }
+        });
+    hbst_binary_tree_->match(hbst_matchable, descriptor_matches_,
+                             config_.hamming_distance_threshold);
+}
+
+void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map,
+                        const std::vector<Eigen::Vector3d> &voxel_means,
+                        const std::vector<Eigen::Vector3d> &voxel_normals) {
+    const Eigen::Matrix4d T_ground = AlignToLocalGround(voxel_means, voxel_normals);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
@@ -170,6 +242,40 @@ ClosureCandidate MapClosures::ValidateClosure(const int reference_id, const int 
 std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
     const int query_id, const std::vector<Eigen::Vector3d> &local_map, const int k) {
     MatchAndAddToDatabase(query_id, local_map);
+    auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
+        return a.number_of_inliers > b.number_of_inliers;
+    };
+
+    std::vector<ClosureCandidate> closures;
+    const int num_of_potential_closures = query_id - no_of_local_maps_to_skip;
+    if (num_of_potential_closures > 0) {
+        closures.reserve(num_of_potential_closures);
+        for (int ref_id = 0; ref_id < num_of_potential_closures; ++ref_id) {
+            ClosureCandidate closure = ValidateClosure(ref_id, query_id);
+            if (closure.number_of_inliers > min_no_of_matches) {
+                closures.emplace_back(std::move(closure));
+            }
+        }
+        if (k != -1 && !closures.empty()) {
+            const int top_k = std::min(k, static_cast<int>(closures.size()));
+            if (top_k < static_cast<int>(closures.size())) {
+                const auto kth = closures.begin() + top_k;
+                std::nth_element(closures.begin(), kth, closures.end(), compare_closure_candidates);
+                closures.resize(top_k);
+            }
+            std::sort(closures.begin(), closures.end(), compare_closure_candidates);
+        }
+    }
+    return closures;
+}
+
+std::vector<ClosureCandidate> MapClosures::GetTopKClosures(
+    const int query_id,
+    const std::vector<Eigen::Vector3d> &local_map,
+    const std::vector<Eigen::Vector3d> &voxel_means,
+    const std::vector<Eigen::Vector3d> &voxel_normals,
+    const int k) {
+    MatchAndAddToDatabase(query_id, local_map, voxel_means, voxel_normals);
     auto compare_closure_candidates = [](const ClosureCandidate &a, const ClosureCandidate &b) {
         return a.number_of_inliers > b.number_of_inliers;
     };
