@@ -58,8 +58,8 @@ Homepage = "https://github.com/PRBonn/MapClosures"
 
 [tool.scikit-build]
 build-dir = "build/{wheel_tag}"
-cmake.verbose = false
-cmake.minimum-version = "3.22"
+build.verbose = false
+cmake.version = ">=3.22"
 editable.mode = "redirect"
 editable.rebuild = true
 editable.verbose = true

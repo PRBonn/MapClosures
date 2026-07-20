@@ -174,4 +174,22 @@ Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &pointcloud, const doubl
     }
     return T.matrix();
 }
+
+Eigen::Matrix4d AlignToLocalGround(const Vector3dVector &voxel_means,
+                                   const Vector3dVector &voxel_normals) {
+    auto [ground_samples, T] = SampleGroundPoints(voxel_means, voxel_normals);
+    if (ground_samples.empty()) return Eigen::Matrix4d::Identity();
+    TransformPoints(T, ground_samples);
+    for (int iters = 0; iters < max_iterations; iters++) {
+        const auto [H, b] = BuildLinearSystem(ground_samples);
+        const Eigen::Vector3d dx = H.ldlt().solve(-b);
+        Eigen::Matrix<double, 6, 1> se3 = Eigen::Matrix<double, 6, 1>::Zero();
+        se3 << 0.0, 0.0, dx.x(), dx.y(), dx.z(), 0.0;
+        const Sophus::SE3d estimation(Sophus::SE3d::exp(se3));
+        TransformPoints(estimation, ground_samples);
+        T = estimation * T;
+        if (dx.norm() < convergence_threshold) break;
+    }
+    return T.matrix();
+}
 }  // namespace map_closures

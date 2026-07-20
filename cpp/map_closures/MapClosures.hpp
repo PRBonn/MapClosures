@@ -67,12 +67,36 @@ public:
         }
         return std::move(closures.front());
     }
+    ClosureCandidate GetBestClosure(const int query_id,
+                                    const std::vector<Eigen::Vector3d> &local_map,
+                                    const std::vector<Eigen::Vector3d> &voxel_means,
+                                    const std::vector<Eigen::Vector3d> &voxel_normals) {
+        std::vector<ClosureCandidate> closures =
+            GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, 1);
+        if (closures.empty()) {
+            return ClosureCandidate();
+        }
+        return std::move(closures.front());
+    }
+
+    std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
+                                                  const std::vector<Eigen::Vector3d> &local_map,
+                                                  const std::vector<Eigen::Vector3d> &voxel_means,
+                                                  const std::vector<Eigen::Vector3d> &voxel_normals,
+                                                  const int k);
     std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
                                                   const std::vector<Eigen::Vector3d> &local_map,
                                                   const int k);
+
     std::vector<ClosureCandidate> GetClosures(const int query_id,
                                               const std::vector<Eigen::Vector3d> &local_map) {
         return GetTopKClosures(query_id, local_map, -1);
+    }
+    std::vector<ClosureCandidate> GetClosures(const int query_id,
+                                              const std::vector<Eigen::Vector3d> &local_map,
+                                              const std::vector<Eigen::Vector3d> &voxel_means,
+                                              const std::vector<Eigen::Vector3d> &voxel_normals) {
+        return GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, -1);
     }
 
     const DensityMap &getDensityMapFromId(const int map_id) const {
@@ -89,7 +113,14 @@ public:
 
 protected:
     void MatchAndAddToDatabase(const int id, const std::vector<Eigen::Vector3d> &local_map);
+    void MatchAndAddToDatabase(const int id,
+                               const std::vector<Eigen::Vector3d> &local_map,
+                               const std::vector<Eigen::Vector3d> &voxel_means,
+                               const std::vector<Eigen::Vector3d> &voxel_normals);
     void Match(const std::vector<Eigen::Vector3d> &local_map);
+    void Match(const std::vector<Eigen::Vector3d> &local_map,
+               const std::vector<Eigen::Vector3d> &voxel_means,
+               const std::vector<Eigen::Vector3d> &voxel_normals);
     ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
 
     Config config_;
