@@ -68,7 +68,7 @@ struct VoxelMap {
     void RemovePointsFarFromLocation(const Eigen::Vector3d &origin);
 
     double voxel_size_;
-    double map_resolution_;
+    double map_resolution2_;
     double max_distance_;
     std::unordered_map<Voxel, VoxelBlock> map_;
 };

@@ -61,7 +61,7 @@ public:
 
     ClosureCandidate GetBestClosure(const int query_id,
                                     const std::vector<Eigen::Vector3d> &local_map) {
-        std::vector<ClosureCandidate> closures = GetTopKClosures(query_id, local_map, 1);
+        const std::vector<ClosureCandidate> closures = GetTopKClosures(query_id, local_map, 1);
         if (closures.empty()) {
             return ClosureCandidate();
         }
@@ -71,7 +71,7 @@ public:
                                     const std::vector<Eigen::Vector3d> &local_map,
                                     const std::vector<Eigen::Vector3d> &voxel_means,
                                     const std::vector<Eigen::Vector3d> &voxel_normals) {
-        std::vector<ClosureCandidate> closures =
+        const std::vector<ClosureCandidate> closures =
             GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, 1);
         if (closures.empty()) {
             return ClosureCandidate();
@@ -129,6 +129,9 @@ protected:
     std::unordered_map<int, Eigen::Matrix4d> ground_alignments_;
     std::unique_ptr<Tree> hbst_binary_tree_ = std::make_unique<Tree>();
     cv::Ptr<cv::DescriptorExtractor> orb_extractor_;
+
+    std::vector<cv::KeyPoint> orb_keypoints_;
+    std::vector<std::vector<cv::DMatch>> self_matches_;
     cv::BFMatcher self_matcher_ = cv::BFMatcher(cv::NORM_HAMMING);
 };
 }  // namespace map_closures

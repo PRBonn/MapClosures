@@ -23,7 +23,6 @@
 #include "MapClosures.hpp"
 
 #include <Eigen/Core>
-#include <algorithm>
 #include <cmath>
 #include <numeric>
 #include <opencv2/core.hpp>
@@ -72,28 +71,27 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
-    std::vector<cv::KeyPoint> orb_keypoints;
-    orb_keypoints.reserve(nfeatures);
-    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+    orb_keypoints_.clear();
+    orb_keypoints_.reserve(nfeatures);
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints_,
                                      orb_descriptors);
 
-    std::vector<std::vector<cv::DMatch>> self_matches;
-    self_matches.reserve(orb_keypoints.size());
-    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+    self_matches_.clear();
+    self_matches_.reserve(orb_keypoints_.size());
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches_, 2);
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    std::for_each(
-        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
-            if (self_match[1].distance > self_similarity_threshold) {
-                const int index_descriptor = self_match[0].queryIdx;
-                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
-                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
-                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
-                hbst_matchable.emplace_back(
-                    new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
-            }
-        });
+    for (const auto &self_match : self_matches_) {
+        if (self_match[1].distance > self_similarity_threshold) {
+            const int index_descriptor = self_match[0].queryIdx;
+            cv::KeyPoint keypoint = orb_keypoints_[index_descriptor];
+            keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+            keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+            hbst_matchable.emplace_back(
+                new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
+        }
+    }
 
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
@@ -110,29 +108,29 @@ void MapClosures::MatchAndAddToDatabase(const int id,
     Eigen::Matrix4d T_ground = AlignToLocalGround(voxel_means, voxel_normals);
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
+
+    orb_keypoints_.clear();
+    orb_keypoints_.reserve(nfeatures);
     cv::Mat orb_descriptors;
-    std::vector<cv::KeyPoint> orb_keypoints;
-    orb_keypoints.reserve(nfeatures);
-    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints_,
                                      orb_descriptors);
 
-    std::vector<std::vector<cv::DMatch>> self_matches;
-    self_matches.reserve(orb_keypoints.size());
-    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+    self_matches_.clear();
+    self_matches_.reserve(orb_keypoints_.size());
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches_, 2);
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    std::for_each(
-        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
-            if (self_match[1].distance > self_similarity_threshold) {
-                const int index_descriptor = self_match[0].queryIdx;
-                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
-                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
-                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
-                hbst_matchable.emplace_back(
-                    new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
-            }
-        });
+    for (const auto &self_match : self_matches_) {
+        if (self_match[1].distance > self_similarity_threshold) {
+            const int index_descriptor = self_match[0].queryIdx;
+            cv::KeyPoint keypoint = orb_keypoints_[index_descriptor];
+            keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+            keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+            hbst_matchable.emplace_back(
+                new Matchable(keypoint, orb_descriptors.row(index_descriptor), id));
+        }
+    }
 
     hbst_binary_tree_->matchAndAdd(hbst_matchable, descriptor_matches_,
                                    config_.hamming_distance_threshold,
@@ -147,28 +145,27 @@ void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map) {
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
-    std::vector<cv::KeyPoint> orb_keypoints;
-    orb_keypoints.reserve(nfeatures);
-    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+    orb_keypoints_.clear();
+    orb_keypoints_.reserve(nfeatures);
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints_,
                                      orb_descriptors);
 
-    std::vector<std::vector<cv::DMatch>> self_matches;
-    self_matches.reserve(orb_keypoints.size());
-    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+    self_matches_.clear();
+    self_matches_.reserve(orb_keypoints_.size());
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches_, 2);
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    std::for_each(
-        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
-            if (self_match[1].distance > self_similarity_threshold) {
-                const int index_descriptor = self_match[0].queryIdx;
-                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
-                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
-                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
-                hbst_matchable.emplace_back(
-                    new Matchable(keypoint, orb_descriptors.row(index_descriptor)));
-            }
-        });
+    for (const auto &self_match : self_matches_) {
+        if (self_match[1].distance > self_similarity_threshold) {
+            const int index_descriptor = self_match[0].queryIdx;
+            cv::KeyPoint keypoint = orb_keypoints_[index_descriptor];
+            keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+            keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+            hbst_matchable.emplace_back(
+                new Matchable(keypoint, orb_descriptors.row(index_descriptor)));
+        }
+    }
     hbst_binary_tree_->match(hbst_matchable, descriptor_matches_,
                              config_.hamming_distance_threshold);
 }
@@ -180,28 +177,27 @@ void MapClosures::Match(const std::vector<Eigen::Vector3d> &local_map,
     DensityMap density_map = GenerateDensityMap(local_map, T_ground, config_.density_map_resolution,
                                                 config_.density_threshold);
     cv::Mat orb_descriptors;
-    std::vector<cv::KeyPoint> orb_keypoints;
-    orb_keypoints.reserve(nfeatures);
-    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints,
+    orb_keypoints_.clear();
+    orb_keypoints_.reserve(nfeatures);
+    orb_extractor_->detectAndCompute(density_map.grid, cv::noArray(), orb_keypoints_,
                                      orb_descriptors);
 
-    std::vector<std::vector<cv::DMatch>> self_matches;
-    self_matches.reserve(orb_keypoints.size());
-    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches, 2);
+    self_matches_.clear();
+    self_matches_.reserve(orb_keypoints_.size());
+    self_matcher_.knnMatch(orb_descriptors, orb_descriptors, self_matches_, 2);
 
     std::vector<Matchable *> hbst_matchable;
     hbst_matchable.reserve(orb_descriptors.rows);
-    std::for_each(
-        self_matches.cbegin(), self_matches.cend(), [&](const std::vector<cv::DMatch> &self_match) {
-            if (self_match[1].distance > self_similarity_threshold) {
-                const int index_descriptor = self_match[0].queryIdx;
-                cv::KeyPoint keypoint = orb_keypoints[index_descriptor];
-                keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
-                keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
-                hbst_matchable.emplace_back(
-                    new Matchable(keypoint, orb_descriptors.row(index_descriptor)));
-            }
-        });
+    for (const auto &self_match : self_matches_) {
+        if (self_match[1].distance > self_similarity_threshold) {
+            const int index_descriptor = self_match[0].queryIdx;
+            cv::KeyPoint keypoint = orb_keypoints_[index_descriptor];
+            keypoint.pt.x = keypoint.pt.x + static_cast<float>(density_map.lower_bound.y());
+            keypoint.pt.y = keypoint.pt.y + static_cast<float>(density_map.lower_bound.x());
+            hbst_matchable.emplace_back(
+                new Matchable(keypoint, orb_descriptors.row(index_descriptor)));
+        }
+    }
     hbst_binary_tree_->match(hbst_matchable, descriptor_matches_,
                              config_.hamming_distance_threshold);
 }
