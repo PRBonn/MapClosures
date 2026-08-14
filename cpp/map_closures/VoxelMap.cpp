@@ -37,7 +37,7 @@ inline Eigen::Vector3i ToVoxelCoordinates(const Eigen::Vector3d &point, const do
                            static_cast<int>(std::floor(point.z() / voxel_size)));
 }
 
-inline Eigen::Vector3d VoxelCenter(const Voxel &voxel, const double voxel_size) {
+inline Eigen::Vector3d VoxelCenter(const Eigen::Vector3i &voxel, const double voxel_size) {
     return Eigen::Vector3d(static_cast<double>(voxel.x()) * voxel_size,
                            static_cast<double>(voxel.y()) * voxel_size,
                            static_cast<double>(voxel.z()) * voxel_size) +
