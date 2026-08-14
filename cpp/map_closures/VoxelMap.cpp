@@ -37,6 +37,13 @@ inline Eigen::Vector3i ToVoxelCoordinates(const Eigen::Vector3d &point, const do
                            static_cast<int>(std::floor(point.z() / voxel_size)));
 }
 
+inline Eigen::Vector3d VoxelCenter(const Eigen::Vector3i &voxel, const double voxel_size) {
+    return Eigen::Vector3d(static_cast<double>(voxel.x()) * voxel_size,
+                           static_cast<double>(voxel.y()) * voxel_size,
+                           static_cast<double>(voxel.z()) * voxel_size) +
+           Eigen::Vector3d::Constant(voxel_size * 0.5);
+}
+
 static constexpr unsigned int min_points_for_covariance_computation = 10;
 
 std::tuple<Eigen::Vector3d, Eigen::Vector3d> ComputeMeanAndNormal(
@@ -72,8 +79,8 @@ void VoxelBlock::emplace_back(const Eigen::Vector3d &p) {
 
 VoxelMap::VoxelMap(const double voxel_size, const double max_distance)
     : voxel_size_(voxel_size),
-      map_resolution_(voxel_size /
-                      (std::sqrt(static_cast<double>(max_points_per_normal_computation)))),
+      map_resolution2_(voxel_size * voxel_size /
+                       static_cast<double>(max_points_per_normal_computation)),
       max_distance_(max_distance) {}
 
 void VoxelMap::IntegrateFrame(const Vector3dVector &points, const Eigen::Matrix4d &pose) {
@@ -86,7 +93,7 @@ void VoxelMap::IntegrateFrame(const Vector3dVector &points, const Eigen::Matrix4
 }
 
 void VoxelMap::AddPoints(const Vector3dVector &points) {
-    std::for_each(points.cbegin(), points.cend(), [&](const Eigen::Vector3d &point) {
+    for (const auto &point : points) {
         const Voxel voxel = ToVoxelCoordinates(point, voxel_size_);
         const auto [it, inserted] = map_.try_emplace(voxel, VoxelBlock());
         if (!inserted) {
@@ -94,23 +101,23 @@ void VoxelMap::AddPoints(const Vector3dVector &points) {
             if (voxel_block.size() == max_points_per_normal_computation ||
                 std::any_of(voxel_block.cbegin(), voxel_block.cend(),
                             [&](const Eigen::Vector3d &voxel_point) {
-                                return (voxel_point - point).norm() < map_resolution_;
+                                return (voxel_point - point).squaredNorm() < map_resolution2_;
                             })) {
-                return;
+                continue;
             }
         }
         it->second.emplace_back(point);
-    });
+    }
 }
 
 Vector3dVector VoxelMap::Pointcloud() const {
     Vector3dVector points;
     points.reserve(map_.size() * max_points_per_normal_computation);
-    std::for_each(map_.cbegin(), map_.cend(), [&](const auto &map_element) {
-        const VoxelBlock &voxel_block = map_element.second;
-        std::for_each(voxel_block.cbegin(), voxel_block.cend(),
-                      [&](const Eigen::Vector3d &p) { points.emplace_back(p); });
-    });
+    for (const auto &[voxel, voxel_block] : map_) {
+        for (auto it = voxel_block.cbegin(); it != voxel_block.cend(); ++it) {
+            points.emplace_back(*it);
+        }
+    }
     return points;
 }
 
@@ -119,26 +126,22 @@ std::tuple<Vector3dVector, Vector3dVector> VoxelMap::PerVoxelMeanAndNormal() con
     voxel_means.reserve(map_.size());
     Vector3dVector voxel_normals;
     voxel_normals.reserve(map_.size());
-    std::for_each(map_.cbegin(), map_.cend(), [&](const auto &map_element) {
-        const VoxelBlock &voxel_block = map_element.second;
+    for (const auto &[_, voxel_block] : map_) {
         if (voxel_block.size() >= min_points_for_covariance_computation) {
-            auto [mean, normal] = ComputeMeanAndNormal(voxel_block);
+            const auto &[mean, normal] = ComputeMeanAndNormal(voxel_block);
             voxel_means.emplace_back(mean);
             voxel_normals.emplace_back(normal);
         }
-    });
+    }
     return {std::move(voxel_means), std::move(voxel_normals)};
 }
 
 void VoxelMap::RemovePointsFarFromLocation(const Eigen::Vector3d &origin) {
-    const double max_distance2 = max_distance_ * max_distance_;
+    const auto max_distance2 = max_distance_ * max_distance_;
     for (auto it = map_.begin(); it != map_.end();) {
-        const auto &[voxel, voxel_points] = *it;
-        if ((voxel_points.front() - origin).squaredNorm() >= (max_distance2)) {
-            it = map_.erase(it);
-        } else {
-            ++it;
-        }
+        it = (VoxelCenter(it->first, voxel_size_) - origin).squaredNorm() >= max_distance2
+                 ? map_.erase(it)
+                 : std::next(it);
     }
 }
 }  // namespace map_closures

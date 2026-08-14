@@ -55,12 +55,11 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     Eigen::Array2i lower_bound_coordinates = Eigen::Array2i::Constant(max_int);
     Eigen::Array2i upper_bound_coordinates = Eigen::Array2i::Constant(min_int);
 
+    const auto R2x3 = T_ground.block<2, 3>(0, 0);
+    const auto t2x1 = T_ground.block<2, 1>(0, 3);
+    const auto inv_resolution = 1.0 / density_map_resolution;
     auto Discretize2D = [&](const Eigen::Vector3d &p) -> Eigen::Array2i {
-        return ((T_ground.block<2, 3>(0, 0) * p + T_ground.block<2, 1>(0, 3)) /
-                density_map_resolution)
-            .array()
-            .floor()
-            .cast<int>();
+        return ((R2x3 * p + t2x1) * inv_resolution).array().floor().cast<int>();
     };
     std::vector<Eigen::Array2i> pixels(pcd.size());
     std::transform(pcd.cbegin(), pcd.cend(), pixels.begin(), [&](const Eigen::Vector3d &point) {
@@ -74,20 +73,23 @@ DensityMap GenerateDensityMap(const std::vector<Eigen::Vector3d> &pcd,
     const int n_cols = rows_and_columns.y() + 1;
 
     cv::Mat counting_grid(n_rows, n_cols, CV_64FC1, 0.0);
-    std::for_each(pixels.cbegin(), pixels.cend(), [&](const Eigen::Array2i &pixel) {
+    for (const Eigen::Array2i &pixel : pixels) {
         const Eigen::Array2i px = pixel - lower_bound_coordinates;
         double &count = counting_grid.at<double>(px.x(), px.y());
         count += 1.0;
         max_points = std::max(max_points, count);
         min_points = std::min(min_points, count);
-    });
+    }
 
     DensityMap density_map(n_rows, n_cols, density_map_resolution, lower_bound_coordinates);
-    counting_grid.forEach<double>([&](const double count, const int pos[]) {
-        double density = (count - min_points) / (max_points - min_points);
-        density = density > density_threshold ? density : 0.0;
-        density_map(pos[0], pos[1]) = static_cast<uint8_t>(255 * density);
-    });
+    for (int y = 0, x = 0; y < n_rows; ++y) {
+        for (x = 0; x < n_cols; ++x) {
+            const double count = counting_grid.at<double>(y, x);
+            double density = (count - min_points) / (max_points - min_points);
+            density = density > density_threshold ? density : 0.0;
+            density_map(y, x) = static_cast<uint8_t>(255 * density);
+        }
+    }
 
     return density_map;
 }
