@@ -50,8 +50,14 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const Eigen::JacobiSVD<Eigen::Matrix2d> svd(covariance_matrix,
                                                 Eigen::ComputeFullU | Eigen::ComputeFullV);
     Eigen::Isometry2d T = Eigen::Isometry2d::Identity();
-    const Eigen::Matrix2d R = svd.matrixV() * svd.matrixU().transpose();
-    T.linear() = R.determinant() > 0 ? R : -R;
+    Eigen::Matrix2d correction = Eigen::Matrix2d::Identity();
+    // In 2D, negating an entire reflection leaves its determinant negative.
+    // Flip only the singular direction associated with the smaller value.
+    if ((svd.matrixV() * svd.matrixU().transpose()).determinant() < 0.0) {
+        correction(1, 1) = -1.0;
+    }
+    const Eigen::Matrix2d R = svd.matrixV() * correction * svd.matrixU().transpose();
+    T.linear() = R;
     T.translation() = mean.query - R * mean.ref;
 
     return T;

@@ -25,6 +25,7 @@ project(map_closures_cpp VERSION 2.1.0 LANGUAGES CXX)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 option(USE_SYSTEM_OPENCV "Use system pre-installed OpenCV" ON)
+option(BUILD_TESTS "Build MapClosures regression tests" OFF)
 
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -34,3 +35,22 @@ include(3rdparty/find_dependencies.cmake)
 include(cmake/CompilerOptions.cmake)
 
 add_subdirectory(map_closures)
+
+if(BUILD_TESTS)
+  enable_testing()
+  add_executable(align_ransac_2d_test tests/align_ransac_2d_test.cpp)
+  target_link_libraries(align_ransac_2d_test PRIVATE map_closures)
+  foreach(
+    test_case
+    identity
+    rotation_30
+    rotation_90
+    rotation_180
+    rotation_225
+    rotation_270
+    noncollinear
+    reflection_origin
+    reflection_offset)
+    add_test(NAME align_ransac_2d_${test_case} COMMAND align_ransac_2d_test ${test_case})
+  endforeach()
+endif()
