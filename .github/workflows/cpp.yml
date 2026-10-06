@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v2.1
+        uses: jwlawson/actions-setup-cmake@v2.2
         with:
           cmake-version: "3.25.x"
       - name: Configure CMake
