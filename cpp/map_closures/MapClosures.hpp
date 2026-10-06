@@ -1,7 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-// Ignacio Vizzo, Cyrill Stachniss.
+// Copyright (c) 2026 Saurabh Gupta
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +34,7 @@
 #include "DensityMap.hpp"
 #include "srrg_hbst/types/binary_tree.hpp"
 
-static constexpr int descriptor_size_bits = 256;
+constexpr int descriptor_size_bits = 256;
 using Matchable = srrg_hbst::BinaryMatchable<cv::KeyPoint, descriptor_size_bits>;
 using Node = srrg_hbst::BinaryNode<Matchable>;
 using Tree = srrg_hbst::BinaryTree<Node>;
@@ -62,18 +61,42 @@ public:
 
     ClosureCandidate GetBestClosure(const int query_id,
                                     const std::vector<Eigen::Vector3d> &local_map) {
-        const auto &closures = GetTopKClosures(query_id, local_map, 1);
+        const std::vector<ClosureCandidate> closures = GetTopKClosures(query_id, local_map, 1);
         if (closures.empty()) {
             return ClosureCandidate();
         }
         return closures.front();
     }
+    ClosureCandidate GetBestClosure(const int query_id,
+                                    const std::vector<Eigen::Vector3d> &local_map,
+                                    const std::vector<Eigen::Vector3d> &voxel_means,
+                                    const std::vector<Eigen::Vector3d> &voxel_normals) {
+        const std::vector<ClosureCandidate> closures =
+            GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, 1);
+        if (closures.empty()) {
+            return ClosureCandidate();
+        }
+        return closures.front();
+    }
+
+    std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
+                                                  const std::vector<Eigen::Vector3d> &local_map,
+                                                  const std::vector<Eigen::Vector3d> &voxel_means,
+                                                  const std::vector<Eigen::Vector3d> &voxel_normals,
+                                                  const int k);
     std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
                                                   const std::vector<Eigen::Vector3d> &local_map,
                                                   const int k);
+
     std::vector<ClosureCandidate> GetClosures(const int query_id,
                                               const std::vector<Eigen::Vector3d> &local_map) {
         return GetTopKClosures(query_id, local_map, -1);
+    }
+    std::vector<ClosureCandidate> GetClosures(const int query_id,
+                                              const std::vector<Eigen::Vector3d> &local_map,
+                                              const std::vector<Eigen::Vector3d> &voxel_means,
+                                              const std::vector<Eigen::Vector3d> &voxel_normals) {
+        return GetTopKClosures(query_id, local_map, voxel_means, voxel_normals, -1);
     }
 
     const DensityMap &getDensityMapFromId(const int map_id) const {
@@ -90,7 +113,14 @@ public:
 
 protected:
     void MatchAndAddToDatabase(const int id, const std::vector<Eigen::Vector3d> &local_map);
+    void MatchAndAddToDatabase(const int id,
+                               const std::vector<Eigen::Vector3d> &local_map,
+                               const std::vector<Eigen::Vector3d> &voxel_means,
+                               const std::vector<Eigen::Vector3d> &voxel_normals);
     void Match(const std::vector<Eigen::Vector3d> &local_map);
+    void Match(const std::vector<Eigen::Vector3d> &local_map,
+               const std::vector<Eigen::Vector3d> &voxel_means,
+               const std::vector<Eigen::Vector3d> &voxel_normals);
     ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
 
     Config config_;
@@ -99,5 +129,9 @@ protected:
     std::unordered_map<int, Eigen::Matrix4d> ground_alignments_;
     std::unique_ptr<Tree> hbst_binary_tree_ = std::make_unique<Tree>();
     cv::Ptr<cv::DescriptorExtractor> orb_extractor_;
+
+    std::vector<cv::KeyPoint> orb_keypoints_;
+    std::vector<std::vector<cv::DMatch>> self_matches_;
+    cv::BFMatcher self_matcher_ = cv::BFMatcher(cv::NORM_HAMMING);
 };
 }  // namespace map_closures

@@ -1,7 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2023 Saurabh Gupta, Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch,
-# Cyrill Stachniss.
+# Copyright (c) 2026 Saurabh Gupta
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

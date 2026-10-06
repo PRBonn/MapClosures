@@ -1,7 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-# Ignacio Vizzo, Cyrill Stachniss.
+# Copyright (c) 2026 Saurabh Gupta
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +21,7 @@
 # SOFTWARE.
 
 cmake_minimum_required(VERSION 3.16...3.26)
-project(map_closures_cpp VERSION 2.0.2 LANGUAGES CXX)
+project(map_closures_cpp VERSION 2.1.0 LANGUAGES CXX)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 option(USE_SYSTEM_OPENCV "Use system pre-installed OpenCV" ON)

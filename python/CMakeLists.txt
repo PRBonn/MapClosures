@@ -1,7 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
-# Stachniss.
+# Copyright (c) 2026 Saurabh Gupta
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 cmake_minimum_required(VERSION 3.16...3.26)
-project(map_closure_pybind VERSION 2.0.2 LANGUAGES CXX)
+project(map_closure_pybind VERSION 2.1.0 LANGUAGES CXX)
 
 # Set build type
 set(CMAKE_BUILD_TYPE Release)
