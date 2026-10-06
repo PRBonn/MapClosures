@@ -49,11 +49,16 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
 
     const Eigen::JacobiSVD<Eigen::Matrix2d> svd(covariance_matrix,
                                                 Eigen::ComputeFullU | Eigen::ComputeFullV);
+    const Eigen::Matrix2d &U = svd.matrixU();
+    const Eigen::Matrix2d &V = svd.matrixV();
+    Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+    if ((V * U.transpose()).determinant() < 0.0) {
+        D(1, 1) = -1.0;
+    }
     Eigen::Isometry2d T = Eigen::Isometry2d::Identity();
-    const Eigen::Matrix2d R = svd.matrixV() * svd.matrixU().transpose();
-    T.linear() = R.determinant() > 0 ? R : -R;
+    const Eigen::Matrix2d R = V * D * U.transpose();
+    T.linear() = R;
     T.translation() = mean.query - R * mean.ref;
-
     return T;
 }
 
