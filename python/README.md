@@ -12,6 +12,8 @@
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>ICRA24 Paper</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2026ijrr.pdf>IJRR26 Paper</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://github.com/PRBonn/MapClosures/issues>Contact Us</a>
   <br />
   <br />
@@ -55,7 +57,7 @@ map_closure_pipeline -v
 
 ## Citation
 
-If you use this library for any academic work, please cite our original [paper](https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf).
+If you use this library for any academic work, please cite our original papers.
 
 ```bibtex
 @inproceedings{gupta2024icra,
@@ -63,6 +65,15 @@ If you use this library for any academic work, please cite our original [paper](
     title      = {{Effectively Detecting Loop Closures using Point Cloud Density Maps}},
     booktitle  = {IEEE International Conference on Robotics and Automation (ICRA)},
     year       = {2024},
+    codeurl    = {https://github.com/PRBonn/MapClosures},
+}
+@article{gupta2026ijrr,
+    author     = {Saurabh Gupta and Tiziano Guadagnino and Benedikt Mersch and Niklas Trekel and Meher V. R. Malladi and Cyrill Stachniss},
+    title      = {{Efficiently Closing Loops in LiDAR-Based SLAM Using Point Cloud Density Maps}},
+    booktitle  = {The International Journal of Robotics Research (IJRR)},
+    volume     = {0},
+    number     = {0},
+    year       = {2026},
     codeurl    = {https://github.com/PRBonn/MapClosures},
 }
 ```
