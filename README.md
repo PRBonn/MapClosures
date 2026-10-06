@@ -12,6 +12,8 @@
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf>ICRA24 Paper</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href=https://www.ipb.uni-bonn.de/pdfs/gupta2026ijrr.pdf>IJRR26 Paper</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href=https://github.com/PRBonn/MapClosures/issues>Contact Us</a>
   <br />
   <br />
@@ -83,7 +85,7 @@ map_closure_pipeline -v
 
 ## Citation
 
-If you use this library for any academic work, please cite our original [paper](https://www.ipb.uni-bonn.de/pdfs/gupta2024icra.pdf).
+If you use this library for any academic work, please cite our original papers.
 
 ```bibtex
 @inproceedings{gupta2024icra,
@@ -93,11 +95,21 @@ If you use this library for any academic work, please cite our original [paper](
     year       = {2024},
     codeurl    = {https://github.com/PRBonn/MapClosures},
 }
+@article{gupta2026ijrr,
+    author     = {Saurabh Gupta and Tiziano Guadagnino and Benedikt Mersch and Niklas Trekel and Meher V. R. Malladi and Cyrill Stachniss},
+    title      = {{Efficiently Closing Loops in LiDAR-Based SLAM Using Point Cloud Density Maps}},
+    booktitle  = {The International Journal of Robotics Research (IJRR)},
+    volume     = {0},
+    number     = {0},
+    year       = {2026},
+    codeurl    = {https://github.com/PRBonn/MapClosures},
+}
 ```
 ### Paper Results
-As we decided to continue the development of **MapClosures** beyond the scope of the ICRA paper, we created a ``git tag`` so that researchers can consistently reproduce the results of the publication. To checkout at this tag, you can run the following:
+As we decided to continue the development of **MapClosures** beyond the scope of the papers, we created a ``git tag`` so that researchers can consistently reproduce the results of the publication. To checkout at this tag, you can run the following:
 ```sh
 git checkout ICRA2024
+git checkout gupta2026ijrr
 ```
 Our development aims to push the performances of **MapClosures** above the original results of the paper.
 
