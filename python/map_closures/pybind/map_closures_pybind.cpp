@@ -1,7 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Saurabh Gupta, Tiziano Guadagnino, Benedikt Mersch,
-// Ignacio Vizzo, Cyrill Stachniss.
+// Copyright (c) 2026 Saurabh Gupta
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -78,12 +77,34 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                  return density_map_eigen;
              })
         .def("_getGroundAlignmentFromId", &MapClosures::getGroundAlignmentFromId, "map_id"_a)
-        .def("_GetBestClosure", &MapClosures::GetBestClosure, "query_id"_a, "local_map"_a,
-             "voxel_means"_a, "voxel_normals"_a)
-        .def("_GetTopKClosures", &MapClosures::GetTopKClosures, "query_id"_a, "local_map"_a,
-             "voxel_means"_a, "voxel_normals"_a, "k"_a)
-        .def("_GetClosures", &MapClosures::GetClosures, "query_id"_a, "local_map"_a,
-             "voxel_means"_a, "voxel_normals"_a)
+        .def("_GetBestClosure",
+             py::overload_cast<int, const std::vector<Eigen::Vector3d> &>(
+                 &MapClosures::GetBestClosure),
+             "query_id"_a, "local_map"_a)
+        .def("_GetBestClosure",
+             py::overload_cast<int, const std::vector<Eigen::Vector3d> &,
+                               const std::vector<Eigen::Vector3d> &,
+                               const std::vector<Eigen::Vector3d> &>(&MapClosures::GetBestClosure),
+             "query_id"_a, "local_map"_a, "voxel_means"_a, "voxel_normals"_a)
+        .def("_GetTopKClosures",
+             py::overload_cast<int, const std::vector<Eigen::Vector3d> &, int>(
+                 &MapClosures::GetTopKClosures),
+             "query_id"_a, "local_map"_a, "k"_a)
+        .def("_GetTopKClosures",
+             py::overload_cast<int, const std::vector<Eigen::Vector3d> &,
+                               const std::vector<Eigen::Vector3d> &,
+                               const std::vector<Eigen::Vector3d> &, int>(
+                 &MapClosures::GetTopKClosures),
+             "query_id"_a, "local_map"_a, "voxel_means"_a, "voxel_normals"_a, "k"_a)
+        .def(
+            "_GetClosures",
+            py::overload_cast<int, const std::vector<Eigen::Vector3d> &>(&MapClosures::GetClosures),
+            "query_id"_a, "local_map"_a)
+        .def("_GetClosures",
+             py::overload_cast<int, const std::vector<Eigen::Vector3d> &,
+                               const std::vector<Eigen::Vector3d> &,
+                               const std::vector<Eigen::Vector3d> &>(&MapClosures::GetClosures),
+             "query_id"_a, "local_map"_a, "voxel_means"_a, "voxel_normals"_a)
         .def("_SaveHbstDatabase", &MapClosures::SaveHbstDatabase, "database_path"_a);
 
     py::class_<VoxelMap> internal_map(m, "_VoxelMap", "Don't use this");

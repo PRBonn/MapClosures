@@ -57,13 +57,11 @@ class ApolloDataset:
 
     @staticmethod
     def read_poses(file):
-        from pyquaternion import Quaternion
+        from scipy.spatial.transform import Rotation as R
 
         data = np.loadtxt(file)
         _, _, translations, qxyzw = np.split(data, [1, 2, 5], axis=1)
-        rotations = np.array(
-            [Quaternion(x=x, y=y, z=z, w=w).rotation_matrix for x, y, z, w in qxyzw]
-        )
+        rotations = np.array([R.from_quat(q).as_matrix() for q in qxyzw])
         poses = np.zeros([rotations.shape[0], 4, 4])
         poses[:, :3, -1] = translations
         poses[:, :3, :3] = rotations
