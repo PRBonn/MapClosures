@@ -65,7 +65,7 @@ public:
         if (closures.empty()) {
             return ClosureCandidate();
         }
-        return std::move(closures.front());
+        return closures.front();
     }
     ClosureCandidate GetBestClosure(const int query_id,
                                     const std::vector<Eigen::Vector3d> &local_map,
@@ -76,7 +76,7 @@ public:
         if (closures.empty()) {
             return ClosureCandidate();
         }
-        return std::move(closures.front());
+        return closures.front();
     }
 
     std::vector<ClosureCandidate> GetTopKClosures(const int query_id,
