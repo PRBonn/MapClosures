@@ -212,5 +212,134 @@ def map_closure_pipeline(
     ).run().print()
 
 
+app_multisession = typer.Typer(add_completion=False, rich_markup_mode="rich")
+
+docstring = f"""
+Multi-Session Loop Closure Detection\n
+\b
+Examples:\n
+# Detect closures between two sessions (query vs reference)
+$ map_closure_multisession_pipeline kitti <path-to-query-data> <path-to-ref-results-dir> <path-to-store-results>
+"""
+
+
+@app_multisession.command(name="map_closure_multisession_pipeline", help=docstring)
+def map_closure_multisession_pipeline(
+    dataloader_query: str = typer.Argument(
+        None,
+        show_default=False,
+        case_sensitive=False,
+        autocompletion=available_dataloaders,
+        callback=name_callback,
+        help="Dataloader for the query session",
+    ),
+    data_query: Path = typer.Argument(
+        ...,
+        help="Data directory for the query session",
+        show_default=False,
+    ),
+    ref_results_dir: Path = typer.Argument(
+        ...,
+        help="Path to the reference session results directory (output of map_closure_pipeline with write_data_to_disk())",
+        show_default=False,
+    ),
+    results_dir: Path = typer.Argument(
+        ...,
+        help="Path where multi-session results are to be stored",
+        show_default=False,
+        exists=False,
+    ),
+    config: Optional[Path] = typer.Option(
+        None,
+        "--config",
+        exists=True,
+        show_default=False,
+        help="[Optional] Path to the configuration file",
+    ),
+    eval: Optional[bool] = typer.Option(
+        False,
+        "--eval",
+        "-e",
+        rich_help_panel="Additional Options",
+        help="[Optional] Run the Evaluation Pipeline",
+    ),
+    vis: Optional[bool] = typer.Option(
+        False,
+        "--vis",
+        "-v",
+        rich_help_panel="Additional Options",
+        help="[Optional] Visualization of closures",
+    ),
+    opt: Optional[bool] = typer.Option(
+        False,
+        "--opt",
+        "-o",
+        rich_help_panel="Additional Options",
+        help="[Optional] Run pgo optimization with detected closures",
+    ),
+    sequence: Optional[str] = typer.Option(
+        None,
+        "--sequence",
+        "-s",
+        show_default=False,
+        help="[Optional] For some dataloaders, you need to specify a given sequence",
+        rich_help_panel="Additional Options",
+    ),
+    topic: Optional[str] = typer.Option(
+        None,
+        "--topic",
+        "-t",
+        show_default=False,
+        help="[Optional] Only valid when processing rosbag files",
+        rich_help_panel="Additional Options",
+    ),
+    meta: Optional[Path] = typer.Option(
+        None,
+        "--meta",
+        "-m",
+        exists=True,
+        show_default=False,
+        help="[Optional] For Ouster pcap dataloader, specify metadata json file path explicitly",
+        rich_help_panel="Additional Options",
+    ),
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        help="Show the current version of MapClosures",
+        callback=version_callback,
+        is_eager=True,
+    ),
+):
+    if not dataloader_query:
+        dataloader_query, data_query = guess_dataloader(data_query, default_dataloader="generic")
+
+    if dataloader_query in sequence_dataloaders() and sequence is None:
+        print('[ERROR] You must specify a sequence "--sequence"')
+        raise typer.Exit(code=1)
+
+    from map_closures.datasets import dataset_factory
+    from map_closures.pipeline_multisession import MultiSessionMapClosurePipeline
+
+    MultiSessionMapClosurePipeline(
+        dataset_query=dataset_factory(
+            dataloader=dataloader_query,
+            data_dir=data_query,
+            sequence=sequence,
+            topic=topic,
+            meta=meta,
+        ),
+        ref_data_path=ref_results_dir,
+        config_path=config,
+        results_dir=results_dir,
+        eval=eval,
+        vis=vis,
+        opt=opt,
+    ).run()
+
+
 def run_singlesession():
     app_singlesession()
+
+
+def run_multisession():
+    app_multisession()
