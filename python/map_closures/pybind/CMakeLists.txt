@@ -22,3 +22,7 @@
 pybind11_add_module(map_closures_pybind MODULE map_closures_pybind.cpp)
 target_link_libraries(map_closures_pybind PUBLIC map_closures)
 install(TARGETS map_closures_pybind DESTINATION .)
+
+pybind11_add_module(voxel_map_pybind MODULE voxel_map_pybind.cpp)
+target_link_libraries(voxel_map_pybind PUBLIC map_closures)
+install(TARGETS voxel_map_pybind DESTINATION .)

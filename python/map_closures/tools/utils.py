@@ -24,15 +24,6 @@ from typing import List
 
 import numpy as np
 
-from map_closures.map_closures import ClosureCandidate
-
-
-def pose_inv(T):
-    T_inv = np.eye(4)
-    T_inv[:3, :3] = T[:3, :3].T
-    T_inv[:3, -1] = -T[:3, :3].T @ T[:3, -1]
-    return T_inv
-
 
 @dataclass
 class Data:
@@ -54,5 +45,5 @@ class Data:
         self.ground_alignment_transforms.append(ground_alignment_transform)
         self.local_maps_scan_index_range.append(scan_index_range)
 
-    def append_closure(self, closure: ClosureCandidate):
+    def append_closure(self, closure):
         self.closures.append(np.r_[closure.source_id, closure.target_id, closure.pose.flatten()])

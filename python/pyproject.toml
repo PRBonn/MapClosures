@@ -35,12 +35,13 @@ dependencies = [
     "pydantic-settings>=2.12,<2.15",
     "typer[all]>=0.24.0, <0.26.0",
     "typing_extensions",
-    "tqdm~=4.67"
+    "tqdm~=4.67",
+    "open3d>=0.19,<0.20",
+    "g2opy>=2.3.0",
 ]
 
 [project.optional-dependencies]
 all = [
-    "open3d>=0.19,<0.20",
     "pyyaml~=6.0",
     "mcap-ros2-support",
     "rosbags>=0.10,<0.12",
@@ -51,7 +52,7 @@ all = [
 visualizer = ["polyscope", "matplotlib>3.9.2"]
 
 [project.scripts]
-map_closure_pipeline = "map_closures.tools.cmd:run"
+map_closure_pipeline = "map_closures.tools.cmd:run_singlesession"
 
 [project.urls]
 Homepage = "https://github.com/PRBonn/MapClosures"

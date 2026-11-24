@@ -42,7 +42,7 @@ def sequence_dataloaders():
 
 
 def eval_dataloaders():
-    return ["kitti", "helipr", "mulran", "ncd", "apollo"]
+    return ["kitti", "helipr", "mulran", "ncd", "apollo", "nclt"]
 
 
 def available_dataloaders() -> List:

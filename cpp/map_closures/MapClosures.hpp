@@ -26,6 +26,7 @@
 #include <memory>
 #include <opencv2/core.hpp>
 #include <opencv2/features2d.hpp>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -117,11 +118,8 @@ protected:
                                const std::vector<Eigen::Vector3d> &local_map,
                                const std::vector<Eigen::Vector3d> &voxel_means,
                                const std::vector<Eigen::Vector3d> &voxel_normals);
-    void Match(const std::vector<Eigen::Vector3d> &local_map);
-    void Match(const std::vector<Eigen::Vector3d> &local_map,
-               const std::vector<Eigen::Vector3d> &voxel_means,
-               const std::vector<Eigen::Vector3d> &voxel_normals);
-    ClosureCandidate ValidateClosure(const int reference_id, const int query_id) const;
+    std::optional<ClosureCandidate> ValidateClosure(const int reference_id,
+                                                    const int query_id) const;
 
     Config config_;
     Tree::MatchVectorMap descriptor_matches_;

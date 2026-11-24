@@ -33,7 +33,6 @@
 #include <vector>
 
 #include "map_closures/MapClosures.hpp"
-#include "map_closures/VoxelMap.hpp"
 #include "stl_vector_eigen.h"
 
 PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
@@ -106,15 +105,5 @@ PYBIND11_MODULE(map_closures_pybind, m) {
                                const std::vector<Eigen::Vector3d> &>(&MapClosures::GetClosures),
              "query_id"_a, "local_map"_a, "voxel_means"_a, "voxel_normals"_a)
         .def("_SaveHbstDatabase", &MapClosures::SaveHbstDatabase, "database_path"_a);
-
-    py::class_<VoxelMap> internal_map(m, "_VoxelMap", "Don't use this");
-    internal_map.def(py::init<double, double>(), "voxel_size"_a, "max_distance"_a)
-        .def("_clear", &VoxelMap::Clear)
-        .def("_num_voxels", &VoxelMap::NumVoxels)
-        .def("_add_points", &VoxelMap::AddPoints, "points"_a)
-        .def("_integrate_frame", &VoxelMap::IntegrateFrame, "points"_a, "pose"_a)
-        .def("_point_cloud", &VoxelMap::Pointcloud)
-        .def("_per_voxel_mean_and_normal", &VoxelMap::PerVoxelMeanAndNormal)
-        .def("_remove_far_away_points", &VoxelMap::RemovePointsFarFromLocation, "origin"_a);
 }
 }  // namespace map_closures
