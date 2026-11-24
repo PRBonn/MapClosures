@@ -237,9 +237,7 @@ class MultiSessionOptimizer(StubOptimizer):
                 edge = g2o.EdgeSE3()
                 edge.set_vertex(
                     1,
-                    self.pose_graph.vertex(
-                        self.local_map_scan_index_range[self.ref_scan_index_range][0]
-                    ),
+                    self.pose_graph.vertex(self.ref_scan_index_range[local_map_source][0]),
                 )
                 edge.set_vertex(
                     0,

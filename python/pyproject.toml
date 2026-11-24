@@ -8,7 +8,7 @@ version = "2.2.0"
 description = "Effectively Detecting Loop Closures using Point Cloud Density Maps"
 authors = [{ name = "Saurabh Gupta" }, { name = "Tiziano Guadagnino" }]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 
 classifiers = [
@@ -79,7 +79,7 @@ max-line-length = "100"
 
 [tool.cibuildwheel]
 archs = ["auto64"]
-skip = ["*-musllinux*", "pp*", "cp36-*", "cp37-*", "cp38-*", "cp39-*"]
+skip = ["*-musllinux*", "pp*", "cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*"]
 
 [tool.cibuildwheel.macos]
 environment = "MACOSX_DEPLOYMENT_TARGET=11.00"
