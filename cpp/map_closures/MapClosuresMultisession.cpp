@@ -134,7 +134,6 @@ std::optional<ClosureCandidate> MapClosuresMultisession::ValidateClosure(const i
     const size_t num_matches = matches.size();
 
     if (num_matches > min_no_of_matches) {
-        ClosureCandidate closure;
         std::vector<PointPair> keypoint_pairs(num_matches);
         std::transform(matches.cbegin(), matches.cend(), keypoint_pairs.begin(),
                        [&](const Tree::Match &match) {
@@ -146,6 +145,10 @@ std::optional<ClosureCandidate> MapClosuresMultisession::ValidateClosure(const i
                        });
 
         const auto [pose2d, number_of_inliers] = RansacAlignment2D(keypoint_pairs);
+        if (number_of_inliers < min_no_of_matches) {
+            return std::nullopt;
+        }
+        ClosureCandidate closure;
         closure.source_id = reference_id;
         closure.target_id = query_id;
         closure.pose.block<2, 2>(0, 0) = pose2d.linear();
