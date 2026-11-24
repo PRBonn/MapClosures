@@ -14,11 +14,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-24.04, ubuntu-22.04, windows-2022, macos-14, macos-15]
+        os: [ubuntu-24.04, ubuntu-22.04, windows-2022, macos-15]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v2.1
+        uses: jwlawson/actions-setup-cmake@v2.2.0
         with:
           cmake-version: "3.25.x"
       - name: Configure CMake
@@ -38,9 +38,9 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Cache dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.apt/cache
           key: ${{ runner.os }}-apt-${{ hashFiles('**/ubuntu_dependencies.yml') }}
