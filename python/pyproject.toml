@@ -37,7 +37,7 @@ dependencies = [
     "typing_extensions",
     "tqdm~=4.67",
     "open3d>=0.19,<0.20",
-    "g2opy>=2.3.0",
+    "g2opy>=2.1.0",
 ]
 
 [project.optional-dependencies]
