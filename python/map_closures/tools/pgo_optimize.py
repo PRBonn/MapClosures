@@ -256,31 +256,3 @@ class MultiSessionOptimizer(StubOptimizer):
         for i in range(len(self.odom_poses)):
             v = self.pose_graph.vertex(self.offset + i)
             self.g2o_poses[i] = v.estimate().matrix()
-
-    def log_to_file(self, output_dir: str):
-        np.savetxt(
-            os.path.join(output_dir, "g2o_poses_kitti.txt"),
-            self.g2o_poses[:, :3].reshape(-1, 12),
-        )
-        np.save(os.path.join(output_dir, "g2o_poses.npy"), self.g2o_poses)
-
-    def plot_trajectories(self):
-        from matplotlib import pyplot as plt
-
-        fig = plt.figure(figsize=(10, 6), constrained_layout=True)
-        ax = fig.add_subplot(111)
-        plt.plot(
-            self.ref_poses[:, 0, -1],
-            self.ref_poses[:, 1, -1],
-            linewidth=2,
-            color="tab:red",
-        )
-        plt.plot(
-            self.g2o_poses[:, 0, -1],
-            self.g2o_poses[:, 1, -1],
-            linewidth=2,
-            color="tab:blue",
-        )
-        ax.legend(["Reference-Session", "Query-Session"], fontsize=20)
-        plt.axis("auto")
-        plt.show()

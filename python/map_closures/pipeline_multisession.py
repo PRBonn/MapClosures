@@ -97,27 +97,13 @@ class MultiSessionMapClosurePipeline:
                 self.results = EvaluationPipeline(gt_closures, self._query_dataset_name)
 
         self.visualizer = StubVisualizer()
-        self.pgo_optimizer = MultiSessionOptimizer() if self._opt else StubOptimizer()
 
     def run(self):
         self._run_pipeline()
-        self._save_config()
-        self._log_to_file()
         self.results.compute_metrics()
-        self.results.log_to_file(self._results_dir)
-
-        if self.data.closures:
-            self.pgo_optimizer.add_reference_data(
-                self._ref_poses, self._ref_local_maps, self._ref_scan_index_range
-            )
-            self.pgo_optimizer.optimize(
-                self.data.closures,
-                self.data.local_maps,
-                self.data.local_maps_scan_index_range,
-                self.odom_poses,
-            )
-            self.pgo_optimizer.log_to_file(self._results_dir)
-
+        self.optimized_poses = self._run_pose_graph_optimization()
+        self._save_metadata()
+        self._plot_trajectories()
         return self.results
 
     def _load_reference_data(self):
@@ -128,14 +114,14 @@ class MultiSessionMapClosurePipeline:
         with open(os.path.join(self._ref_data_path, "metadata.pkl"), "rb") as f:
             metadata = pickle.load(f)
 
-        self._ref_scan_index_range = metadata["local_maps_scan_index_range"]
+        self.ref_scan_index_range = metadata["local_maps_scan_index_range"]
 
         ground_alignment_transforms = metadata["ground_alignment_transforms"]
         for i, T in enumerate(ground_alignment_transforms):
             self.map_closures_multisession.set_reference_ground_alignment(i, T)
 
-        self._ref_poses = metadata["optimized_poses"]
-        self._ref_local_maps = metadata["local_maps"]
+        self.ref_poses = metadata["optimized_poses"]
+        self.ref_local_maps = metadata["local_maps"]
 
     def _run_pipeline(self):
         map_idx = 0
@@ -192,7 +178,25 @@ class MultiSessionMapClosurePipeline:
                 local_map_start_scan_idx = scan_idx
                 map_idx += 1
 
-    def _log_to_file(self):
+    def _run_pose_graph_optimization(self):
+        pgo_optimizer = StubOptimizer()
+        optimized_poses = None
+        if self._opt and self.data.closures:
+            pgo_optimizer = MultiSessionOptimizer()
+            pgo_optimizer.add_reference_data(
+                self.ref_poses, self.ref_local_maps, self.ref_scan_index_range
+            )
+            optimized_poses = pgo_optimizer.optimize(
+                self.data.closures,
+                self.data.local_maps,
+                self.data.local_maps_scan_index_range,
+                self.odom_poses,
+            )
+
+        return optimized_poses
+
+    def _save_metadata(self):
+        self._results_dir = self._create_results_dir()
         np.savetxt(
             os.path.join(self._results_dir, "multisession_closures.txt"),
             np.asarray(self._multisession_closures),
@@ -201,11 +205,57 @@ class MultiSessionMapClosurePipeline:
             os.path.join(self._results_dir, "kiss_poses_kitti.txt"),
             self.odom_poses[:, :3].reshape(-1, 12),
         )
-        np.save(os.path.join(self._results_dir, "kiss_poses.npy"), self.odom_poses)
 
-    def _save_config(self):
-        self._results_dir = self._create_results_dir()
-        write_config(self.closure_config, os.path.join(self._results_dir, "config"))
+        if self.optimized_poses is not None:
+            np.savetxt(
+                os.path.join(self._results_dir, "optimized_poses_kitti.txt"),
+                self.optimized_poses[:, :3].reshape(-1, 12),
+            )
+
+        self.results.log_to_file(self._results_dir)
+
+    def _plot_trajectories(self):
+        from matplotlib import pyplot as plt
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(
+            self.ref_poses[:, 0, 3],
+            self.ref_poses[:, 1, 3],
+            color="red",
+            label="Reference session optimized poses",
+        )
+        ax.plot(
+            self.odom_poses[:, 0, 3],
+            self.odom_poses[:, 1, 3],
+            color="black",
+            label="Query session odometry poses",
+        )
+        if self.optimized_poses is not None:
+            ax.plot(
+                self.optimized_poses[:, 0, 3],
+                self.optimized_poses[:, 1, 3],
+                color="blue",
+                label="Query session optimized poses",
+            )
+
+        for i, closure in enumerate(self.data.closures):
+            source_idx = int(self.ref_scan_index_range[int(closure[0])][0])
+            target_idx = int(self.data.local_maps_scan_index_range[int(closure[1])][0])
+            ax.plot(
+                [self.ref_poses[source_idx, 0, 3], self.optimized_poses[target_idx, 0, 3]],
+                [self.ref_poses[source_idx, 1, 3], self.optimized_poses[target_idx, 1, 3]],
+                color="green",
+                linestyle="--",
+                linewidth=0.5,
+                alpha=0.5,
+                label="Cross session loop closure" if i == 0 else "_nolegend_",
+            )
+
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.legend()
+        plt.savefig(os.path.join(self._results_dir, "trajectories.pdf"))
 
     def _create_results_dir(self) -> Path:
         def get_timestamp() -> str:
