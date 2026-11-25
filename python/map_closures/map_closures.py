@@ -26,7 +26,7 @@ from typing_extensions import TypeAlias
 
 from map_closures.config import MapClosuresConfig
 from map_closures.pybind import map_closures_pybind
-from map_closures.pybind.map_closures_pybind import _Vector3dVector as Vector3dVector
+from map_closures.pybind.map_closures_pybind import Vector3dVector
 
 ClosureCandidate: TypeAlias = map_closures_pybind._ClosureCandidate
 

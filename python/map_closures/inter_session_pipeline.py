@@ -30,15 +30,16 @@ from kiss_icp.config import KISSConfig
 from kiss_icp.kiss_icp import KissICP
 from tqdm.auto import trange
 
-from map_closures.config import load_config, write_config
-from map_closures.map_closures_multisession import MapClosuresMultisession
+from map_closures.config import load_config
+from map_closures.map_closures_inter_session import MapClosuresInterSession
 from map_closures.tools.evaluation import EvaluationPipeline, StubEvaluation
 from map_closures.tools.pgo_optimize import MultiSessionOptimizer, StubOptimizer
 from map_closures.tools.utils import Data
+from map_closures.visualizer.visualizer import StubVisualizer, Visualizer
 from map_closures.voxel_map import VoxelMap
 
 
-class MultiSessionMapClosurePipeline:
+class InterSessionMapClosurePipeline:
     def __init__(
         self,
         dataset_query,
@@ -63,7 +64,7 @@ class MultiSessionMapClosurePipeline:
         self._opt = opt
 
         self.closure_config = load_config(config_path)
-        self.map_closures_multisession = MapClosuresMultisession(self.closure_config)
+        self.map_closures_inter_session = MapClosuresInterSession(self.closure_config)
 
         self.kiss_config = KISSConfig()
         self.kiss_config.mapping.voxel_size = 1.0
@@ -76,9 +77,11 @@ class MultiSessionMapClosurePipeline:
         )
         self._map_range = self.kiss_config.data.max_range
 
+        self.visualizer = Visualizer(intersession=True) if self._vis else StubVisualizer()
+
         self.data = Data()
         self.odom_poses = np.zeros((self._n_scans, 4, 4))
-        self._multisession_closures: List[np.ndarray] = []
+        self._inter_session_closures: List[np.ndarray] = []
 
         # Load reference session data and inject into map_closures
         self._load_reference_data()
@@ -104,7 +107,7 @@ class MultiSessionMapClosurePipeline:
         return self.results
 
     def _load_reference_data(self):
-        self.map_closures_multisession.load_hbst_database(
+        self.map_closures_inter_session.load_hbst_database(
             os.path.join(self._ref_data_path, "hbst_database.bin")
         )
 
@@ -115,10 +118,16 @@ class MultiSessionMapClosurePipeline:
 
         ground_alignment_transforms = np.asarray(metadata["ground_alignment_transforms"])
         for i, T in enumerate(ground_alignment_transforms):
-            self.map_closures_multisession.set_reference_ground_alignment(i, T)
+            self.map_closures_inter_session.set_reference_ground_alignment(i, T)
 
         self.ref_poses = np.asarray(metadata["optimized_poses"])
         self.ref_local_maps = metadata["local_maps"]
+
+        self.visualizer.set_reference_data(
+            self.ref_local_maps,
+            self.ref_poses,
+            self.ref_scan_index_range[:, 0],
+        )
 
     def _run_pipeline(self):
         map_idx = 0
@@ -131,7 +140,7 @@ class MultiSessionMapClosurePipeline:
             ncols=80,
             unit=" frames",
             dynamic_ncols=True,
-            desc="Multi-Session Loop Closure Detection",
+            desc="Inter-Session Loop Closure Detection",
         ):
             raw_frame, timestamps = self._query_dataset[scan_idx]
             deskewed_frame, _ = self.odometry.register_frame(raw_frame, timestamps)
@@ -140,6 +149,9 @@ class MultiSessionMapClosurePipeline:
 
             frame_to_map_pose = np.linalg.inv(current_map_pose) @ current_frame_pose
             self.voxel_local_map.integrate_frame(deskewed_frame, frame_to_map_pose)
+            self.visualizer.update_registration(
+                deskewed_frame, self.odometry.local_map.point_cloud(), current_frame_pose
+            )
 
             if np.linalg.norm(frame_to_map_pose[:3, -1]) > self._map_range or (
                 scan_idx == self._n_scans - 1
@@ -147,22 +159,25 @@ class MultiSessionMapClosurePipeline:
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
                 voxel_means, voxel_normals = self.voxel_local_map.per_voxel_mean_and_normal()
 
-                closures = self.map_closures_multisession.get_closures(
+                closures = self.map_closures_inter_session.get_closures(
                     map_idx, local_map_pointcloud, voxel_means, voxel_normals
                 )
 
                 self.data.append_localmap(
                     local_map_pointcloud,
                     None,
-                    None,
                     [local_map_start_scan_idx, scan_idx + 1],
                 )
+                self.visualizer.update_data(local_map_pointcloud, current_map_pose)
 
                 for closure in closures:
                     if closure.number_of_inliers > self.closure_config.inliers_threshold:
                         self.data.append_closure(closure)
                         self.results.append(
                             closure.source_id, closure.target_id, closure.number_of_inliers
+                        )
+                        self.visualizer.update_closures(
+                            np.asarray(closure.pose), [closure.source_id, closure.target_id]
                         )
 
                 self.voxel_local_map.remove_far_away_points(frame_to_map_pose[:3, -1])
@@ -195,8 +210,8 @@ class MultiSessionMapClosurePipeline:
     def _save_metadata(self):
         self._results_dir = self._create_results_dir()
         np.savetxt(
-            os.path.join(self._results_dir, "multisession_closures.txt"),
-            np.asarray(self._multisession_closures),
+            os.path.join(self._results_dir, "inter_session_closures.txt"),
+            np.asarray(self._inter_session_closures),
         )
         np.savetxt(
             os.path.join(self._results_dir, "kiss_poses_kitti.txt"),
@@ -260,11 +275,11 @@ class MultiSessionMapClosurePipeline:
 
         results_dir = os.path.join(
             self._results_dir,
-            f"{self._query_dataset_name}_multisession_results",
+            f"{self._query_dataset_name}_inter_session_results",
             get_timestamp(),
         )
         latest_dir = os.path.join(
-            self._results_dir, f"{self._query_dataset_name}_multisession_results", "latest"
+            self._results_dir, f"{self._query_dataset_name}_inter_session_results", "latest"
         )
 
         os.makedirs(results_dir, exist_ok=True)

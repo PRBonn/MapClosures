@@ -54,11 +54,11 @@ struct ClosureCandidate {
     std::size_t number_of_inliers = 0;
 };
 
-class MapClosuresMultisession {
+class MapClosuresInterSession {
 public:
-    explicit MapClosuresMultisession();
-    explicit MapClosuresMultisession(const Config &config);
-    ~MapClosuresMultisession() = default;
+    explicit MapClosuresInterSession();
+    explicit MapClosuresInterSession(const Config &config);
+    ~MapClosuresInterSession() = default;
 
     const DensityMap &getDensityMapFromId(const int map_id) const {
         return density_maps_.at(map_id);

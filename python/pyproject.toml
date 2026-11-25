@@ -52,8 +52,8 @@ all = [
 visualizer = ["polyscope", "matplotlib>3.9.2"]
 
 [project.scripts]
-map_closure_pipeline = "map_closures.tools.cmd:run_singlesession"
-map_closure_multisession_pipeline = "map_closures.tools.cmd:run_multisession"
+map_closure_pipeline = "map_closures.tools.cmd:run_intra_session"
+inter_session_map_closure_pipeline = "map_closures.tools.cmd:run_inter_session"
 
 [project.urls]
 Homepage = "https://github.com/PRBonn/MapClosures"

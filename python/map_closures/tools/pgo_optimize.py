@@ -129,7 +129,7 @@ class SingleSessionOptimizer(StubOptimizer):
 
         self.pose_graph.vertex(0).set_fixed(True)
         self.pose_graph.initialize_optimization()
-        self.pose_graph.optimize(20)
+        self.pose_graph.optimize(25)
         optimized_poses = np.tile(np.eye(4), (len(self.odom_poses), 1, 1))
         for i, v in self.pose_graph.vertices().items():
             optimized_poses[i] = v.estimate().matrix()
@@ -249,7 +249,7 @@ class MultiSessionOptimizer(StubOptimizer):
                 self.pose_graph.add_edge(edge)
 
         self.pose_graph.initialize_optimization()
-        self.pose_graph.optimize(100)
+        self.pose_graph.optimize(50)
 
         optimized_poses = np.tile(np.eye(4), (len(self.odom_poses), 1, 1))
         for i in range(len(self.odom_poses)):

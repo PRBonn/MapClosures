@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "MapClosuresMultisession.hpp"
+#include "MapClosuresInterSession.hpp"
 
 #include <Eigen/Core>
 #include <cmath>
@@ -53,19 +53,19 @@ constexpr int fast_threshold = 35;
 }  // namespace
 
 namespace map_closures {
-MapClosuresMultisession::MapClosuresMultisession() : config_(Config()) {
+MapClosuresInterSession::MapClosuresInterSession() : config_(Config()) {
     orb_extractor_ =
         cv::ORB::create(nfeatures, scale_factor, n_levels, edge_threshold, first_level, WTA_K,
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
-MapClosuresMultisession::MapClosuresMultisession(const Config &config) : config_(config) {
+MapClosuresInterSession::MapClosuresInterSession(const Config &config) : config_(config) {
     orb_extractor_ =
         cv::ORB::create(nfeatures, scale_factor, n_levels, edge_threshold, first_level, WTA_K,
                         cv::ORB::ScoreType(score_type), patch_size, fast_threshold);
 }
 
-void MapClosuresMultisession::Match(const int id,
+void MapClosuresInterSession::Match(const int id,
                                     const std::vector<Eigen::Vector3d> &local_map,
                                     const std::vector<Eigen::Vector3d> &voxel_means,
                                     const std::vector<Eigen::Vector3d> &voxel_normals) {
@@ -100,7 +100,7 @@ void MapClosuresMultisession::Match(const int id,
     ground_alignments_.emplace(id, T_ground);
 }
 
-std::vector<ClosureCandidate> MapClosuresMultisession::GetClosures(
+std::vector<ClosureCandidate> MapClosuresInterSession::GetClosures(
     const int query_id,
     const std::vector<Eigen::Vector3d> &local_map,
     const std::vector<Eigen::Vector3d> &voxel_means,
@@ -122,7 +122,7 @@ std::vector<ClosureCandidate> MapClosuresMultisession::GetClosures(
     return closures;
 }
 
-std::optional<ClosureCandidate> MapClosuresMultisession::ValidateClosure(const int reference_id,
+std::optional<ClosureCandidate> MapClosuresInterSession::ValidateClosure(const int reference_id,
                                                                          const int query_id) const {
     const auto it = descriptor_matches_.find(reference_id);
     if (it == descriptor_matches_.end()) {

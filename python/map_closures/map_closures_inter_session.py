@@ -19,24 +19,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import List, overload
-
 import numpy as np
-from typing_extensions import TypeAlias
 
 from map_closures.config import MapClosuresConfig
-from map_closures.pybind import map_closures_multisession_pybind
-from map_closures.pybind.map_closures_multisession_pybind import (
-    _Vector3dVector as Vector3dVector,
-)
-
-ClosureCandidate: TypeAlias = map_closures_multisession_pybind._ClosureCandidate
+from map_closures.pybind import map_closures_inter_session_pybind
+from map_closures.pybind.map_closures_inter_session_pybind import Vector3dVector
 
 
-class MapClosuresMultisession:
+class MapClosuresInterSession:
     def __init__(self, config: MapClosuresConfig = MapClosuresConfig()):
         self._config = config
-        self._pipeline = map_closures_multisession_pybind._MapClosuresMultisession(
+        self._pipeline = map_closures_inter_session_pybind._MapClosuresInterSession(
             self._config.model_dump()
         )
 
@@ -58,7 +51,7 @@ class MapClosuresMultisession:
         local_map: np.ndarray,
         voxel_means: np.ndarray,
         voxel_normals: np.ndarray,
-    ) -> List[ClosureCandidate]:
+    ):
         return self._pipeline._GetClosures(
             query_idx,
             Vector3dVector(local_map),

@@ -78,7 +78,7 @@ def name_callback(value: str):
     return value
 
 
-app_singlesession = typer.Typer(add_completion=False, rich_markup_mode="rich")
+app_intra_session = typer.Typer(add_completion=False, rich_markup_mode="rich")
 
 _available_dl_help = available_dataloaders()
 _available_dl_help.remove("generic")
@@ -95,7 +95,7 @@ $ map_closure_pipeline --dataloader mulran --config <path-to-config-file> <path-
 """
 
 
-@app_singlesession.command(help=docstring)
+@app_intra_session.command(help=docstring)
 def map_closure_pipeline(
     data: Path = typer.Argument(
         ...,
@@ -212,19 +212,19 @@ def map_closure_pipeline(
     ).run().print()
 
 
-app_multisession = typer.Typer(add_completion=False, rich_markup_mode="rich")
+app_inter_session = typer.Typer(add_completion=False, rich_markup_mode="rich")
 
 docstring = f"""
 Multi-Session Loop Closure Detection\n
 \b
 Examples:\n
 # Detect closures between two sessions (query vs reference)
-$ map_closure_multisession_pipeline kitti <path-to-query-data> <path-to-ref-results-dir> <path-to-store-results>
+$ inter_session_map_closure_pipeline kitti <path-to-query-data> <path-to-ref-results-dir> <path-to-store-results>
 """
 
 
-@app_multisession.command(name="map_closure_multisession_pipeline", help=docstring)
-def map_closure_multisession_pipeline(
+@app_inter_session.command(name="inter_session_map_closure_pipeline", help=docstring)
+def inter_session_map_closure_pipeline(
     dataloader_query: str = typer.Argument(
         None,
         show_default=False,
@@ -245,7 +245,7 @@ def map_closure_multisession_pipeline(
     ),
     results_dir: Path = typer.Argument(
         ...,
-        help="Path where multi-session results are to be stored",
+        help="Path where inter-session results are to be stored",
         show_default=False,
         exists=False,
     ),
@@ -318,9 +318,9 @@ def map_closure_multisession_pipeline(
         raise typer.Exit(code=1)
 
     from map_closures.datasets import dataset_factory
-    from map_closures.pipeline_multisession import MultiSessionMapClosurePipeline
+    from map_closures.inter_session_pipeline import InterSessionMapClosurePipeline
 
-    MultiSessionMapClosurePipeline(
+    InterSessionMapClosurePipeline(
         dataset_query=dataset_factory(
             dataloader=dataloader_query,
             data_dir=data_query,
@@ -337,9 +337,9 @@ def map_closure_multisession_pipeline(
     ).run()
 
 
-def run_singlesession():
-    app_singlesession()
+def run_intra_session():
+    app_intra_session()
 
 
-def run_multisession():
-    app_multisession()
+def run_inter_session():
+    app_inter_session()

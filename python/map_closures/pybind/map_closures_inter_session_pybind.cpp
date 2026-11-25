@@ -32,7 +32,7 @@
 #include <opencv2/core/eigen.hpp>
 #include <vector>
 
-#include "map_closures/MapClosuresMultisession.hpp"
+#include "map_closures/MapClosuresInterSession.hpp"
 #include "stl_vector_eigen.h"
 
 PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
@@ -49,9 +49,9 @@ Config GetConfigFromYAML(const py::dict &yaml_cfg) {
     return cpp_config;
 }
 
-PYBIND11_MODULE(map_closures_multisession_pybind, m) {
+PYBIND11_MODULE(map_closures_inter_session_pybind, m) {
     auto vector3dvector = pybind_eigen_vector_of_vector<Eigen::Vector3d>(
-        m, "_Vector3dVector", "std::vector<Eigen::Vector3d>",
+        m, "Vector3dVector", "std::vector<Eigen::Vector3d>",
         py::py_array_to_vectors_double<Eigen::Vector3d>);
 
     py::class_<ClosureCandidate> closure_candidate(m, "_ClosureCandidate");
@@ -61,27 +61,27 @@ PYBIND11_MODULE(map_closures_multisession_pybind, m) {
         .def_readwrite("pose", &ClosureCandidate::pose)
         .def_readwrite("number_of_inliers", &ClosureCandidate::number_of_inliers);
 
-    py::class_<MapClosuresMultisession, std::shared_ptr<MapClosuresMultisession>>
-        map_closures_multisession(m, "_MapClosuresMultisession", "");
-    map_closures_multisession
+    py::class_<MapClosuresInterSession, std::shared_ptr<MapClosuresInterSession>>
+        map_closures_inter_session(m, "_MapClosuresInterSession", "");
+    map_closures_inter_session
         .def(py::init([](const py::dict &cfg) {
                  auto config = GetConfigFromYAML(cfg);
-                 return std::make_shared<MapClosuresMultisession>(config);
+                 return std::make_shared<MapClosuresInterSession>(config);
              }),
              "config"_a)
         .def("_getDensityMapFromId",
-             [](MapClosuresMultisession &self, const int &map_id) {
+             [](MapClosuresInterSession &self, const int &map_id) {
                  const auto &density_map = self.getDensityMapFromId(map_id);
                  Eigen::MatrixXf density_map_eigen;
                  cv::cv2eigen(density_map.grid, density_map_eigen);
                  return density_map_eigen;
              })
-        .def("_getGroundAlignmentFromId", &MapClosuresMultisession::getGroundAlignmentFromId,
+        .def("_getGroundAlignmentFromId", &MapClosuresInterSession::getGroundAlignmentFromId,
              "map_id"_a)
-        .def("_setReferenceGroundAlignment", &MapClosuresMultisession::setReferenceGroundAlignment,
+        .def("_setReferenceGroundAlignment", &MapClosuresInterSession::setReferenceGroundAlignment,
              "map_id"_a, "alignment"_a)
-        .def("_LoadHbstDatabase", &MapClosuresMultisession::LoadHbstDatabase, "database_path"_a)
-        .def("_GetClosures", &MapClosuresMultisession::GetClosures, "query_id"_a, "local_map"_a,
+        .def("_LoadHbstDatabase", &MapClosuresInterSession::LoadHbstDatabase, "database_path"_a)
+        .def("_GetClosures", &MapClosuresInterSession::GetClosures, "query_id"_a, "local_map"_a,
              "voxel_means"_a, "voxel_normals"_a);
 }
 }  // namespace map_closures
