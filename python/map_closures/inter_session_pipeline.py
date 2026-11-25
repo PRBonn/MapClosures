@@ -45,7 +45,6 @@ class InterSessionMapClosurePipeline:
         dataset_query,
         ref_data_path: Path,
         config_path: Path,
-        results_dir: Path,
         eval: Optional[bool] = False,
         vis: Optional[bool] = False,
         opt: Optional[bool] = False,
@@ -58,7 +57,6 @@ class InterSessionMapClosurePipeline:
         )
         self._ref_data_path = str(ref_data_path)
         self._n_scans = len(self._query_dataset)
-        self._results_dir = results_dir
         self._eval = eval
         self._vis = vis
         self._opt = opt
@@ -274,12 +272,12 @@ class InterSessionMapClosurePipeline:
             return datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         results_dir = os.path.join(
-            self._results_dir,
+            self._ref_data_path,
             f"{self._query_dataset_name}_inter_session_results",
             get_timestamp(),
         )
         latest_dir = os.path.join(
-            self._results_dir, f"{self._query_dataset_name}_inter_session_results", "latest"
+            self._ref_data_path, f"{self._query_dataset_name}_inter_session_results", "latest"
         )
 
         os.makedirs(results_dir, exist_ok=True)

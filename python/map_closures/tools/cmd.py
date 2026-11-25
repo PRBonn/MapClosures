@@ -87,11 +87,11 @@ _available_dl_help.remove("ouster")
 _available_dl_help.remove("rosbag")
 
 docstring = f"""
-Effectively Detecting Loop Closures using Point Cloud Density Maps\n
+Intra-Session Loop Closure Detection\n
 \b
 Examples:\n
 # Use a specific dataloader: apollo, kitti, mulran, ncd, helipr
-$ map_closure_pipeline --dataloader mulran --config <path-to-config-file> <path-to-mulran-sequence-root> <path-to-store-results>
+$ map_closure_pipeline --dataloader <dataloader_name> --config <path-to-config-file> <path-to-mulran-sequence-root> <path-to-store-results>
 """
 
 
@@ -215,25 +215,26 @@ def map_closure_pipeline(
 app_inter_session = typer.Typer(add_completion=False, rich_markup_mode="rich")
 
 docstring = f"""
-Multi-Session Loop Closure Detection\n
+Inter-Session Loop Closure Detection\n
 \b
 Examples:\n
 # Detect closures between two sessions (query vs reference)
-$ inter_session_map_closure_pipeline kitti <path-to-query-data> <path-to-ref-results-dir> <path-to-store-results>
+# Use a specific dataloader: apollo, kitti, mulran, ncd, helipr
+$ inter_session_map_closure_pipeline --dataloader <dataloader_name> <path-to-query-data> <path-to-ref-results-dir>
 """
 
 
 @app_inter_session.command(name="inter_session_map_closure_pipeline", help=docstring)
 def inter_session_map_closure_pipeline(
-    dataloader_query: str = typer.Argument(
+    dataloader: str = typer.Option(
         None,
         show_default=False,
         case_sensitive=False,
         autocompletion=available_dataloaders,
         callback=name_callback,
-        help="Dataloader for the query session",
+        help="[Optional] Use a specific dataloader from those supported by MapClosures",
     ),
-    data_query: Path = typer.Argument(
+    data: Path = typer.Argument(
         ...,
         help="Data directory for the query session",
         show_default=False,
@@ -242,12 +243,6 @@ def inter_session_map_closure_pipeline(
         ...,
         help="Path to the reference session results directory (output of map_closure_pipeline with write_data_to_disk())",
         show_default=False,
-    ),
-    results_dir: Path = typer.Argument(
-        ...,
-        help="Path where inter-session results are to be stored",
-        show_default=False,
-        exists=False,
     ),
     config: Optional[Path] = typer.Option(
         None,
@@ -310,10 +305,10 @@ def inter_session_map_closure_pipeline(
         is_eager=True,
     ),
 ):
-    if not dataloader_query:
-        dataloader_query, data_query = guess_dataloader(data_query, default_dataloader="generic")
+    if not dataloader:
+        dataloader, data = guess_dataloader(data, default_dataloader="generic")
 
-    if dataloader_query in sequence_dataloaders() and sequence is None:
+    if dataloader in sequence_dataloaders() and sequence is None:
         print('[ERROR] You must specify a sequence "--sequence"')
         raise typer.Exit(code=1)
 
@@ -322,15 +317,14 @@ def inter_session_map_closure_pipeline(
 
     InterSessionMapClosurePipeline(
         dataset_query=dataset_factory(
-            dataloader=dataloader_query,
-            data_dir=data_query,
+            dataloader=dataloader,
+            data_dir=data,
             sequence=sequence,
             topic=topic,
             meta=meta,
         ),
         ref_data_path=ref_results_dir,
         config_path=config,
-        results_dir=results_dir,
         eval=eval,
         vis=vis,
         opt=opt,
