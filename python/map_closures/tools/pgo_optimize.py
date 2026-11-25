@@ -178,8 +178,8 @@ class MultiSessionOptimizer(StubOptimizer):
         for i, pose in enumerate(self.ref_poses):
             v = g2o.VertexSE3()
             v.set_id(i)
-            v.set_fixed(True)
             v.set_estimate(g2o.Isometry3d(pose))
+            v.set_fixed(True)
             self.pose_graph.add_vertex(v)
 
         for idx in range(len(self.ref_poses) - 1):
@@ -205,11 +205,10 @@ class MultiSessionOptimizer(StubOptimizer):
         self.local_map_scan_index_range = local_map_scan_index_range
         self.odom_poses = odom_poses
 
-        initial_T = self.closures[0][2:].reshape(4, 4)
-        for i, pose in enumerate(self.odom_poses):
+        for i, pose in enumerate(self.odom_poses, start=self.offset):
             v = g2o.VertexSE3()
-            v.set_id(self.offset + i)
-            v.set_estimate(g2o.Isometry3d(initial_T * pose))
+            v.set_id(i)
+            v.set_estimate(g2o.Isometry3d(pose))
             self.pose_graph.add_vertex(v)
 
         for idx in range(len(self.odom_poses) - 1):
@@ -246,13 +245,15 @@ class MultiSessionOptimizer(StubOptimizer):
                     ),
                 )
                 edge.set_measurement(g2o.Isometry3d(estimate.transformation))
-                edge.set_information(self.omega_poses)
+                edge.set_information(self.omega_closure)
                 self.pose_graph.add_edge(edge)
 
         self.pose_graph.initialize_optimization()
-        self.pose_graph.optimize(20)
+        self.pose_graph.optimize(100)
 
-        self.g2o_poses = np.tile(np.eye(4), (len(self.odom_poses), 1, 1))
+        optimized_poses = np.tile(np.eye(4), (len(self.odom_poses), 1, 1))
         for i in range(len(self.odom_poses)):
             v = self.pose_graph.vertex(self.offset + i)
-            self.g2o_poses[i] = v.estimate().matrix()
+            optimized_poses[i] = v.estimate().matrix()
+
+        return optimized_poses

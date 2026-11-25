@@ -35,7 +35,6 @@ from map_closures.map_closures_multisession import MapClosuresMultisession
 from map_closures.tools.evaluation import EvaluationPipeline, StubEvaluation
 from map_closures.tools.pgo_optimize import MultiSessionOptimizer, StubOptimizer
 from map_closures.tools.utils import Data
-from map_closures.visualizer.visualizer import StubVisualizer
 from map_closures.voxel_map import VoxelMap
 
 
@@ -96,8 +95,6 @@ class MultiSessionMapClosurePipeline:
                 gt_closures = np.loadtxt(gt_closures_path, dtype=int)
                 self.results = EvaluationPipeline(gt_closures, self._query_dataset_name)
 
-        self.visualizer = StubVisualizer()
-
     def run(self):
         self._run_pipeline()
         self.results.compute_metrics()
@@ -116,11 +113,11 @@ class MultiSessionMapClosurePipeline:
 
         self.ref_scan_index_range = metadata["local_maps_scan_index_range"]
 
-        ground_alignment_transforms = metadata["ground_alignment_transforms"]
+        ground_alignment_transforms = np.asarray(metadata["ground_alignment_transforms"])
         for i, T in enumerate(ground_alignment_transforms):
             self.map_closures_multisession.set_reference_ground_alignment(i, T)
 
-        self.ref_poses = metadata["optimized_poses"]
+        self.ref_poses = np.asarray(metadata["optimized_poses"])
         self.ref_local_maps = metadata["local_maps"]
 
     def _run_pipeline(self):
@@ -222,20 +219,20 @@ class MultiSessionMapClosurePipeline:
         ax.plot(
             self.ref_poses[:, 0, 3],
             self.ref_poses[:, 1, 3],
-            color="red",
+            color="black",
             label="Reference session optimized poses",
         )
         ax.plot(
             self.odom_poses[:, 0, 3],
             self.odom_poses[:, 1, 3],
-            color="black",
+            color="blue",
             label="Query session odometry poses",
         )
         if self.optimized_poses is not None:
             ax.plot(
                 self.optimized_poses[:, 0, 3],
                 self.optimized_poses[:, 1, 3],
-                color="blue",
+                color="red",
                 label="Query session optimized poses",
             )
 
@@ -243,8 +240,8 @@ class MultiSessionMapClosurePipeline:
             source_idx = int(self.ref_scan_index_range[int(closure[0])][0])
             target_idx = int(self.data.local_maps_scan_index_range[int(closure[1])][0])
             ax.plot(
-                [self.ref_poses[source_idx, 0, 3], self.optimized_poses[target_idx, 0, 3]],
-                [self.ref_poses[source_idx, 1, 3], self.optimized_poses[target_idx, 1, 3]],
+                [self.ref_poses[source_idx, 0, 3], self.odom_poses[target_idx, 0, 3]],
+                [self.ref_poses[source_idx, 1, 3], self.odom_poses[target_idx, 1, 3]],
                 color="green",
                 linestyle="--",
                 linewidth=0.5,

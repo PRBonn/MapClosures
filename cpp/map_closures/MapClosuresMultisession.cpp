@@ -38,7 +38,6 @@
 
 namespace {
 constexpr int min_no_of_matches = 2;
-constexpr int no_of_local_maps_to_skip = 3;
 constexpr int self_similarity_threshold = 35;
 
 // fixed parameters for OpenCV ORB Features
