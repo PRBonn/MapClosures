@@ -37,7 +37,7 @@ jobs:
         if: github.event_name != 'release'
         uses: pypa/cibuildwheel@v4.3.5
         env: # build 1 build per platform just to make sure we can do it later when releasing
-          CIBW_BUILD: "cp310-*"
+          CIBW_BUILD: "cp311-*"
         with:
           package-dir: ${{github.workspace}}/python/
 

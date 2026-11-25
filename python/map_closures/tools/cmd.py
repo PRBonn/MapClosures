@@ -78,7 +78,7 @@ def name_callback(value: str):
     return value
 
 
-app = typer.Typer(add_completion=False, rich_markup_mode="rich")
+app_singlesession = typer.Typer(add_completion=False, rich_markup_mode="rich")
 
 _available_dl_help = available_dataloaders()
 _available_dl_help.remove("generic")
@@ -95,7 +95,7 @@ $ map_closure_pipeline --dataloader mulran --config <path-to-config-file> <path-
 """
 
 
-@app.command(help=docstring)
+@app_singlesession.command(help=docstring)
 def map_closure_pipeline(
     data: Path = typer.Argument(
         ...,
@@ -136,6 +136,13 @@ def map_closure_pipeline(
         "-v",
         rich_help_panel="Additional Options",
         help="[Optional] Visualization of closures",
+    ),
+    opt: Optional[bool] = typer.Option(
+        False,
+        "--opt",
+        "-o",
+        rich_help_panel="Additional Options",
+        help="[Optional] Run pgo optimization with detected closures",
     ),
     # Aditional Options ---------------------------------------------------------------------------
     sequence: Optional[str] = typer.Option(
@@ -201,8 +208,9 @@ def map_closure_pipeline(
         results_dir=results_dir,
         eval=eval,
         vis=vis,
+        opt=opt,
     ).run().print()
 
 
-def run():
-    app()
+def run_singlesession():
+    app_singlesession()

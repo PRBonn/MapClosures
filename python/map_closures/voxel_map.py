@@ -21,13 +21,13 @@
 # SOFTWARE.
 import numpy as np
 
-from map_closures.pybind import map_closures_pybind
-from map_closures.pybind.map_closures_pybind import _Vector3dVector as Vector3dVector
+from map_closures.pybind import voxel_map_pybind
+from map_closures.pybind.voxel_map_pybind import _Vector3dVector as Vector3dVector
 
 
 class VoxelMap:
     def __init__(self, voxel_size: float, max_distance: float):
-        self.map = map_closures_pybind._VoxelMap(voxel_size, max_distance)
+        self.map = voxel_map_pybind._VoxelMap(voxel_size, max_distance)
 
     def integrate_frame(self, points: np.ndarray, pose: np.ndarray):
         vector3dvector = Vector3dVector(points.astype(np.float64))
