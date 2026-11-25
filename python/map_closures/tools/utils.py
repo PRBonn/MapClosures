@@ -28,7 +28,6 @@ import numpy as np
 @dataclass
 class Data:
     local_maps: list = field(default_factory=list)
-    density_maps: list = field(default_factory=list)
     local_maps_scan_index_range: list = field(default_factory=list)
     ground_alignment_transforms: list = field(default_factory=list)
     closures: list = field(default_factory=list)
@@ -36,12 +35,10 @@ class Data:
     def append_localmap(
         self,
         local_map: np.ndarray,
-        density_map: np.ndarray,
         ground_alignment_transform: np.ndarray,
         scan_index_range: List[int],
     ):
         self.local_maps.append(local_map)
-        self.density_maps.append(density_map)
         self.ground_alignment_transforms.append(ground_alignment_transform)
         self.local_maps_scan_index_range.append(scan_index_range)
 

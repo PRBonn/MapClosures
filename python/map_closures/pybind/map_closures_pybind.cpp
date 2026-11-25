@@ -51,7 +51,7 @@ Config GetConfigFromYAML(const py::dict &yaml_cfg) {
 
 PYBIND11_MODULE(map_closures_pybind, m) {
     auto vector3dvector = pybind_eigen_vector_of_vector<Eigen::Vector3d>(
-        m, "_Vector3dVector", "std::vector<Eigen::Vector3d>",
+        m, "Vector3dVector", "std::vector<Eigen::Vector3d>",
         py::py_array_to_vectors_double<Eigen::Vector3d>);
 
     py::class_<ClosureCandidate> closure_candidate(m, "_ClosureCandidate");

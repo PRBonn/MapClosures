@@ -48,7 +48,6 @@ I = np.eye(4)
 class LocalMapData:
     size: int = 0
     local_maps: list = field(default_factory=list)
-    density_maps: list = field(default_factory=list)
     local_map_poses: list = field(default_factory=list)
 
 
@@ -65,9 +64,12 @@ class StubVisualizer(ABC):
     def update_data(self, *kwargs):
         pass
 
+    def set_reference_data(self, *kwargs):
+        pass
+
 
 class Visualizer(StubVisualizer):
-    def __init__(self):
+    def __init__(self, intersession=False):
         # Initialize GUI
         try:
             self._ps = importlib.import_module("polyscope")
@@ -77,8 +79,11 @@ class Visualizer(StubVisualizer):
             exit(1)
 
         self.localmap_data = LocalMapData()
+        self.reference_data = LocalMapData() if intersession else None
         self.registration = RegistrationVisualizer(self._ps, self._gui)
-        self.closures = ClosuresVisualizer(self._ps, self._gui, self.localmap_data)
+        self.closures = ClosuresVisualizer(
+            self._ps, self._gui, self.localmap_data, self.reference_data
+        )
         self.local_maps = LocalMapVisualizer(self._ps, self._gui, self.localmap_data)
         self.background_color = BACKGROUND_COLOR
         self.global_view = False
@@ -88,11 +93,15 @@ class Visualizer(StubVisualizer):
     def update_registration(self, source, local_map, frame_pose):
         self.registration.update(source, local_map, frame_pose)
 
-    def update_data(self, local_map, density_map, local_map_pose):
+    def update_data(self, local_map, local_map_pose):
         self.localmap_data.size += 1
         self.localmap_data.local_maps.append(local_map)
-        self.localmap_data.density_maps.append(density_map)
         self.localmap_data.local_map_poses.append(local_map_pose)
+
+    def set_reference_data(self, local_maps, ref_trajectory, start_id):
+        self.closures.reference_trajectory = ref_trajectory
+        self.closures.reference_data.local_maps = local_maps
+        self.closures.reference_data.local_map_poses = self.closures.reference_trajectory[start_id]
 
     def update_closures(self, alignment_pose, closure_edge):
         self.closures.update_closures(alignment_pose, closure_edge)
@@ -118,8 +127,6 @@ class Visualizer(StubVisualizer):
             self.registration._localmap_callback()
         elif self.closures.states.toggle_view:
             self.closures._previous_next_closure_callback()
-            self._gui.SameLine()
-            self.closures._density_map_callback()
             self._gui.Separator()
             self.closures._query_map_callback()
             self.closures._reference_map_callback()
@@ -127,17 +134,11 @@ class Visualizer(StubVisualizer):
             self.closures._alignment_callback()
             self._gui.SameLine()
             self.closures._closure_slider_callback()
-            if self.closures.states.view_density_map:
-                self.closures.matplotlib_eventloop()
         elif self.local_maps.toggle_view:
             self.local_maps._previous_next_localmap_callback()
-            self._gui.SameLine()
-            self.local_maps._density_map_callback()
             self._gui.Separator()
             self.local_maps._pts_size_callback()
             self.local_maps._navigate_callback()
-            if self.local_maps.view_density_map:
-                self.local_maps.matplotlib_eventloop()
         self._gui.Separator()
         self._background_color_callback()
         self._gui.Separator()
@@ -201,8 +202,6 @@ class Visualizer(StubVisualizer):
                 )
                 self.registration.states.play_mode = False
                 self.local_maps._update_callback()
-                if self.local_maps.view_density_map:
-                    self.local_maps.matplotlib_eventloop()
             else:
                 self.registration.states.view_frame = True
                 self.registration.states.view_local_map = True
@@ -212,9 +211,6 @@ class Visualizer(StubVisualizer):
                 self._ps.get_point_cloud("target").set_enabled(
                     self.registration.states.view_local_map
                 )
-                if self.local_maps.view_density_map:
-                    self.local_maps.view_density_map = False
-                    self.local_maps.close_density_map_fig()
 
     def _switch_to_closures_view_callback(self):
         BUTTON_NAME = REGISTRATION_VIEW_2 if self.closures.states.toggle_view else CLOSURES_VIEW
@@ -231,8 +227,6 @@ class Visualizer(StubVisualizer):
                 )
                 self.registration.states.play_mode = False
                 self.closures._render_closure()
-                if self.closures.states.view_density_map:
-                    self.closures.matplotlib_eventloop()
             else:
                 self.registration.states.view_frame = True
                 self.registration.states.view_local_map = True
@@ -243,9 +237,6 @@ class Visualizer(StubVisualizer):
                 self._ps.get_point_cloud("target").set_enabled(
                     self.registration.states.view_local_map
                 )
-                if self.closures.states.view_density_map:
-                    self.closures.states.view_density_map = False
-                    self.closures.close_density_map_fig()
 
     def _register_trajectory(self):
         self.registration._register_trajectory()
@@ -301,9 +292,5 @@ class Visualizer(StubVisualizer):
         self._gui.SetCursorPosX(posX)
         if self._gui.Button(QUIT) or self._gui.IsKeyPressed(self._gui.ImGuiKey_Q):
             print("Destroying Visualizer")
-            if self.closures.states.view_density_map:
-                self.closures.close_density_map_fig()
-            if self.local_maps.view_density_map:
-                self.local_maps.close_density_map_fig()
             self._ps.unshow()
             os._exit(0)

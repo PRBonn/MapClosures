@@ -30,30 +30,19 @@ Effectively Detecting Loop Closures using Point Cloud Density Maps.
 ## Install the Python API and CLI
 `pip install map-closures`
 
-### Usage
-<details>
-<summary>
-The following command will provide details about how to use our pipeline:
-
+### Usage - Intra-Session Pipeline
 ```sh
-map_closure_pipeline --help
+map_closure_pipeline --dataloader <dataloader_name> --config <path_to_config_file> <data_dir> <results_dir>
 ```
-</summary>
+The `-v` flag can be passed to launch a visualizer and `-o` flag can be used to perform a pose graph optimization at the end of the pipeline with all the closures detected.
+The odometry poses, optimized poses, HBST database and other metadata will be dumped in the `<results_dir>/<dataset_name>_results/<timestamp>/` folder.
 
-![CLI_usage](https://github.com/PRBonn/MapClosures/assets/28734882/6dfbd767-ca63-4671-9582-3129752d0244)
-</details>
-
-<details>
-<summary>
-Providing the -v flag will initialize the visualizer:
-
+### Usage - Inter-Session Pipeline
 ```sh
-map_closure_pipeline -v
+inter_session_map_closure_pipeline --dataloader <dataloader_name> --config <path_to_config_file> <query_data_dir> <reference_results_dir>
 ```
-</summary>
-
-![Visualizer](https://github.com/user-attachments/assets/34aa2b2f-c0ce-4dfb-a0e0-cbcc04487a5a)
-</details>
+The `-v` flag can be passed to launch a visualizer and `-o` flag can be used to perform a pose graph optimization at the end of the pipeline with all the inter-session closures detected w.r.t. the optimized reference session poses.
+The query session odometry poses, optimized poses, and other metadata will be dumped in the `<reference_results_dir>/<dataset_name>_inter_session_results/<timestamp>/` folder.
 
 ## Citation
 
@@ -81,6 +70,10 @@ If you use this library for any academic work, please cite our original papers.
 ## Acknowledgement
 
 This repository is heavily inspired by, and also depends on [KISS-ICP](https://github.com/PRBonn/kiss-icp)
+
+## Looking for a full LiDAR SLAM pipeline?
+
+Checkout [KISS-SLAM](https://github.com/PRBonn/kiss-slam) and [Retro-SLAM](https://github.com/PRBonn/retro_slam).
 
 ## Contributors
 

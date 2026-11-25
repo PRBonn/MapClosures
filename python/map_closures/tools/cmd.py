@@ -78,7 +78,7 @@ def name_callback(value: str):
     return value
 
 
-app_singlesession = typer.Typer(add_completion=False, rich_markup_mode="rich")
+app_intra_session = typer.Typer(add_completion=False, rich_markup_mode="rich")
 
 _available_dl_help = available_dataloaders()
 _available_dl_help.remove("generic")
@@ -87,15 +87,15 @@ _available_dl_help.remove("ouster")
 _available_dl_help.remove("rosbag")
 
 docstring = f"""
-Effectively Detecting Loop Closures using Point Cloud Density Maps\n
+Intra-Session Loop Closure Detection\n
 \b
 Examples:\n
 # Use a specific dataloader: apollo, kitti, mulran, ncd, helipr
-$ map_closure_pipeline --dataloader mulran --config <path-to-config-file> <path-to-mulran-sequence-root> <path-to-store-results>
+$ map_closure_pipeline --dataloader <dataloader_name> --config <path-to-config-file> <path-to-mulran-sequence-root> <path-to-store-results>
 """
 
 
-@app_singlesession.command(help=docstring)
+@app_intra_session.command(help=docstring)
 def map_closure_pipeline(
     data: Path = typer.Argument(
         ...,
@@ -212,5 +212,128 @@ def map_closure_pipeline(
     ).run().print()
 
 
-def run_singlesession():
-    app_singlesession()
+app_inter_session = typer.Typer(add_completion=False, rich_markup_mode="rich")
+
+docstring = f"""
+Inter-Session Loop Closure Detection\n
+\b
+Examples:\n
+# Detect closures between two sessions (query vs reference)
+# Use a specific dataloader: apollo, kitti, mulran, ncd, helipr
+$ inter_session_map_closure_pipeline --dataloader <dataloader_name> <path-to-query-data> <path-to-ref-results-dir>
+"""
+
+
+@app_inter_session.command(name="inter_session_map_closure_pipeline", help=docstring)
+def inter_session_map_closure_pipeline(
+    dataloader: str = typer.Option(
+        None,
+        show_default=False,
+        case_sensitive=False,
+        autocompletion=available_dataloaders,
+        callback=name_callback,
+        help="[Optional] Use a specific dataloader from those supported by MapClosures",
+    ),
+    data: Path = typer.Argument(
+        ...,
+        help="Data directory for the query session",
+        show_default=False,
+    ),
+    ref_results_dir: Path = typer.Argument(
+        ...,
+        help="Path to the reference session results directory (output of map_closure_pipeline with write_data_to_disk())",
+        show_default=False,
+    ),
+    config: Optional[Path] = typer.Option(
+        None,
+        "--config",
+        exists=True,
+        show_default=False,
+        help="[Optional] Path to the configuration file",
+    ),
+    eval: Optional[bool] = typer.Option(
+        False,
+        "--eval",
+        "-e",
+        rich_help_panel="Additional Options",
+        help="[Optional] Run the Evaluation Pipeline",
+    ),
+    vis: Optional[bool] = typer.Option(
+        False,
+        "--vis",
+        "-v",
+        rich_help_panel="Additional Options",
+        help="[Optional] Visualization of closures",
+    ),
+    opt: Optional[bool] = typer.Option(
+        False,
+        "--opt",
+        "-o",
+        rich_help_panel="Additional Options",
+        help="[Optional] Run pgo optimization with detected closures",
+    ),
+    sequence: Optional[str] = typer.Option(
+        None,
+        "--sequence",
+        "-s",
+        show_default=False,
+        help="[Optional] For some dataloaders, you need to specify a given sequence",
+        rich_help_panel="Additional Options",
+    ),
+    topic: Optional[str] = typer.Option(
+        None,
+        "--topic",
+        "-t",
+        show_default=False,
+        help="[Optional] Only valid when processing rosbag files",
+        rich_help_panel="Additional Options",
+    ),
+    meta: Optional[Path] = typer.Option(
+        None,
+        "--meta",
+        "-m",
+        exists=True,
+        show_default=False,
+        help="[Optional] For Ouster pcap dataloader, specify metadata json file path explicitly",
+        rich_help_panel="Additional Options",
+    ),
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        help="Show the current version of MapClosures",
+        callback=version_callback,
+        is_eager=True,
+    ),
+):
+    if not dataloader:
+        dataloader, data = guess_dataloader(data, default_dataloader="generic")
+
+    if dataloader in sequence_dataloaders() and sequence is None:
+        print('[ERROR] You must specify a sequence "--sequence"')
+        raise typer.Exit(code=1)
+
+    from map_closures.datasets import dataset_factory
+    from map_closures.inter_session_pipeline import InterSessionMapClosurePipeline
+
+    InterSessionMapClosurePipeline(
+        dataset_query=dataset_factory(
+            dataloader=dataloader,
+            data_dir=data,
+            sequence=sequence,
+            topic=topic,
+            meta=meta,
+        ),
+        ref_data_path=ref_results_dir,
+        config_path=config,
+        eval=eval,
+        vis=vis,
+        opt=opt,
+    ).run()
+
+
+def run_intra_session():
+    app_intra_session()
+
+
+def run_inter_session():
+    app_inter_session()

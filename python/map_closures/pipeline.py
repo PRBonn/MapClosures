@@ -132,15 +132,13 @@ class MapClosurePipeline:
                 local_map_pointcloud = self.voxel_local_map.point_cloud()
                 closures = self.map_closures.get_closures(map_idx, local_map_pointcloud)
 
-                density_map = self.map_closures.get_density_map_from_id(map_idx)
                 self.data.append_localmap(
                     local_map_pointcloud,
-                    density_map,
                     self.map_closures.get_ground_alignment_from_id(map_idx),
                     [local_map_start_scan_idx, scan_idx + 1],
                 )
 
-                self.visualizer.update_data(local_map_pointcloud, density_map, current_map_pose)
+                self.visualizer.update_data(local_map_pointcloud, current_map_pose)
 
                 for closure in closures:
                     if closure.number_of_inliers > self.closure_config.inliers_threshold:

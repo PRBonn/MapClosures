@@ -22,19 +22,17 @@
 from dataclasses import dataclass, field
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 # Button names
 PREV_CLOSURE = "Prev Closure [P]"
 NEXT_CLOSURE = "Next Closure [N]"
 ALIGN_CLOSURE = "Align [A]"
-OPEN_DENSITY_VIEW = "Open Density Maps Viewer [D]"
-QUIT_DENSITY_VIEW = "Quit Density Maps Viewer [D]"
 
 # Colors
 SOURCE_COLOR = [0.8470, 0.1058, 0.3764]
 TARGET_COLOR = [0.0, 0.3019, 0.2509]
 TRAJECTORY_COLOR = [1.0, 0.0, 0.0]
+TRAJECTORY_COLOR_2 = [0.0, 1.0, 0.0]
 
 # Size constants
 SOURCE_PTS_SIZE = 0.06
@@ -58,25 +56,23 @@ class ClosuresStateMachine:
     view_query: bool = True
     view_reference: bool = True
     align: bool = True
-    view_density_map: bool = False
 
     query_points_size: float = SOURCE_PTS_SIZE
     reference_points_size: float = TARGET_PTS_SIZE
 
 
 class ClosuresVisualizer:
-    def __init__(self, ps, gui, localmap_data):
+    def __init__(self, ps, gui, localmap_data, reference_data=None):
         self._ps = ps
         self._gui = gui
 
         # Initialize GUI States
         self.states = ClosuresStateMachine()
-        self.ref_density_viewer = None
-        self.query_density_viewer = None
-        self.fig = None
 
         # Create data
         self.localmap_data = localmap_data
+        self.reference_data = reference_data
+        self.reference_trajectory = None
         self.data = LoopClosureData()
 
     def update_closures(self, alignment_pose, closure_edge):
@@ -85,16 +81,12 @@ class ClosuresVisualizer:
         self.data.size += 1
         self.data.current_id = self.data.size - 1
         if self.states.global_view:
-            self._register_trajectory()
+            if self.reference_trajectory is None:
+                self._register_trajectory_intra_session()
+            else:
+                self._register_trajectory_inter_session()
         if self.states.toggle_view:
             self._render_closure()
-
-    def matplotlib_eventloop(self):
-        plt.gcf().canvas.draw()
-        plt.gcf().canvas.start_event_loop(1e-6)
-
-    def close_density_map_fig(self):
-        plt.close(self.fig)
 
     def _query_map_callback(self):
         changed, self.states.query_points_size = self._gui.SliderFloat(
@@ -151,34 +143,26 @@ class ClosuresVisualizer:
             self.data.current_id = (self.data.current_id + 1) % self.data.size
         self._render_closure()
 
-    def _density_map_callback(self):
-        BUTTON = OPEN_DENSITY_VIEW if not self.states.view_density_map else QUIT_DENSITY_VIEW
-        if self._gui.Button(BUTTON) or self._gui.IsKeyPressed(self._gui.ImGuiKey_D):
-            self.states.view_density_map = not self.states.view_density_map
-            if self.states.view_density_map:
-                id = self.data.current_id
-                [ref_id, query_id] = self.data.closure_edges[id]
-                plt.ion()
-                self.fig = plt.figure()
-                plt.show(block=False)
-                ax_ref = self.fig.add_subplot(1, 2, 1)
-                ax_ref.set_title("Reference Density Map")
-                ax_query = self.fig.add_subplot(1, 2, 2)
-                ax_query.set_title("Query Density Map")
-                self.ref_density_viewer = ax_ref.imshow(
-                    self.localmap_data.density_maps[ref_id], cmap="gray"
-                )
-                self.query_density_viewer = ax_query.imshow(
-                    self.localmap_data.density_maps[query_id], cmap="gray"
-                )
-                self.matplotlib_eventloop()
-            else:
-                plt.close(self.fig)
-
     def _render_closure(self):
         id = self.data.current_id
         [ref_id, query_id] = self.data.closure_edges[id]
-        ref_map_pose = self.localmap_data.local_map_poses[ref_id]
+        if self.reference_trajectory is None:
+            ref_map_pose = self.localmap_data.local_map_poses[ref_id]
+            reference_map = self._ps.register_point_cloud(
+                "reference_map",
+                self.localmap_data.local_maps[ref_id],
+                color=SOURCE_COLOR,
+                point_render_mode="quad",
+            )
+        else:
+            ref_map_pose = self.reference_data.local_map_poses[ref_id]
+            reference_map = self._ps.register_point_cloud(
+                "reference_map",
+                self.reference_data.local_maps[ref_id],
+                color=SOURCE_COLOR,
+                point_render_mode="quad",
+            )
+
         query_map_pose = self.localmap_data.local_map_poses[query_id]
         query_map = self._ps.register_point_cloud(
             "query_map",
@@ -187,12 +171,6 @@ class ClosuresVisualizer:
             point_render_mode="quad",
         )
         query_map.set_radius(self.states.query_points_size, relative=False)
-        reference_map = self._ps.register_point_cloud(
-            "reference_map",
-            self.localmap_data.local_maps[ref_id],
-            color=SOURCE_COLOR,
-            point_render_mode="quad",
-        )
         reference_map.set_radius(self.states.reference_points_size, relative=False)
         if self.states.global_view:
             query_map.set_transform(query_map_pose)
@@ -208,12 +186,14 @@ class ClosuresVisualizer:
                 reference_map.set_transform(I)
         query_map.set_enabled(self.states.view_query)
         reference_map.set_enabled(self.states.view_reference)
-        if self.states.view_density_map:
-            self.ref_density_viewer.set_data(self.localmap_data.density_maps[ref_id])
-            self.query_density_viewer.set_data(self.localmap_data.density_maps[query_id])
-            self.matplotlib_eventloop()
 
     def _register_trajectory(self):
+        if self.reference_trajectory is None:
+            self._register_trajectory_intra_session()
+        else:
+            self._register_trajectory_inter_session()
+
+    def _register_trajectory_intra_session(self):
         closure_lines = self._ps.register_curve_network(
             "loop closures",
             np.array(self.localmap_data.local_map_poses)[:, :3, -1],
@@ -222,5 +202,32 @@ class ClosuresVisualizer:
         )
         closure_lines.set_radius(0.1, relative=False)
 
+    def _register_trajectory_inter_session(self):
+        ref_trajectory = self._ps.register_point_cloud(
+            "ref_trajectory",
+            np.asarray(self.reference_trajectory)[:, :3, -1],
+            color=TRAJECTORY_COLOR_2,
+        )
+        ref_trajectory.set_radius(0.3, relative=False)
+
+        for ref_id, query_id in self.data.closure_edges:
+            closure_line = self._ps.register_curve_network(
+                f"closures_{ref_id}-{query_id}",
+                np.array(
+                    [
+                        self.localmap_data.local_map_poses[query_id][:3, -1],
+                        self.reference_data.local_map_poses[ref_id][:3, -1],
+                    ]
+                ),
+                np.array([[0, 1]]),
+                color=TRAJECTORY_COLOR,
+            )
+            closure_line.set_radius(0.1, relative=False)
+
     def _unregister_trajectory(self):
-        self._ps.remove_curve_network("loop closures")
+        if self.reference_data is None:
+            self._ps.remove_curve_network("loop closures")
+        else:
+            for ref_id, query_id in self.data.closure_edges:
+                self._ps.remove_curve_network(f"closures_{ref_id}-{query_id}")
+            self._ps.remove_point_cloud("ref_trajectory")
